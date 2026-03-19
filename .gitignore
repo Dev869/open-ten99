@@ -39,6 +39,7 @@ web/dist/
 .env
 .env.local
 *.local
+functions/.env
 
 # OS
 .DS_Store
