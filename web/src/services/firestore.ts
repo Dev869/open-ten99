@@ -190,10 +190,12 @@ export async function bulkUpdateStatus(ids: string[], status: string) {
 
 export async function createClient(client: Omit<Client, 'id' | 'createdAt'>) {
   const ref = collection(db, 'clients');
-  const docRef = await addDoc(ref, {
-    ...client,
-    createdAt: Timestamp.now(),
-  });
+  // Firestore rejects undefined values — strip them before writing
+  const clean: Record<string, unknown> = { createdAt: Timestamp.now() };
+  for (const [k, v] of Object.entries(client)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  const docRef = await addDoc(ref, clean);
   return docRef.id;
 }
 
@@ -255,7 +257,11 @@ export function subscribeProfile(
 export async function updateProfile(userId: string, profile: Partial<UserProfile>) {
   const ref = doc(db, 'profiles', userId);
   const { setDoc } = await import('firebase/firestore');
-  await setDoc(ref, { ...profile, updatedAt: Timestamp.now() }, { merge: true });
+  const clean: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  for (const [k, v] of Object.entries(profile)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  await setDoc(ref, clean, { merge: true });
 }
 
 // --- Vault ---
