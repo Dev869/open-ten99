@@ -12,7 +12,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../lib/firebase';
+import { db, functions, auth } from '../lib/firebase';
 import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole } from '../lib/types';
 
 // --- Converters ---
@@ -53,6 +53,13 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
         }
       : undefined,
     scheduledDate: data.scheduledDate ? toDate(data.scheduledDate) : undefined,
+    clientNotes: data.clientNotes ?? undefined,
+    clientApproval: data.clientApproval ?? undefined,
+    clientApprovalDate: data.clientApprovalDate ? toDate(data.clientApprovalDate) : undefined,
+    invoiceStatus: data.invoiceStatus ?? undefined,
+    invoiceSentDate: data.invoiceSentDate ? toDate(data.invoiceSentDate) : undefined,
+    invoicePaidDate: data.invoicePaidDate ? toDate(data.invoicePaidDate) : undefined,
+    invoiceDueDate: data.invoiceDueDate ? toDate(data.invoiceDueDate) : undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -138,6 +145,7 @@ export async function createWorkItem(item: Omit<WorkItem, 'id' | 'createdAt' | '
     ...item,
     lineItems: item.lineItems.map(lineItemToData),
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
+    ownerId: auth.currentUser?.uid ?? null,
     createdAt: now,
     updatedAt: now,
   });
@@ -189,6 +197,37 @@ export async function bulkUpdateStatus(ids: string[], status: string) {
   await Promise.all(promises);
 }
 
+// --- Invoice Tracking ---
+
+export async function updateInvoiceStatus(
+  workItemId: string,
+  data: { invoiceStatus: string; invoiceSentDate?: Date; invoicePaidDate?: Date; invoiceDueDate?: Date },
+) {
+  const ref = doc(db, 'workItems', workItemId);
+  const clean: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  clean.invoiceStatus = data.invoiceStatus;
+  if (data.invoiceSentDate) clean.invoiceSentDate = Timestamp.fromDate(data.invoiceSentDate);
+  if (data.invoicePaidDate) clean.invoicePaidDate = Timestamp.fromDate(data.invoicePaidDate);
+  if (data.invoiceDueDate) clean.invoiceDueDate = Timestamp.fromDate(data.invoiceDueDate);
+  await updateDoc(ref, clean);
+}
+
+// --- Portal Client Response ---
+
+export async function updateWorkItemClientResponse(
+  workItemId: string,
+  data: { clientNotes?: string; clientApproval?: string; clientApprovalDate?: Date },
+) {
+  const ref = doc(db, 'workItems', workItemId);
+  const clean: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  for (const [k, v] of Object.entries(data)) {
+    if (v !== undefined) {
+      clean[k] = v instanceof Date ? Timestamp.fromDate(v) : v;
+    }
+  }
+  await updateDoc(ref, clean);
+}
+
 // --- Clients CRUD ---
 
 export async function createClient(client: Omit<Client, 'id' | 'createdAt'>) {
@@ -198,6 +237,7 @@ export async function createClient(client: Omit<Client, 'id' | 'createdAt'>) {
   for (const [k, v] of Object.entries(client)) {
     if (v !== undefined) clean[k] = v;
   }
+  if (auth.currentUser) clean.ownerId = auth.currentUser.uid;
   const docRef = await addDoc(ref, clean);
   return docRef.id;
 }
@@ -292,7 +332,7 @@ export async function createVaultMeta(
 ) {
   const ref = doc(db, 'vaults', userId);
   const { setDoc } = await import('firebase/firestore');
-  await setDoc(ref, { ...meta, createdAt: Timestamp.now() });
+  await setDoc(ref, { ...meta, ownerId: auth.currentUser?.uid ?? null, createdAt: Timestamp.now() });
 }
 
 export function subscribeVaultCredentials(
@@ -323,7 +363,7 @@ export async function createVaultCredential(
 ) {
   const ref = collection(db, 'vaults', userId, 'credentials');
   const now = Timestamp.now();
-  const docRef = await addDoc(ref, { ...credential, createdAt: now, updatedAt: now });
+  const docRef = await addDoc(ref, { ...credential, ownerId: auth.currentUser?.uid ?? null, createdAt: now, updatedAt: now });
   return docRef.id;
 }
 
@@ -366,6 +406,7 @@ export async function createTeam(team: Omit<Team, 'id' | 'createdAt'>) {
   for (const [k, v] of Object.entries(team)) {
     if (v !== undefined) clean[k] = v;
   }
+  if (auth.currentUser) clean.ownerId = auth.currentUser.uid;
   const docRef = await addDoc(ref, clean);
   return docRef.id;
 }
@@ -446,6 +487,7 @@ export async function createTeamInvite(
   const ref = collection(db, 'teams', teamId, 'invites');
   const docRef = await addDoc(ref, {
     ...invite,
+    ownerId: auth.currentUser?.uid ?? null,
     status: 'pending',
     createdAt: Timestamp.now(),
   });

@@ -1,11 +1,29 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { WorkItem } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { updateWorkItemClientResponse } from '../../services/firestore';
 
 interface PortalDetailProps {
   workItems: WorkItem[];
+}
+
+function ApprovalBadge({ status }: { status?: 'pending' | 'approved' | 'rejected' }) {
+  if (!status) return null;
+  const config = {
+    pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Pending Review' },
+    approved: { bg: 'bg-[#5A9A5A]/20', text: 'text-[#5A9A5A]', label: 'Approved' },
+    rejected: { bg: 'bg-[#D4873E]/20', text: 'text-[#D4873E]', label: 'Changes Requested' },
+  };
+  const c = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${c.bg} ${c.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${status === 'approved' ? 'bg-[#5A9A5A]' : status === 'rejected' ? 'bg-[#D4873E]' : 'bg-gray-400'}`} />
+      {c.label}
+    </span>
+  );
 }
 
 export default function PortalDetail({ workItems }: PortalDetailProps) {
@@ -13,12 +31,59 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
   const navigate = useNavigate();
   const item = workItems.find((i) => i.id === id);
 
+  const [notes, setNotes] = useState(item?.clientNotes ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
   if (!item) {
     return (
       <div className="min-h-screen bg-[var(--bg-page)] flex items-center justify-center">
         <div className="text-center text-[var(--text-secondary)]">Work order not found.</div>
       </div>
     );
+  }
+
+  const canApprove = item.status === 'inReview' && item.clientApproval !== 'approved';
+
+  async function handleApprove() {
+    if (!item?.id) return;
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      await updateWorkItemClientResponse(item.id, {
+        clientApproval: 'approved',
+        clientApprovalDate: new Date(),
+        ...(notes.trim() ? { clientNotes: notes.trim() } : {}),
+      });
+      setSuccessMsg('Work order approved! Thank you.');
+    } catch {
+      setErrorMsg('Failed to submit approval. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRequestChanges() {
+    if (!item?.id) return;
+    if (!notes.trim()) {
+      setErrorMsg('Please add a comment explaining what changes are needed.');
+      return;
+    }
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      await updateWorkItemClientResponse(item.id, {
+        clientApproval: 'rejected',
+        clientApprovalDate: new Date(),
+        clientNotes: notes.trim(),
+      });
+      setSuccessMsg('Change request submitted. We will review your feedback.');
+    } catch {
+      setErrorMsg('Failed to submit. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -46,14 +111,15 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
             onClick={() => navigate('/portal')}
             className="text-sm text-white/60 hover:text-white mb-3"
           >
-            ← Back
+            &larr; Back
           </button>
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-xl font-bold text-white">{item.subject}</h1>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 flex-wrap items-center">
                 <TypeTag type={item.type} />
                 <span className="text-xs text-white/60">{formatDate(item.createdAt)}</span>
+                {item.clientApproval && <ApprovalBadge status={item.clientApproval} />}
               </div>
             </div>
             <StatusBadge status={item.status} />
@@ -76,7 +142,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
                 <div className="flex-1">
                   <div className="text-sm text-[var(--text-primary)]">{li.description}</div>
                   <div className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {li.hours} hrs · {formatCurrency(li.cost)}
+                    {li.hours} hrs &middot; {formatCurrency(li.cost)}
                   </div>
                 </div>
               </div>
@@ -97,6 +163,101 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
             </span>
           </div>
         </div>
+
+        {/* Approval Status (when already responded) */}
+        {item.clientApproval === 'approved' && !successMsg && (
+          <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#5A9A5A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-[#5A9A5A]">You approved this work order</span>
+            </div>
+            {item.clientApprovalDate && (
+              <p className="text-xs text-[var(--text-secondary)] mt-1 ml-7">
+                {formatDate(item.clientApprovalDate)}
+              </p>
+            )}
+            {item.clientNotes && (
+              <p className="text-sm text-[var(--text-secondary)] mt-2 ml-7">{item.clientNotes}</p>
+            )}
+          </div>
+        )}
+
+        {item.clientApproval === 'rejected' && !successMsg && (
+          <div className="bg-[#D4873E]/10 border border-[#D4873E]/30 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#D4873E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="text-sm font-semibold text-[#D4873E]">You requested changes</span>
+            </div>
+            {item.clientApprovalDate && (
+              <p className="text-xs text-[var(--text-secondary)] mt-1 ml-7">
+                {formatDate(item.clientApprovalDate)}
+              </p>
+            )}
+            {item.clientNotes && (
+              <p className="text-sm text-[var(--text-secondary)] mt-2 ml-7">{item.clientNotes}</p>
+            )}
+          </div>
+        )}
+
+        {/* Success message */}
+        {successMsg && (
+          <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#5A9A5A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-[#5A9A5A]">{successMsg}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Approval section */}
+        {canApprove && !successMsg && (
+          <div className="bg-[var(--bg-card)] rounded-xl shadow-sm p-5 mb-4">
+            <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+              Your Feedback
+            </h2>
+            <textarea
+              value={notes}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                setErrorMsg('');
+              }}
+              placeholder="Add any comments or notes..."
+              rows={3}
+              className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] resize-none"
+            />
+            {errorMsg && (
+              <p className="text-xs text-red-500 mt-2">{errorMsg}</p>
+            )}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleApprove}
+                disabled={submitting}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#5A9A5A] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:bg-[#4e894e] transition-colors disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {submitting ? 'Submitting...' : 'Approve'}
+              </button>
+              <button
+                onClick={handleRequestChanges}
+                disabled={submitting}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#D4873E] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:bg-[#c07835] transition-colors disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {submitting ? 'Submitting...' : 'Request Changes'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* PDF */}
         {item.pdfUrl && (

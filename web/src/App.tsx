@@ -1,11 +1,15 @@
-import { Suspense, lazy, useState, useCallback } from 'react';
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import { useWorkItems, useClients, useSettings } from './hooks/useFirestore';
 import { updateSettings } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
 import { TimeTracker } from './components/TimeTracker';
+import { ToastContainer } from './components/ToastContainer';
+import { ToastContext, useToastState } from './hooks/useToast';
 import { useTheme } from './hooks/useTheme';
+import { GlobalSearch } from './components/GlobalSearch';
+import { computeNotifications, NotificationPanel, MobileNotificationBell } from './components/NotificationCenter';
 import Login from './routes/Login';
 
 // Lazy-loaded contractor routes
@@ -36,6 +40,7 @@ function Loading() {
 
 function ContractorLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(() => {
     const stored = localStorage.getItem('oc-sidebar-expanded');
     return stored === 'true';
@@ -45,9 +50,71 @@ function ContractorLayout() {
   const { workItems } = useWorkItems();
   const { clients } = useClients();
   const { settings } = useSettings(user?.uid);
+  const toastState = useToastState();
   const pendingCount = workItems.filter(
     (i) => i.status === 'draft' || i.status === 'inReview'
   ).length;
+
+  // Notification center state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifDismissed, setNotifDismissed] = useState<Set<string>>(new Set());
+  const [isMobileView, setIsMobileView] = useState(false);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+  const notifBellRef = useRef<HTMLButtonElement>(null);
+  const mobileBellRef = useRef<HTMLButtonElement>(null);
+
+  const allNotifications = useMemo(
+    () => computeNotifications(workItems, clients),
+    [workItems, clients]
+  );
+  const notifications = useMemo(
+    () => allNotifications.filter((n) => !notifDismissed.has(n.id)),
+    [allNotifications, notifDismissed]
+  );
+  const notifCount = notifications.length;
+
+  // Track viewport for mobile detection
+  useEffect(() => {
+    function check() { setIsMobileView(window.innerWidth < 768); }
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Click outside to close notification panel (desktop)
+  useEffect(() => {
+    if (!notifOpen || isMobileView) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node) &&
+        notifBellRef.current && !notifBellRef.current.contains(e.target as Node)
+      ) {
+        setNotifOpen(false);
+      }
+    }
+    const timer = setTimeout(() => document.addEventListener('mousedown', handleClick), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handleClick); };
+  }, [notifOpen, isMobileView]);
+
+  // Escape to close notification panel
+  useEffect(() => {
+    if (!notifOpen) return;
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') setNotifOpen(false); }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [notifOpen]);
+
+  const handleNotifDismiss = useCallback((id: string) => {
+    setNotifDismissed((prev) => new Set(prev).add(id));
+  }, []);
+
+  const handleNotifDismissAll = useCallback(() => {
+    setNotifDismissed(new Set(allNotifications.map((n) => n.id)));
+  }, [allNotifications]);
+
+  const handleNotifToggle = useCallback(() => {
+    setNotifOpen((v) => !v);
+  }, []);
 
   const handleUpdateSidebar = useCallback(
     (order: string[], hidden: string[]) => {
@@ -65,55 +132,105 @@ function ContractorLayout() {
     });
   }
 
-  return (
-    <div className="flex h-screen bg-[var(--bg-page)]">
-      <Sidebar
-        pendingCount={pendingCount}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        sidebarOrder={settings.sidebarOrder}
-        sidebarHidden={settings.sidebarHidden}
-        onUpdateSidebar={handleUpdateSidebar}
-        dark={dark}
-        onToggleTheme={toggle}
-        expanded={sidebarExpanded}
-        onToggleExpanded={handleToggleExpanded}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="md:hidden flex items-center h-14 px-4 bg-[var(--bg-card)] border-b border-[var(--border)] flex-shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <div className="flex-1 flex items-center justify-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">OpenChanges</span>
-          </div>
-          <div className="w-10" />
-        </header>
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(v => !v);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <Suspense fallback={<Loading />}>
-            <Outlet />
-          </Suspense>
-        </main>
+  return (
+    <ToastContext.Provider value={toastState}>
+      <div className="flex h-screen bg-[var(--bg-page)]">
+        <Sidebar
+          pendingCount={pendingCount}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          sidebarOrder={settings.sidebarOrder}
+          sidebarHidden={settings.sidebarHidden}
+          onUpdateSidebar={handleUpdateSidebar}
+          dark={dark}
+          onToggleTheme={toggle}
+          expanded={sidebarExpanded}
+          onToggleExpanded={handleToggleExpanded}
+          notificationCount={notifCount}
+          notificationBellRef={notifBellRef}
+          onNotificationsClick={handleNotifToggle}
+        />
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Mobile header */}
+          <header className="md:hidden flex items-center h-14 px-4 bg-[var(--bg-card)] border-b border-[var(--border)] flex-shrink-0">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -ml-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="flex-1 flex items-center justify-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">OpenChanges</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MobileNotificationBell
+                count={notifCount}
+                onClick={handleNotifToggle}
+                buttonRef={mobileBellRef}
+              />
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="p-2 -mr-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          {/* Main content */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">
+            <Suspense fallback={<Loading />}>
+              <Outlet />
+            </Suspense>
+          </main>
+        </div>
+        <TimeTracker clients={clients} />
+        {notifOpen && (
+          <NotificationPanel
+            notifications={notifications}
+            onDismiss={handleNotifDismiss}
+            onDismissAll={handleNotifDismissAll}
+            onClose={() => setNotifOpen(false)}
+            isMobile={isMobileView}
+            panelRef={notifPanelRef}
+            sidebarExpanded={sidebarExpanded}
+          />
+        )}
+        <ToastContainer />
+        {searchOpen && (
+          <GlobalSearch
+            workItems={workItems}
+            clients={clients}
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
       </div>
-      <TimeTracker clients={clients} />
-    </div>
+    </ToastContext.Provider>
   );
 }
 

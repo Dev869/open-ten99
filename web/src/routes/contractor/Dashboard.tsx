@@ -1,6 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { StatCard } from '../../components/StatCard';
 import { WorkItemCard } from '../../components/WorkItemCard';
+import { Onboarding } from '../../components/Onboarding';
+import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../hooks/useFirestore';
 import type { WorkItem, Client } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
 
@@ -10,6 +13,32 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ workItems, clients }: DashboardProps) {
+  const { user } = useAuth();
+  const { settings } = useSettings(user?.uid);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(
+    () => localStorage.getItem('oc-onboarded') === 'true'
+  );
+
+  const handleOnboardingComplete = useCallback(() => {
+    setOnboardingDismissed(true);
+  }, []);
+
+  const showOnboarding =
+    !onboardingDismissed &&
+    clients.length === 0 &&
+    workItems.length === 0 &&
+    user != null;
+
+  if (showOnboarding) {
+    return (
+      <Onboarding
+        user={user}
+        clients={clients}
+        settings={settings}
+        onComplete={handleOnboardingComplete}
+      />
+    );
+  }
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};
     clients.forEach((c) => { if (c.id) map[c.id] = c.name; });

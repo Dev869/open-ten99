@@ -132,6 +132,15 @@ function IconVault() {
   );
 }
 
+function IconBell() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  );
+}
+
 function IconCustomize() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -392,6 +401,9 @@ interface SidebarProps {
   onToggleTheme: () => void;
   expanded: boolean;
   onToggleExpanded: () => void;
+  notificationCount?: number;
+  notificationBellRef?: React.RefObject<HTMLButtonElement | null>;
+  onNotificationsClick?: () => void;
 }
 
 export function Sidebar({
@@ -405,6 +417,9 @@ export function Sidebar({
   onUpdateSidebar,
   expanded,
   onToggleExpanded,
+  notificationCount = 0,
+  notificationBellRef,
+  onNotificationsClick,
 }: SidebarProps) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -583,6 +598,37 @@ export function Sidebar({
             <span className="text-sm font-medium md:hidden">{dark ? 'Light Mode' : 'Dark Mode'}</span>
             {expanded && <span className="text-sm font-medium hidden md:inline">{dark ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
+          {onNotificationsClick && (
+            <button
+              ref={notificationBellRef}
+              onClick={onNotificationsClick}
+              className={cn(
+                'relative flex items-center rounded-xl transition-all duration-200',
+                'w-full px-4 py-3 gap-3',
+                !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
+                'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+              )}
+              title="Notifications"
+            >
+              <div className="relative flex-shrink-0">
+                <IconBell />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--bg-sidebar)]" />
+                )}
+              </div>
+              <span className="text-sm font-medium md:hidden">Notifications</span>
+              {expanded && <span className="text-sm font-medium hidden md:inline">Notifications</span>}
+              {notificationCount > 0 && (
+                <span className={cn(
+                  'ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full',
+                  expanded ? '' : 'md:hidden'
+                )}>
+                  {notificationCount}
+                </span>
+              )}
+            </button>
+          )}
           <NavLink
             to="/dashboard/profile"
             onClick={onClose}

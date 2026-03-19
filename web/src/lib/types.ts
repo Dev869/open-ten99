@@ -36,6 +36,13 @@ export interface WorkItem {
   scheduledDate?: Date;
   assigneeId?: string;
   teamId?: string;
+  clientNotes?: string;
+  clientApproval?: 'pending' | 'approved' | 'rejected';
+  clientApprovalDate?: Date;
+  invoiceStatus?: 'draft' | 'sent' | 'paid' | 'overdue';
+  invoiceSentDate?: Date;
+  invoicePaidDate?: Date;
+  invoiceDueDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

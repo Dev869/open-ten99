@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, addBusinessDays } from '../../lib/utils';
 import {
   updateWorkItem,
   archiveWorkItem,
+  updateInvoiceStatus,
 } from '../../services/firestore';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
 
@@ -443,6 +444,147 @@ export default function WorkItemDetail({
             </>
           )}
         </div>
+      </div>
+
+      {/* Invoice Tracking */}
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+          Invoice
+        </h2>
+
+        {/* Draft / No invoice */}
+        {(!item.invoiceStatus || item.invoiceStatus === 'draft') && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#86868B]/20 text-[#86868B]">
+                {item.invoiceStatus === 'draft' ? 'Draft' : 'No Invoice'}
+              </span>
+            </div>
+            <button
+              onClick={async () => {
+                if (!item.id) return;
+                const now = new Date();
+                const due = new Date(now);
+                due.setDate(due.getDate() + 30);
+                await updateInvoiceStatus(item.id, {
+                  invoiceStatus: 'sent',
+                  invoiceSentDate: now,
+                  invoiceDueDate: due,
+                });
+                setItem({
+                  ...item,
+                  invoiceStatus: 'sent',
+                  invoiceSentDate: now,
+                  invoiceDueDate: due,
+                });
+              }}
+              className="min-h-[44px] px-5 rounded-xl bg-[#D4873E] text-white text-sm font-semibold hover:bg-[#C07835] transition-colors"
+            >
+              Mark as Invoiced
+            </button>
+          </div>
+        )}
+
+        {/* Sent */}
+        {item.invoiceStatus === 'sent' && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D4873E]/20 text-[#D4873E]">
+                Sent
+              </span>
+              <span className="text-sm text-[var(--text-secondary)]">
+                Sent: {item.invoiceSentDate ? formatDate(item.invoiceSentDate) : '—'}
+              </span>
+            </div>
+            <div className="text-sm text-[var(--text-secondary)] mb-3">
+              Due: {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
+              {item.invoiceDueDate && (
+                <span className="ml-1">
+                  ({Math.max(0, Math.ceil((item.invoiceDueDate.getTime() - Date.now()) / 86400000))} days remaining)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  if (!item.id) return;
+                  const now = new Date();
+                  await updateInvoiceStatus(item.id, {
+                    invoiceStatus: 'paid',
+                    invoicePaidDate: now,
+                  });
+                  setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
+                }}
+                className="min-h-[44px] px-5 rounded-xl bg-[#5A9A5A] text-white text-sm font-semibold hover:bg-[#4E8A4E] transition-colors"
+              >
+                Mark as Paid
+              </button>
+              <button
+                onClick={async () => {
+                  if (!item.id) return;
+                  await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
+                  setItem({ ...item, invoiceStatus: 'overdue' });
+                }}
+                className="min-h-[44px] px-5 rounded-xl border border-red-500 text-red-500 text-sm font-semibold hover:bg-red-500/5 transition-colors"
+              >
+                Mark Overdue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Paid */}
+        {item.invoiceStatus === 'paid' && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#5A9A5A]/20 text-[#5A9A5A]">
+                Paid
+              </span>
+              <span className="text-sm text-[var(--text-secondary)]">
+                Paid: {item.invoicePaidDate ? formatDate(item.invoicePaidDate) : '—'}
+              </span>
+            </div>
+            <span className="text-xl font-extrabold text-[#5A9A5A]">
+              {formatCurrency(item.totalCost)}
+            </span>
+          </div>
+        )}
+
+        {/* Overdue */}
+        {item.invoiceStatus === 'overdue' && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-500">
+                Overdue
+              </span>
+              {item.invoiceDueDate && (
+                <span className="text-sm font-semibold text-red-500">
+                  {Math.ceil((Date.now() - item.invoiceDueDate.getTime()) / 86400000)} days overdue
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-[var(--text-secondary)] mb-3">
+              Due: {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
+              {item.invoiceSentDate && (
+                <span className="ml-2">Sent: {formatDate(item.invoiceSentDate)}</span>
+              )}
+            </div>
+            <button
+              onClick={async () => {
+                if (!item.id) return;
+                const now = new Date();
+                await updateInvoiceStatus(item.id, {
+                  invoiceStatus: 'paid',
+                  invoicePaidDate: now,
+                });
+                setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
+              }}
+              className="min-h-[44px] px-5 rounded-xl bg-[#5A9A5A] text-white text-sm font-semibold hover:bg-[#4E8A4E] transition-colors"
+            >
+              Mark as Paid
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Actions */}

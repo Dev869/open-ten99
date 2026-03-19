@@ -10,6 +10,22 @@ interface PortalHomeProps {
   clientName: string;
 }
 
+function ClientApprovalBadge({ approval }: { approval?: 'pending' | 'approved' | 'rejected' }) {
+  if (!approval) return null;
+  const config = {
+    pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Pending' },
+    approved: { bg: 'bg-[#5A9A5A]/20', text: 'text-[#5A9A5A]', label: 'Approved' },
+    rejected: { bg: 'bg-[#D4873E]/20', text: 'text-[#D4873E]', label: 'Changes Requested' },
+  };
+  const c = config[approval];
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${approval === 'approved' ? 'bg-[#5A9A5A]' : approval === 'rejected' ? 'bg-[#D4873E]' : 'bg-gray-400'}`} />
+      {c.label}
+    </span>
+  );
+}
+
 export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
   const navigate = useNavigate();
 
@@ -62,29 +78,39 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
               Needs Your Review ({pending.length})
             </h2>
             <div className="space-y-2">
-              {pending.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/portal/${item.id}`)}
-                  className="w-full bg-[var(--bg-card)] rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow border-l-4 border-[var(--accent)]"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.subject}</div>
-                      <div className="flex gap-2 mt-1">
-                        <TypeTag type={item.type} />
-                        <span className="text-xs text-[var(--text-secondary)]">{formatDate(item.createdAt)}</span>
+              {pending.map((item) => {
+                const needsAction = !item.clientApproval || item.clientApproval === 'pending';
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(`/portal/${item.id}`)}
+                    className="w-full bg-[var(--bg-card)] rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow border-l-4 border-[var(--accent)] relative"
+                  >
+                    {needsAction && (
+                      <span className="absolute top-3 right-3 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--accent)]" />
+                      </span>
+                    )}
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-[var(--text-primary)] truncate pr-4">{item.subject}</div>
+                        <div className="flex gap-2 mt-1 flex-wrap items-center">
+                          <TypeTag type={item.type} />
+                          <span className="text-xs text-[var(--text-secondary)]">{formatDate(item.createdAt)}</span>
+                          {item.clientApproval && <ClientApprovalBadge approval={item.clientApproval} />}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-4">
+                        <StatusBadge status={item.status} />
+                        <div className="text-sm font-bold text-[var(--accent)] mt-1">
+                          {formatCurrency(item.totalCost)}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <StatusBadge status={item.status} />
-                      <div className="text-sm font-bold text-[var(--accent)] mt-1">
-                        {formatCurrency(item.totalCost)}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -105,9 +131,10 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.subject}</div>
-                      <div className="flex gap-2 mt-1">
+                      <div className="flex gap-2 mt-1 flex-wrap items-center">
                         <TypeTag type={item.type} />
                         <span className="text-xs text-[var(--text-secondary)]">{formatDate(item.createdAt)}</span>
+                        {item.clientApproval && <ClientApprovalBadge approval={item.clientApproval} />}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
