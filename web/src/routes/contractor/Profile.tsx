@@ -104,12 +104,12 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
   return (
     <div className="max-w-2xl animate-fade-in-up">
-      <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider mb-6">
+      <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
         Profile
       </h1>
 
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-4">
+      <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-6 mb-4">
         <div className="flex items-center gap-5">
           {/* Profile Photo */}
           <div className="flex-shrink-0 relative group">
@@ -117,11 +117,11 @@ export default function Profile({ user, onLogout }: ProfileProps) {
               <img
                 src={resolvedPhotoURL}
                 alt=""
-                className="w-20 h-20 rounded-full ring-2 ring-[#E5E5EA] object-cover"
+                className="w-20 h-20 rounded-full ring-2 ring-[var(--border)] object-cover"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-[#4BA8A8] flex items-center justify-center text-white font-bold text-3xl">
+              <div className="w-20 h-20 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-bold text-3xl">
                 {resolvedDisplayName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -147,29 +147,29 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
           {/* Name & Email */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-[#1A1A2E] truncate">
+            <h2 className="text-lg font-bold text-[var(--text-primary)] truncate">
               {resolvedDisplayName}
             </h2>
-            <p className="text-sm text-[#86868B] truncate">{user.email}</p>
+            <p className="text-sm text-[var(--text-secondary)] truncate">{user.email}</p>
             {resolvedCompany && (
-              <p className="text-sm text-[#86868B] mt-0.5">{resolvedCompany}</p>
+              <p className="text-sm text-[var(--text-secondary)] mt-0.5">{resolvedCompany}</p>
             )}
           </div>
 
           {/* Edit Toggle */}
           <button
             onClick={() => setEditing(!editing)}
-            className="text-sm text-[#86868B] hover:text-[#1A1A2E] border border-[#E5E5EA] px-4 py-2 rounded-xl transition-colors flex-shrink-0 font-medium hover:bg-[#F2F2F7]"
+            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] px-4 py-2 rounded-xl transition-colors flex-shrink-0 font-medium hover:bg-[var(--bg-input)]"
           >
             {editing ? 'Cancel' : 'Edit'}
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-xs text-[#86868B]">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-xs text-[var(--text-secondary)]">
           <span>Member since {memberSince}</span>
           {resolvedPhone && <span>{resolvedPhone}</span>}
           {resolvedWebsite && (
-            <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[#4BA8A8] hover:underline">
+            <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
               {resolvedWebsite.replace(/^https?:\/\//, '')}
             </a>
           )}
@@ -185,8 +185,8 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
       {/* Edit Form */}
       {editing && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-4 space-y-5 animate-fade-in-up">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider">
+        <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-6 mb-4 space-y-5 animate-fade-in-up">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
             Edit Profile
           </h2>
 
@@ -194,33 +194,33 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Display Name */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Display Name
               </label>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-transparent transition-shadow"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-shadow"
               />
             </div>
 
             {/* Email (read-only) */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Email
               </label>
               <input
                 type="email"
                 value={user.email ?? ''}
                 readOnly
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7]/50 rounded-xl text-sm text-[#86868B] cursor-not-allowed border border-transparent"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)]/50 rounded-xl text-sm text-[var(--text-secondary)] cursor-not-allowed border border-transparent"
               />
             </div>
 
             {/* Phone */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Phone
               </label>
               <input
@@ -228,13 +228,13 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(555) 123-4567"
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
               />
             </div>
 
             {/* Company Name */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Company
               </label>
               <input
@@ -242,13 +242,13 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="Your company"
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
               />
             </div>
 
             {/* Website */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Website
               </label>
               <input
@@ -256,13 +256,13 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="https://yoursite.com"
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
               />
             </div>
 
             {/* Address */}
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
                 Address
               </label>
               <input
@@ -270,14 +270,14 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="City, State"
-                className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+                className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
               />
             </div>
           </div>
 
           {/* Bio - full width */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Bio
             </label>
             <textarea
@@ -285,7 +285,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
               onChange={(e) => setBio(e.target.value)}
               rows={3}
               placeholder="A few words about yourself..."
-              className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] resize-none border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+              className="w-full px-3.5 py-2.5 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] resize-none border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
             />
           </div>
 
@@ -293,14 +293,14 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           <div className="flex gap-3 pt-1">
             <button
               onClick={() => setEditing(false)}
-              className="py-2.5 px-5 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+              className="py-2.5 px-5 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="ml-auto py-2.5 px-6 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+              className="ml-auto py-2.5 px-6 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Save Profile'}
             </button>
@@ -310,33 +310,33 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
       {/* Profile Details (when not editing) */}
       {!editing && !profileLoading && (resolvedPhone || resolvedBio || resolvedWebsite || resolvedAddress) && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-4">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
+        <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-6 mb-4">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
             About
           </h2>
           <div className="space-y-3">
             {resolvedBio && (
-              <p className="text-sm text-[#1A1A2E] leading-relaxed">{resolvedBio}</p>
+              <p className="text-sm text-[var(--text-primary)] leading-relaxed">{resolvedBio}</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {resolvedPhone && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#86868B]">Phone</span>
-                  <span className="text-[#1A1A2E]">{resolvedPhone}</span>
+                  <span className="text-[var(--text-secondary)]">Phone</span>
+                  <span className="text-[var(--text-primary)]">{resolvedPhone}</span>
                 </div>
               )}
               {resolvedWebsite && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#86868B]">Website</span>
-                  <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[#4BA8A8] hover:underline truncate ml-2">
+                  <span className="text-[var(--text-secondary)]">Website</span>
+                  <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline truncate ml-2">
                     {resolvedWebsite.replace(/^https?:\/\//, '')}
                   </a>
                 </div>
               )}
               {resolvedAddress && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#86868B]">Location</span>
-                  <span className="text-[#1A1A2E]">{resolvedAddress}</span>
+                  <span className="text-[var(--text-secondary)]">Location</span>
+                  <span className="text-[var(--text-primary)]">{resolvedAddress}</span>
                 </div>
               )}
             </div>
@@ -345,59 +345,59 @@ export default function Profile({ user, onLogout }: ProfileProps) {
       )}
 
       {/* Profile Stats */}
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-4">
-        <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
+      <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-6 mb-4">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
           Stats
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-[#F5F5F7] rounded-xl p-4">
-            <div className="text-2xl font-extrabold text-[#1A1A2E]">
+          <div className="bg-[var(--bg-page)] rounded-xl p-4">
+            <div className="text-2xl font-extrabold text-[var(--text-primary)]">
               {stats.totalWorkOrders}
             </div>
-            <div className="text-xs text-[#86868B] mt-1">Work Orders</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Work Orders</div>
           </div>
-          <div className="bg-[#F5F5F7] rounded-xl p-4">
-            <div className="text-2xl font-extrabold text-[#1A1A2E]">
+          <div className="bg-[var(--bg-page)] rounded-xl p-4">
+            <div className="text-2xl font-extrabold text-[var(--text-primary)]">
               {formatHours(stats.totalHours)}
             </div>
-            <div className="text-xs text-[#86868B] mt-1">Hours Logged</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Hours Logged</div>
           </div>
-          <div className="bg-[#F5F5F7] rounded-xl p-4">
-            <div className="text-2xl font-extrabold text-[#4BA8A8]">
+          <div className="bg-[var(--bg-page)] rounded-xl p-4">
+            <div className="text-2xl font-extrabold text-[var(--accent)]">
               {formatCurrency(stats.totalRevenue)}
             </div>
-            <div className="text-xs text-[#86868B] mt-1">Revenue</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Revenue</div>
           </div>
-          <div className="bg-[#F5F5F7] rounded-xl p-4">
-            <div className="text-lg font-extrabold text-[#1A1A2E]">
+          <div className="bg-[var(--bg-page)] rounded-xl p-4">
+            <div className="text-lg font-extrabold text-[var(--text-primary)]">
               {memberSince}
             </div>
-            <div className="text-xs text-[#86868B] mt-1">Member Since</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">Member Since</div>
           </div>
         </div>
       </div>
 
       {/* Account Details */}
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 mb-4">
-        <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+      <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] p-6 mb-4">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           Account
         </h2>
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-[#86868B]">UID</span>
-            <span className="text-[#1A1A2E] font-mono text-xs">{user.uid}</span>
+            <span className="text-[var(--text-secondary)]">UID</span>
+            <span className="text-[var(--text-primary)] font-mono text-xs">{user.uid}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-[#86868B]">Provider</span>
-            <span className="text-[#1A1A2E]">
+            <span className="text-[var(--text-secondary)]">Provider</span>
+            <span className="text-[var(--text-primary)]">
               {user.providerData[0]?.providerId === 'google.com'
                 ? 'Google'
                 : user.providerData[0]?.providerId ?? 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-[#86868B]">Last Sign-In</span>
-            <span className="text-[#1A1A2E]">
+            <span className="text-[var(--text-secondary)]">Last Sign-In</span>
+            <span className="text-[var(--text-primary)]">
               {user.metadata.lastSignInTime
                 ? new Date(user.metadata.lastSignInTime).toLocaleDateString('en-US', {
                     month: 'short',

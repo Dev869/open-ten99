@@ -46,7 +46,7 @@ export default function PortalAuth() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-[var(--bg-card)] rounded-2xl shadow-lg overflow-hidden">
           {/* Accent stripe */}
           <div className="flex h-1">
             <div className="flex-1 bg-[#E74C3C]" />
@@ -59,15 +59,15 @@ export default function PortalAuth() {
           <div className="p-8 text-center">
             {loading && !error && (
               <>
-                <h1 className="text-lg font-bold text-[#1A1A2E] mb-2">Signing you in...</h1>
-                <p className="text-sm text-[#86868B]">Please wait while we verify your access.</p>
+                <h1 className="text-lg font-bold text-[var(--text-primary)] mb-2">Signing you in...</h1>
+                <p className="text-sm text-[var(--text-secondary)]">Please wait while we verify your access.</p>
               </>
             )}
 
             {error && (
               <>
-                <h1 className="text-lg font-bold text-[#1A1A2E] mb-2">Access Error</h1>
-                <p className="text-sm text-[#86868B]">{error}</p>
+                <h1 className="text-lg font-bold text-[var(--text-primary)] mb-2">Access Error</h1>
+                <p className="text-sm text-[var(--text-secondary)]">{error}</p>
               </>
             )}
           </div>

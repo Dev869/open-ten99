@@ -4,10 +4,10 @@ interface StatCardProps {
   color?: string;
 }
 
-export function StatCard({ label, value, color = '#2C2417' }: StatCardProps) {
+export function StatCard({ label, value, color = 'var(--text-primary)' }: StatCardProps) {
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[#DDD5C8] flex-1">
-      <div className="text-[10px] text-[#8C7E6A] uppercase font-semibold tracking-wide">
+    <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border)] flex-1">
+      <div className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
         {label}
       </div>
       <div

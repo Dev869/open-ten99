@@ -9,7 +9,7 @@ export default function Login({ onSignIn, loading }: LoginProps) {
       <div className="w-full max-w-sm animate-fade-in-up">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-[#4BA8A8] flex items-center justify-center mx-auto mb-5">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -22,14 +22,14 @@ export default function Login({ onSignIn, loading }: LoginProps) {
 
         <div className="bg-[var(--bg-card)] rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div className="p-8">
-            <p className="text-sm text-[#8C7E6A] text-center mb-6">
+            <p className="text-sm text-[var(--text-secondary)] text-center mb-6">
               Sign in to manage your work orders.
             </p>
 
             <button
               onClick={onSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[#EDE9E2] text-[#2C2417] text-sm font-semibold hover:bg-[#DDD5C8] disabled:opacity-50 transition-colors border border-[#DDD5C8]"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-semibold hover:bg-[var(--border)] disabled:opacity-50 transition-colors border border-[var(--border)]"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

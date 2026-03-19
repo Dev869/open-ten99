@@ -223,7 +223,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
       return (
         <div
           key={`empty-${index}`}
-          className="min-h-[70px] sm:min-h-[110px] bg-[#FAFAF7] border-b border-r border-[#F2F2F7]"
+          className="min-h-[70px] sm:min-h-[110px] bg-[var(--bg-page)] border-b border-r border-[var(--border)]"
         />
       );
     }
@@ -234,7 +234,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
     return (
       <div
         key={day.toISOString()}
-        className="min-h-[70px] sm:min-h-[110px] border-b border-r border-[#F2F2F7] p-1 sm:p-2 group hover:bg-white/80 transition-colors cursor-default"
+        className="min-h-[70px] sm:min-h-[110px] border-b border-r border-[var(--border)] p-1 sm:p-2 group hover:bg-[var(--bg-card)]/80 transition-colors cursor-default"
       >
         {/* Day number */}
         <div className="flex items-center justify-start mb-1.5">
@@ -242,8 +242,8 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
             className={`
               inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full transition-colors
               ${isToday
-                ? 'bg-[#4BA8A8] text-white shadow-sm'
-                : 'text-[#86868B] group-hover:text-[#1A1A2E]'
+                ? 'bg-[var(--accent)] text-white shadow-sm'
+                : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
               }
             `}
           >
@@ -267,7 +267,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
             </button>
           ))}
           {items.length > maxVisible && (
-            <span className="inline-block text-[10px] font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 px-2 py-0.5 rounded-full">
+            <span className="inline-block text-[10px] font-semibold text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">
               +{items.length - maxVisible} more
             </span>
           )}
@@ -283,19 +283,19 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
     <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-        <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
+        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Calendar
         </h1>
         {/* Segmented Control */}
-        <div className="inline-flex bg-[#F2F2F7] rounded-lg p-0.5 shadow-inner">
+        <div className="inline-flex bg-[var(--bg-input)] rounded-lg p-0.5 shadow-inner">
           {viewOptions.map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={`px-4 py-1.5 min-h-[44px] rounded-md text-xs font-semibold transition-all ${
                 view === v
-                  ? 'bg-white text-[#4BA8A8] shadow-sm'
-                  : 'text-[#86868B] hover:text-[#1A1A2E]'
+                  ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -308,18 +308,18 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
       <div className="flex items-center gap-2 mb-5">
         <button
           onClick={prev}
-          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
+          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] hover:shadow-sm transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
         </button>
-        <span className="text-sm font-bold text-[#1A1A2E] min-w-[160px] text-center">
+        <span className="text-sm font-bold text-[var(--text-primary)] min-w-[160px] text-center">
           {monthLabel}
         </span>
         <button
           onClick={next}
-          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
+          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] hover:shadow-sm transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -327,7 +327,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
         </button>
         <button
           onClick={() => setCurrent(new Date())}
-          className="ml-2 px-3 py-1.5 min-h-[44px] text-xs font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 hover:bg-[#4BA8A8]/20 rounded-lg transition-colors"
+          className="ml-2 px-3 py-1.5 min-h-[44px] text-xs font-semibold text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 rounded-lg transition-colors"
         >
           Today
         </button>
@@ -335,14 +335,14 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
 
       {/* ===== Month View ===== */}
       {view === 'month' && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-x-auto">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-x-auto">
           <div className="min-w-[500px]">
             {/* Day-of-week headers */}
-            <div className="grid grid-cols-7 bg-[#FAFAF7]">
+            <div className="grid grid-cols-7 bg-[var(--bg-page)]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
                 <div
                   key={d}
-                  className="text-center text-[11px] font-bold text-[#86868B] uppercase tracking-wider py-3 border-b border-r border-[#F2F2F7]"
+                  className="text-center text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider py-3 border-b border-r border-[var(--border)]"
                 >
                   <span className="hidden sm:inline">{d}</span>
                   <span className="sm:hidden">{d.charAt(0)}</span>
@@ -359,27 +359,27 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
 
       {/* ===== Week View ===== */}
       {view === 'week' && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-x-auto">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-x-auto">
           <div className="min-w-[500px]">
           {/* Day headers */}
-          <div className="grid grid-cols-7 bg-[#FAFAF7] border-b border-[#F2F2F7]">
+          <div className="grid grid-cols-7 bg-[var(--bg-page)] border-b border-[var(--border)]">
             {weekDays.map((day) => {
               const isToday = sameDay(day, today);
               return (
                 <div
                   key={day.toISOString()}
-                  className={`text-center py-3 border-r last:border-r-0 border-[#F2F2F7] transition-colors ${
-                    isToday ? 'bg-[#4BA8A8]/10' : ''
+                  className={`text-center py-3 border-r last:border-r-0 border-[var(--border)] transition-colors ${
+                    isToday ? 'bg-[var(--accent)]/10' : ''
                   }`}
                 >
-                  <div className="text-[10px] text-[#86868B] uppercase tracking-wide font-semibold">
+                  <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-semibold">
                     {day.toLocaleDateString('en-US', { weekday: 'short' })}
                   </div>
                   <div className="mt-0.5">
                     <span
                       className={`
                         inline-flex items-center justify-center w-8 h-8 text-base font-bold rounded-full
-                        ${isToday ? 'bg-[#4BA8A8] text-white shadow-sm' : 'text-[#1A1A2E]'}
+                        ${isToday ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-primary)]'}
                       `}
                     >
                       {day.getDate()}
@@ -397,8 +397,8 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`border-r last:border-r-0 border-[#F2F2F7] min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 space-y-2 ${
-                    isToday ? 'bg-[#4BA8A8]/5' : ''
+                  className={`border-r last:border-r-0 border-[var(--border)] min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 space-y-2 ${
+                    isToday ? 'bg-[var(--accent)]/5' : ''
                   }`}
                 >
                   {items.map((ci) => (
@@ -418,10 +418,10 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                       </div>
                       {/* Hours + type badge row */}
                       <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-semibold">
+                        <span className="text-[10px] bg-[var(--bg-card)]/20 px-1.5 py-0.5 rounded font-semibold">
                           {ci.item.totalHours.toFixed(1)} hrs
                         </span>
-                        <span className="text-[9px] bg-white/15 px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] bg-[var(--bg-card)]/15 px-1.5 py-0.5 rounded">
                           {WORK_ITEM_TYPE_LABELS[ci.item.type]}
                         </span>
                       </div>
@@ -441,7 +441,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                     </button>
                   ))}
                   {items.length === 0 && (
-                    <div className="flex items-center justify-center h-20 text-[#E5E5EA]">
+                    <div className="flex items-center justify-center h-20 text-[var(--border)]">
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 opacity-40" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                       </svg>
@@ -460,10 +460,10 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
         <div className="space-y-3">
           {listItems.length === 0 && (
             <div className="text-center py-20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto text-[#E5E5EA] mb-3" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto text-[var(--border)] mb-3" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
               </svg>
-              <p className="text-[#86868B] font-medium">No items this month</p>
+              <p className="text-[var(--text-secondary)] font-medium">No items this month</p>
             </div>
           )}
           {listItems.map((ci) => {
@@ -473,7 +473,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               <button
                 key={calendarItemKey(ci)}
                 onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-                className={`w-full flex items-start gap-3 sm:gap-5 bg-white rounded-xl border border-[#F2F2F7] p-3 sm:p-5 text-left hover:shadow-md hover:border-[#E5E5EA] transition-all group ${
+                className={`w-full flex items-start gap-3 sm:gap-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-3 sm:p-5 text-left hover:shadow-md hover:border-[var(--border)] transition-all group ${
                   ci.isRecurring ? 'border-dashed opacity-80' : ''
                 }`}
               >
@@ -481,11 +481,11 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                 <div
                   className={`flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${
                     isToday
-                      ? 'bg-[#4BA8A8] text-white shadow-sm'
-                      : 'bg-[#F5F5F7] text-[#1A1A2E]'
+                      ? 'bg-[var(--accent)] text-white shadow-sm'
+                      : 'bg-[var(--bg-input)] text-[var(--text-primary)]'
                   }`}
                 >
-                  <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-white/80' : 'text-[#86868B]'}`}>
+                  <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-white/80' : 'text-[var(--text-secondary)]'}`}>
                     {d.toLocaleDateString('en-US', { month: 'short' })}
                   </span>
                   <span className="text-lg font-extrabold leading-none">{d.getDate()}</span>
@@ -499,10 +499,10 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-[#1A1A2E] group-hover:text-[#4BA8A8] transition-colors truncate">
+                      <div className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors truncate">
                         {ci.item.subject}
                       </div>
-                      <div className="text-xs text-[#86868B] mt-0.5">
+                      <div className="text-xs text-[var(--text-secondary)] mt-0.5">
                         {clientMap[ci.item.clientId] ?? 'Unknown'}
                       </div>
                     </div>
@@ -516,17 +516,17 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                     >
                       {WORK_ITEM_TYPE_LABELS[ci.item.type]}
                     </span>
-                    <span className="text-xs text-[#86868B] font-semibold">
+                    <span className="text-xs text-[var(--text-secondary)] font-semibold">
                       {ci.item.totalHours.toFixed(1)} hrs
                     </span>
-                    <span className="text-xs text-[#86868B]">
+                    <span className="text-xs text-[var(--text-secondary)]">
                       {formatCurrency(ci.item.totalCost)}
                     </span>
-                    <span className="text-[10px] text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-full font-medium">
+                    <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full font-medium">
                       {ci.item.deductFromRetainer ? 'Retainer' : 'Hourly'}
                     </span>
                     {ci.item.recurrence && (
-                      <span className="text-[10px] text-[#4BA8A8] bg-[#4BA8A8]/10 px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5">
+                      <span className="text-[10px] text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                         </svg>

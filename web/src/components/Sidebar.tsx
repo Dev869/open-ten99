@@ -175,12 +175,12 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={cn(
         'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
-        checked ? 'bg-[#4BA8A8]' : 'bg-[#E5E5EA]'
+        checked ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
       )}
     >
       <span
         className={cn(
-          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-[var(--bg-card)] shadow-sm ring-0 transition duration-200 ease-in-out',
           checked ? 'translate-x-5' : 'translate-x-0'
         )}
       />
@@ -263,10 +263,10 @@ function CustomizePanel({
   const panelContent = (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-[#1A1A2E]">Customize Sidebar</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Customize Sidebar</h3>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E] transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -286,10 +286,10 @@ function CustomizePanel({
                 isHidden ? 'opacity-50' : ''
               )}
             >
-              <div className="flex-shrink-0 text-[#86868B]">
+              <div className="flex-shrink-0 text-[var(--text-secondary)]">
                 <item.Icon />
               </div>
-              <span className="flex-1 text-sm font-medium text-[#1A1A2E] truncate">
+              <span className="flex-1 text-sm font-medium text-[var(--text-primary)] truncate">
                 {item.label}
               </span>
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -299,8 +299,8 @@ function CustomizePanel({
                   className={cn(
                     'w-7 h-7 flex items-center justify-center rounded-lg transition-colors',
                     idx === 0
-                      ? 'text-[#E5E5EA] cursor-not-allowed'
-                      : 'text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E]'
+                      ? 'text-[var(--border)] cursor-not-allowed'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   <IconChevronUp />
@@ -311,8 +311,8 @@ function CustomizePanel({
                   className={cn(
                     'w-7 h-7 flex items-center justify-center rounded-lg transition-colors',
                     idx === orderedItems.length - 1
-                      ? 'text-[#E5E5EA] cursor-not-allowed'
-                      : 'text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E]'
+                      ? 'text-[var(--border)] cursor-not-allowed'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   <IconChevronDown />
@@ -326,7 +326,7 @@ function CustomizePanel({
 
       <button
         onClick={onReset}
-        className="mt-3 text-xs text-[#4BA8A8] hover:text-[#3d8f8f] font-medium text-center transition-colors py-1"
+        className="mt-3 text-xs text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium text-center transition-colors py-1"
       >
         Reset to Default
       </button>
@@ -341,7 +341,7 @@ function CustomizePanel({
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] animate-fade-in"
           onClick={onClose}
         />
-        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[70] bg-white rounded-xl border border-[#E5E5EA] shadow-xl p-4 animate-fade-in-up max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[70] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl p-4 animate-fade-in-up max-h-[80vh] overflow-y-auto">
           {panelContent}
         </div>
       </>
@@ -352,7 +352,7 @@ function CustomizePanel({
   return (
     <div
       ref={panelRef}
-      className="fixed left-[80px] bottom-14 z-[60] bg-white rounded-xl border border-[#E5E5EA] shadow-xl p-4 w-[300px] animate-fade-in-up"
+      className="fixed left-[80px] bottom-14 z-[60] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl p-4 w-[300px] animate-fade-in-up"
       style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
     >
       {panelContent}
@@ -467,7 +467,7 @@ export function Sidebar({
         {/* Brand mark */}
         <div className="flex items-center h-16 flex-shrink-0 px-4 md:justify-center">
           <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
-            <div className="w-10 h-10 rounded-full bg-[#1A1A2E] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -568,8 +568,8 @@ export function Sidebar({
               className={cn(
                 'hidden md:flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 mt-1',
                 customizeOpen
-                  ? 'bg-[#4BA8A8]/10 text-[#4BA8A8]'
-                  : 'text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E]'
+                  ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
               )}
               title="Customize sidebar"
             >

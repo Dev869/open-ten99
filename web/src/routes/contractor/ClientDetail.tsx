@@ -61,7 +61,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
   }, [client, clientItems]);
 
   if (!client) {
-    return <div className="text-center py-20 text-[#86868B]">Client not found.</div>;
+    return <div className="text-center py-20 text-[var(--text-secondary)]">Client not found.</div>;
   }
 
   async function handleSave() {
@@ -86,7 +86,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
       {/* Back Button */}
       <button
         onClick={() => navigate('/dashboard/clients')}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-[#86868B] hover:text-[#1A1A2E] hover:bg-white hover:shadow-sm border border-transparent hover:border-[#E5E5EA] active:scale-[0.97] transition-all mb-5 min-h-[44px]"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] hover:shadow-sm border border-transparent hover:border-[var(--border)] active:scale-[0.97] transition-all mb-5 min-h-[44px]"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
           <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -97,7 +97,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
       {/* Client Header */}
       <div className="bg-gradient-to-br from-[#1A1A2E] to-[#444] rounded-2xl p-6 mb-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[#4BA8A8] flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+          <div className="w-14 h-14 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
             {client.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1">
@@ -109,7 +109,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           </div>
           <button
             onClick={() => setEditing(!editing)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white/70 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/10 rounded-xl active:scale-[0.97] transition-all min-h-[44px]"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white/70 hover:text-white border border-white/20 hover:border-white/40 hover:bg-[var(--bg-card)]/10 rounded-xl active:scale-[0.97] transition-all min-h-[44px]"
           >
             {editing ? (
               <>
@@ -137,9 +137,9 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
       {/* Retainer Summary */}
       {retainerUsage && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] shadow-sm p-5 mb-4 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 mb-4 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
               Retainer
             </h2>
             <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                   }
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97] min-h-[44px] ${
                     client.retainerPaused
-                      ? 'bg-[#4BA8A8]/10 text-[#4BA8A8] hover:bg-[#4BA8A8]/20'
+                      ? 'bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20'
                       : 'bg-[#E67E22]/10 text-[#E67E22] hover:bg-[#E67E22]/20'
                   }`}
                 >
@@ -181,16 +181,16 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           </div>
           <div className="flex items-end gap-6">
             <div>
-              <div className="text-2xl font-extrabold text-[#1A1A2E]">
+              <div className="text-2xl font-extrabold text-[var(--text-primary)]">
                 {retainerUsage.remaining.toFixed(1)}
-                <span className="text-sm font-normal text-[#86868B]"> hrs remaining</span>
+                <span className="text-sm font-normal text-[var(--text-secondary)]"> hrs remaining</span>
               </div>
-              <div className="text-xs text-[#86868B] mt-1">
+              <div className="text-xs text-[var(--text-secondary)] mt-1">
                 {retainerUsage.used.toFixed(1)} of {retainerUsage.total} hrs used
               </div>
             </div>
             <div className="flex-1">
-              <div className="h-2 bg-[#F2F2F7] rounded-full overflow-hidden">
+              <div className="h-2 bg-[var(--bg-input)] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -201,7 +201,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
               </div>
             </div>
           </div>
-          <div className="text-xs text-[#86868B] mt-2">
+          <div className="text-xs text-[var(--text-secondary)] mt-2">
             Period: {formatDate(retainerUsage.periodStart)} — {formatDate(retainerUsage.periodEnd)}
             {' · '}Renews on the {client!.retainerRenewalDay}{ordinalSuffix(client!.retainerRenewalDay!)}
           </div>
@@ -210,61 +210,61 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
       {/* Edit Form */}
       {editing && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] shadow-sm p-5 mb-4 space-y-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 mb-4 space-y-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div>
-            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Name</label>
+            <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">Name</label>
             <input
               type="text"
               value={client.name}
               onChange={(e) => setClient({ ...client, name: e.target.value })}
-              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+              className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Email</label>
+            <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">Email</label>
             <input
               type="email"
               value={client.email}
               onChange={(e) => setClient({ ...client, email: e.target.value })}
-              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+              className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Phone</label>
+            <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">Phone</label>
             <input
               type="tel"
               value={client.phone ?? ''}
               onChange={(e) => setClient({ ...client, phone: e.target.value || undefined })}
-              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+              className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Company</label>
+            <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">Company</label>
             <input
               type="text"
               value={client.company ?? ''}
               onChange={(e) => setClient({ ...client, company: e.target.value || undefined })}
-              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+              className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Notes</label>
+            <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">Notes</label>
             <textarea
               value={client.notes ?? ''}
               onChange={(e) => setClient({ ...client, notes: e.target.value || undefined })}
               rows={3}
-              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] resize-none border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all"
+              className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] resize-none border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all"
             />
           </div>
 
           {/* Retainer Settings */}
-          <div className="border-t border-[#E5E5EA] pt-4">
-            <h3 className="text-xs text-[#86868B] uppercase font-semibold tracking-wide mb-3">
+          <div className="border-t border-[var(--border)] pt-4">
+            <h3 className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-3">
               Retainer
             </h3>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">
+                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
                   Hours / Month
                 </label>
                 <input
@@ -279,11 +279,11 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                       retainerHours: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
-                  className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+                  className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">
+                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
                   Renewal Day
                 </label>
                 <input
@@ -298,12 +298,12 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                       retainerRenewalDay: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
-                  className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
+                  className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
                 />
               </div>
             </div>
             {client.retainerHours && (
-              <label className="flex items-center gap-2 text-sm text-[#1A1A2E] mt-3">
+              <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] mt-3">
                 <input
                   type="checkbox"
                   checked={client.retainerPaused ?? false}
@@ -319,7 +319,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 active:scale-[0.98] transition-all min-h-[48px] mt-2"
+            className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 active:scale-[0.98] transition-all min-h-[48px] mt-2"
           >
             {saving ? (
               <>
@@ -340,7 +340,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           </button>
 
           {/* Delete Button */}
-          <div className="border-t border-[#E5E5EA] pt-4">
+          <div className="border-t border-[var(--border)] pt-4">
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 active:scale-[0.97] transition-all min-h-[44px]"
@@ -362,7 +362,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm animate-scale-in">
+          <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-sm animate-scale-in">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-500">
@@ -370,13 +370,13 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                   <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-[#1A1A2E] mb-1">Delete this client?</h3>
-              <p className="text-sm text-[#86868B]">This action cannot be undone. All client data will be permanently removed.</p>
+              <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">Delete this client?</h3>
+              <p className="text-sm text-[var(--text-secondary)]">This action cannot be undone. All client data will be permanently removed.</p>
             </div>
-            <div className="flex gap-3 p-5 border-t border-[#E5E5EA]">
+            <div className="flex gap-3 p-5 border-t border-[var(--border)]">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-3 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F5F5F7] active:scale-[0.98] transition-all min-h-[44px]"
+                className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.98] transition-all min-h-[44px]"
               >
                 Cancel
               </button>
@@ -393,7 +393,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
       {/* Work Items */}
       <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-        <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           Work Items ({clientItems.length})
         </h2>
         <div className="space-y-2">
@@ -409,16 +409,16 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
         {/* Empty State for Work Items */}
         {clientItems.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-xl border border-[#E5E5EA] animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-[#86868B]/50">
+          <div className="text-center py-16 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-[var(--text-secondary)]/50">
                 <rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M4 11h20" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M9 16h10M9 19h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <div className="text-sm font-semibold text-[#1A1A2E]">No work items yet</div>
-            <div className="text-xs text-[#86868B] mt-1 max-w-xs mx-auto">
+            <div className="text-sm font-semibold text-[var(--text-primary)]">No work items yet</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
               Work items linked to {client.name} will appear here.
             </div>
           </div>

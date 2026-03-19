@@ -15,16 +15,16 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center">
-        <div className="text-center text-[#86868B]">Work order not found.</div>
+      <div className="min-h-screen bg-[var(--bg-page)] flex items-center justify-center">
+        <div className="text-center text-[var(--text-secondary)]">Work order not found.</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]">
+    <div className="min-h-screen bg-[var(--bg-page)]">
       {/* Teal brand header */}
-      <div className="bg-[#4BA8A8]">
+      <div className="bg-[var(--accent)]">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-2">
           <div className="flex items-baseline gap-1">
             <span className="text-white font-black text-xl tracking-tight leading-none">DW</span>
@@ -39,7 +39,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
           <div className="flex-1 bg-[#E67E22]" />
           <div className="flex-1 bg-[#F1C40F]" />
           <div className="flex-1 bg-[#27AE60]" />
-          <div className="flex-1 bg-[#4BA8A8]" />
+          <div className="flex-1 bg-[var(--accent)]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
           <button
@@ -63,19 +63,19 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Line Items */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-sm p-5 mb-4">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
             Line Items
           </h2>
           <div className="space-y-3">
             {item.lineItems.map((li, i) => (
               <div key={li.id} className="flex gap-3 items-start">
-                <span className="text-xs font-semibold text-[#86868B] mt-0.5 w-5 text-right">
+                <span className="text-xs font-semibold text-[var(--text-secondary)] mt-0.5 w-5 text-right">
                   {i + 1}.
                 </span>
                 <div className="flex-1">
-                  <div className="text-sm text-[#1A1A2E]">{li.description}</div>
-                  <div className="text-xs text-[#86868B] mt-0.5">
+                  <div className="text-sm text-[var(--text-primary)]">{li.description}</div>
+                  <div className="text-xs text-[var(--text-secondary)] mt-0.5">
                     {li.hours} hrs · {formatCurrency(li.cost)}
                   </div>
                 </div>
@@ -85,14 +85,14 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
         </div>
 
         {/* Totals */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
+        <div className="bg-[var(--bg-card)] rounded-xl shadow-sm p-5 mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-[#86868B]">Total Hours</span>
+            <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
             <span className="text-sm font-semibold">{item.totalHours.toFixed(1)} hrs</span>
           </div>
-          <div className="flex justify-between items-center border-t border-[#F5F5F7] pt-2">
-            <span className="font-bold text-[#1A1A2E]">Total Cost</span>
-            <span className="text-xl font-extrabold text-[#4BA8A8]">
+          <div className="flex justify-between items-center border-t border-[var(--border)] pt-2">
+            <span className="font-bold text-[var(--text-primary)]">Total Cost</span>
+            <span className="text-xl font-extrabold text-[var(--accent)]">
               {formatCurrency(item.totalCost)}
             </span>
           </div>
@@ -104,7 +104,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
             href={item.pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full py-3 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold text-center hover:bg-[#3A9090] transition-colors"
+            className="block w-full py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold text-center hover:bg-[var(--accent-dark)] transition-colors"
           >
             Download PDF
           </a>

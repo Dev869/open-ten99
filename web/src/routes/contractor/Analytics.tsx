@@ -99,39 +99,39 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
 
   return (
     <div>
-      <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider mb-6">
+      <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
         Analytics
       </h1>
 
       {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="This Month" value={formatCurrency(stats.thisMonthRevenue)} color="#4BA8A8" />
+        <StatCard label="This Month" value={formatCurrency(stats.thisMonthRevenue)} color="var(--accent)" />
         <StatCard label="Last Month" value={formatCurrency(stats.lastMonthRevenue)} />
-        <StatCard label="All-Time Revenue" value={formatCurrency(stats.totalRevenue)} color="#27AE60" />
+        <StatCard label="All-Time Revenue" value={formatCurrency(stats.totalRevenue)} color="#D4873E" />
         <StatCard label="Avg Order" value={formatCurrency(stats.avgOrderValue)} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <StatCard label="Total Hours" value={`${stats.totalHours.toFixed(1)}h`} color="#4BA8A8" />
+        <StatCard label="Total Hours" value={`${stats.totalHours.toFixed(1)}h`} color="var(--accent)" />
         <StatCard label="Total Orders" value={String(stats.totalOrders)} />
       </div>
 
       {/* Monthly Revenue Chart */}
-      <div className="bg-white rounded-xl border border-[#E5E5EA] p-5 mb-6">
-        <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
           Monthly Revenue
         </h2>
         <div className="flex items-end gap-2 sm:gap-3 h-32 sm:h-40 lg:h-48">
           {monthlyRevenue.map((month) => (
             <div key={month.label} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[#86868B] hidden sm:inline">
+              <span className="text-[10px] text-[var(--text-secondary)] hidden sm:inline">
                 {month.revenue > 0 ? formatCurrency(month.revenue) : ''}
               </span>
               <div
-                className="w-full rounded-t-lg bg-[#4BA8A8] transition-all"
+                className="w-full rounded-t-lg bg-[var(--accent)] transition-all"
                 style={{ height: `${(month.revenue / maxRevenue) * 80}%`, minHeight: month.revenue > 0 ? 4 : 0 }}
               />
-              <span className="text-[10px] sm:text-xs font-semibold text-[#86868B]">{month.label}</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-[var(--text-secondary)]">{month.label}</span>
             </div>
           ))}
         </div>
@@ -139,8 +139,8 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* By Type */}
-        <div className="bg-white rounded-xl border border-[#E5E5EA] p-5">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
             By Type
           </h2>
           <div className="space-y-3">
@@ -151,14 +151,14 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
                   style={{ backgroundColor: typeColors[type] ?? '#999' }}
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-[#1A1A2E]">
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">
                     {WORK_ITEM_TYPE_LABELS[type as keyof typeof WORK_ITEM_TYPE_LABELS] ?? type}
                   </div>
-                  <div className="text-xs text-[#86868B]">
+                  <div className="text-xs text-[var(--text-secondary)]">
                     {data.count} items · {data.hours.toFixed(1)}h
                   </div>
                 </div>
-                <span className="text-sm font-bold text-[#1A1A2E]">
+                <span className="text-sm font-bold text-[var(--text-primary)]">
                   {formatCurrency(data.revenue)}
                 </span>
               </div>
@@ -167,27 +167,27 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
         </div>
 
         {/* By Client */}
-        <div className="bg-white rounded-xl border border-[#E5E5EA] p-5">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
             Top Clients
           </h2>
           <div className="space-y-3">
             {byClient.slice(0, 5).map((entry) => (
               <div key={entry.name} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#4BA8A8] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                   {entry.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-[#1A1A2E]">{entry.name}</div>
-                  <div className="text-xs text-[#86868B]">{entry.count} orders</div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{entry.name}</div>
+                  <div className="text-xs text-[var(--text-secondary)]">{entry.count} orders</div>
                 </div>
-                <span className="text-sm font-bold text-[#1A1A2E]">
+                <span className="text-sm font-bold text-[var(--text-primary)]">
                   {formatCurrency(entry.revenue)}
                 </span>
               </div>
             ))}
             {byClient.length === 0 && (
-              <div className="text-sm text-[#86868B] text-center py-4">No data yet.</div>
+              <div className="text-sm text-[var(--text-secondary)] text-center py-4">No data yet.</div>
             )}
           </div>
         </div>

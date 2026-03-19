@@ -28,7 +28,7 @@ const PortalDetail = lazy(() => import('./routes/portal/PortalDetail'));
 function Loading() {
   return (
     <div className="flex items-center justify-center h-full py-20">
-      <div className="text-sm text-[#8C7E6A]">Loading...</div>
+      <div className="text-sm text-[var(--text-secondary)]">Loading...</div>
     </div>
   );
 }
@@ -78,7 +78,7 @@ function ContractorLayout() {
             </svg>
           </button>
           <div className="flex-1 flex items-center justify-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#2C2417] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -189,7 +189,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
-          <div className="w-16 h-16 rounded-full bg-[#4BA8A8] flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
               <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

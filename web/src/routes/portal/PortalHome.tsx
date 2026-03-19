@@ -22,7 +22,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
   const rest = items.filter((i) => i.status !== 'inReview');
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]">
+    <div className="min-h-screen bg-[var(--bg-page)]">
       {/* Teal brand header */}
       <div className="bg-[#4BA8A8]">
         <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
@@ -42,7 +42,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
           <div className="flex-1 bg-[#4BA8A8]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <span className="font-bold text-[10px] text-[#4BA8A8] tracking-widest uppercase">
+          <span className="font-bold text-[10px] text-[var(--accent)] tracking-widest uppercase">
             OpenChanges
           </span>
           <h1 className="text-xl font-bold text-white mt-2">
@@ -58,7 +58,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
         {/* Pending Review */}
         {pending.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
               Needs Your Review ({pending.length})
             </h2>
             <div className="space-y-2">
@@ -66,19 +66,19 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
                 <button
                   key={item.id}
                   onClick={() => navigate(`/portal/${item.id}`)}
-                  className="w-full bg-white rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow border-l-4 border-[#4BA8A8]"
+                  className="w-full bg-[var(--bg-card)] rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow border-l-4 border-[var(--accent)]"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#1A1A2E] truncate">{item.subject}</div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.subject}</div>
                       <div className="flex gap-2 mt-1">
                         <TypeTag type={item.type} />
-                        <span className="text-xs text-[#86868B]">{formatDate(item.createdAt)}</span>
+                        <span className="text-xs text-[var(--text-secondary)]">{formatDate(item.createdAt)}</span>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
                       <StatusBadge status={item.status} />
-                      <div className="text-sm font-bold text-[#4BA8A8] mt-1">
+                      <div className="text-sm font-bold text-[var(--accent)] mt-1">
                         {formatCurrency(item.totalCost)}
                       </div>
                     </div>
@@ -92,7 +92,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
         {/* All Orders */}
         {rest.length > 0 && (
           <div>
-            <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+            <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
               All Work Orders
             </h2>
             <div className="space-y-2">
@@ -100,19 +100,19 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
                 <button
                   key={item.id}
                   onClick={() => navigate(`/portal/${item.id}`)}
-                  className="w-full bg-white rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow"
+                  className="w-full bg-[var(--bg-card)] rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-shadow"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#1A1A2E] truncate">{item.subject}</div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.subject}</div>
                       <div className="flex gap-2 mt-1">
                         <TypeTag type={item.type} />
-                        <span className="text-xs text-[#86868B]">{formatDate(item.createdAt)}</span>
+                        <span className="text-xs text-[var(--text-secondary)]">{formatDate(item.createdAt)}</span>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
                       <StatusBadge status={item.status} />
-                      <div className="text-sm font-bold text-[#1A1A2E] mt-1">
+                      <div className="text-sm font-bold text-[var(--text-primary)] mt-1">
                         {formatCurrency(item.totalCost)}
                       </div>
                     </div>
@@ -126,8 +126,8 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
         {items.length === 0 && (
           <div className="text-center py-20">
             <div className="text-5xl mb-4 opacity-40">✦</div>
-            <div className="text-lg font-bold text-[#1A1A2E]">No work orders</div>
-            <div className="text-sm text-[#86868B] mt-1">
+            <div className="text-lg font-bold text-[var(--text-primary)]">No work orders</div>
+            <div className="text-sm text-[var(--text-secondary)] mt-1">
               There are no work orders to review at this time.
             </div>
           </div>

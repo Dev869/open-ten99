@@ -24,7 +24,7 @@ export function WorkItemCard({
 
   return (
     <div
-      className="bg-[var(--bg-card)] rounded-xl p-3.5 border border-[#DDD5C8] flex items-start gap-3 group hover-lift"
+      className="bg-[var(--bg-card)] rounded-xl p-3.5 border border-[var(--border)] flex items-start gap-3 group hover-lift"
       style={{ borderLeft: `3px solid ${borderColor}` }}
     >
       {selectable && (
@@ -32,7 +32,7 @@ export function WorkItemCard({
           type="checkbox"
           checked={selected}
           onChange={() => onSelect?.(item.id!)}
-          className="mt-1 accent-[#4BA8A8]"
+          className="mt-1 accent-[var(--accent)]"
         />
       )}
       <Link
@@ -41,24 +41,24 @@ export function WorkItemCard({
       >
         <div className="flex justify-between items-start mb-1.5">
           <div className="min-w-0">
-            <div className="text-sm font-bold text-[#2C2417] truncate">
+            <div className="text-sm font-bold text-[var(--text-primary)] truncate">
               {item.subject}
             </div>
-            <div className="text-xs text-[#8C7E6A] mt-0.5">{clientName}</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-0.5">{clientName}</div>
           </div>
           <StatusBadge status={item.status} />
         </div>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <TypeTag type={item.type} />
           {!item.isBillable && (
-            <span className="text-[10px] font-semibold text-[#8C7E6A] bg-[#EDE9E2] px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full">
               Non-Billable
             </span>
           )}
-          <span className="ml-auto text-xs text-[#8C7E6A]">
+          <span className="ml-auto text-xs text-[var(--text-secondary)]">
             {formatHours(item.totalHours)}
           </span>
-          <span className="text-xs font-semibold text-[#2C2417]">
+          <span className="text-xs font-semibold text-[var(--text-primary)]">
             {formatCurrency(item.totalCost)}
           </span>
         </div>

@@ -13,15 +13,15 @@
 }
 
 .dark {
-  --bg-page: #1A1710;
-  --bg-card: #242018;
-  --bg-sidebar: #1E1B14;
-  --bg-input: #2E2A20;
-  --text-primary: #E8E0D0;
-  --text-secondary: #7A6F5E;
-  --border: #3A3428;
-  --accent: #4BA8A8;
-  --accent-dark: #5BC0C0;
+  --bg-page: #1C1710;
+  --bg-card: #2A2318;
+  --bg-sidebar: #211C14;
+  --bg-input: #342C1F;
+  --text-primary: #F0E8D8;
+  --text-secondary: #A89880;
+  --border: #3D3426;
+  --accent: #5BC4C4;
+  --accent-dark: #7DD5D5;
 }
 
 body {

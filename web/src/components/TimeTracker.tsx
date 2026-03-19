@@ -55,7 +55,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
         className={cn(
           'fixed bottom-6 right-6 z-30',
           'flex items-center gap-2 min-h-[48px] px-5 rounded-full shadow-lg',
-          'bg-[#4BA8A8] text-white font-semibold text-sm',
+          'bg-[var(--accent)] text-white font-semibold text-sm',
           'hover-lift cursor-pointer transition-all duration-200',
           isRunning && 'animate-pulse'
         )}
@@ -85,18 +85,18 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
     <div
       className={cn(
         'fixed bottom-6 right-6 z-30 w-80',
-        'bg-white rounded-2xl border border-[#E5E5EA] shadow-2xl',
+        'bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-2xl',
         'animate-scale-in'
       )}
     >
       {/* Header with minimize button */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <span className="text-xs font-semibold text-[#86868B] uppercase tracking-wider">
+        <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
           Time Tracker
         </span>
         <button
           onClick={() => setIsExpanded(false)}
-          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#F2F2F7] transition-colors text-[#86868B] hover:text-[#1A1A2E] cursor-pointer"
+          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--bg-input)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
@@ -109,14 +109,14 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
       <div className="px-5 py-4 text-center">
         <div
           className={cn(
-            'text-3xl font-bold text-[#1A1A2E] font-mono tracking-wide transition-all duration-300',
-            isRunning && 'text-[#4BA8A8]'
+            'text-3xl font-bold text-[var(--text-primary)] font-mono tracking-wide transition-all duration-300',
+            isRunning && 'text-[var(--accent)]'
           )}
           style={isRunning ? { textShadow: '0 0 20px rgba(75, 168, 168, 0.3)' } : undefined}
         >
           {formatTime(elapsedSeconds)}
         </div>
-        <div className="mt-1.5 text-xs text-[#86868B]">
+        <div className="mt-1.5 text-xs text-[var(--text-secondary)]">
           {selectedClient
             ? `${selectedClient.name}${description ? ' \u2022 ' + description : ''}`
             : 'No task selected'}
@@ -131,7 +131,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
             'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md',
             isRunning
               ? 'bg-[#E84855] hover:bg-[#D43D4A] text-white'
-              : 'bg-[#4BA8A8] hover:bg-[#3D9494] text-white'
+              : 'bg-[var(--accent)] hover:bg-[var(--accent-dark)] text-white'
           )}
         >
           {isRunning ? (
@@ -148,7 +148,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
         {(isRunning || elapsedSeconds > 0) && (
           <button
             onClick={handleStop}
-            className="w-10 h-10 rounded-full border border-[#E5E5EA] flex items-center justify-center hover:bg-[#F2F2F7] transition-colors cursor-pointer text-[#86868B] hover:text-[#1A1A2E]"
+            className="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center hover:bg-[var(--bg-input)] transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -159,15 +159,15 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
 
       {/* Task selector (when stopped) */}
       {!isRunning && (
-        <div className="border-t border-[#E5E5EA] px-5 py-4 space-y-3">
+        <div className="border-t border-[var(--border)] px-5 py-4 space-y-3">
           <div>
-            <label className="block text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
               Client
             </label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#E5E5EA] bg-[#F5F5F7] text-sm text-[#1A1A2E] outline-none focus:border-[#4BA8A8] focus:ring-1 focus:ring-[#4BA8A8]/20 transition-colors"
+              className="w-full h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors"
             >
               <option value="">Select a client...</option>
               {clients.map((c) => (
@@ -178,7 +178,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
               Description
             </label>
             <input
@@ -186,7 +186,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What are you working on?"
-              className="w-full h-9 px-3 rounded-lg border border-[#E5E5EA] bg-[#F5F5F7] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] outline-none focus:border-[#4BA8A8] focus:ring-1 focus:ring-[#4BA8A8]/20 transition-colors"
+              className="w-full h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors"
             />
           </div>
         </div>

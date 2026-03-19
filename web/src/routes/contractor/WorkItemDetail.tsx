@@ -38,7 +38,7 @@ export default function WorkItemDetail({
 
   if (!item) {
     return (
-      <div className="text-center py-20 text-[#86868B]">Work item not found.</div>
+      <div className="text-center py-20 text-[var(--text-secondary)]">Work item not found.</div>
     );
   }
 
@@ -158,7 +158,7 @@ export default function WorkItemDetail({
     <div className="max-w-4xl">
       <button
         onClick={() => navigate('/dashboard/work-items')}
-        className="text-sm text-[#86868B] hover:text-[#1A1A2E] mb-4"
+        className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
       >
         ← Back to Work Items
       </button>
@@ -185,7 +185,7 @@ export default function WorkItemDetail({
           {!item.isBillable && (
             <span className="text-xs text-white/60">Non-Billable</span>
           )}
-          <span className={`text-xs font-medium ${item.deductFromRetainer ? 'text-[#E67E22]' : 'text-[#4BA8A8]'}`}>
+          <span className={`text-xs font-medium ${item.deductFromRetainer ? 'text-[#E67E22]' : 'text-[var(--accent)]'}`}>
             {item.deductFromRetainer ? 'Retainer' : 'Hourly'}
           </span>
           {item.recurrence && (
@@ -198,20 +198,20 @@ export default function WorkItemDetail({
 
       {/* Original Email */}
       {item.sourceEmail && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] mb-4 overflow-hidden">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] mb-4 overflow-hidden">
           <button
             onClick={() => setShowEmail(!showEmail)}
             className="w-full flex items-center justify-between p-4 text-left"
           >
             <div className="flex items-center gap-2">
-              <span className="text-[#4BA8A8]">✉</span>
-              <span className="text-sm font-semibold text-[#1A1A2E]">Original Email</span>
+              <span className="text-[var(--accent)]">✉</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Original Email</span>
             </div>
-            <span className="text-xs text-[#86868B]">{showEmail ? '▲' : '▼'}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{showEmail ? '▲' : '▼'}</span>
           </button>
           {showEmail && (
-            <div className="px-4 pb-4 border-t border-[#F5F5F7]">
-              <p className="text-sm text-[#86868B] whitespace-pre-wrap mt-3">
+            <div className="px-4 pb-4 border-t border-[var(--border)]">
+              <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap mt-3">
                 {item.sourceEmail}
               </p>
             </div>
@@ -220,14 +220,14 @@ export default function WorkItemDetail({
       )}
 
       {/* Line Items */}
-      <div className="bg-white rounded-xl border border-[#E5E5EA] p-4 mb-4">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 mb-4">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-bold text-[#1A1A2E] uppercase tracking-wide">
+          <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">
             Line Items
           </h2>
           <button
             onClick={addLineItem}
-            className="text-xs font-semibold text-[#4BA8A8] hover:underline"
+            className="text-xs font-semibold text-[var(--accent)] hover:underline"
           >
             + Add Item
           </button>
@@ -235,7 +235,7 @@ export default function WorkItemDetail({
         <div className="space-y-3">
           {item.lineItems.map((li, i) => (
             <div key={li.id} className="flex gap-3 items-start">
-              <span className="text-xs font-semibold text-[#86868B] mt-2 w-5 text-right">
+              <span className="text-xs font-semibold text-[var(--text-secondary)] mt-2 w-5 text-right">
                 {i + 1}.
               </span>
               <div className="flex-1 space-y-2">
@@ -244,10 +244,10 @@ export default function WorkItemDetail({
                   onChange={(e) => updateLineItem(i, 'description', e.target.value)}
                   placeholder="Description"
                   rows={1}
-                  className="w-full px-3 py-2 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                  className="w-full px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-1 text-xs text-[#86868B]">
+                  <label className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
                     Hours:
                     <input
                       type="number"
@@ -255,11 +255,11 @@ export default function WorkItemDetail({
                       onChange={(e) => updateLineItem(i, 'hours', e.target.value)}
                       step="0.5"
                       min="0"
-                      className="w-16 px-2 py-1 bg-[#F2F2F7] rounded text-sm font-medium text-[#1A1A2E] focus:outline-none"
+                      className="w-16 px-2 py-1 bg-[var(--bg-input)] rounded text-sm font-medium text-[var(--text-primary)] focus:outline-none"
                     />
                   </label>
-                  <span className="text-xs text-[#86868B]">
-                    Cost: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(li.cost)}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    Cost: <span className="font-semibold text-[var(--text-primary)]">{formatCurrency(li.cost)}</span>
                   </span>
                   <button
                     onClick={() => removeLineItem(i)}
@@ -275,11 +275,11 @@ export default function WorkItemDetail({
       </div>
 
       {/* Schedule & Billing */}
-      <div className="bg-white rounded-xl border border-[#E5E5EA] p-4 mb-4">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 mb-4">
         <div className="space-y-3">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
                 Business Days
               </label>
               <input
@@ -294,16 +294,16 @@ export default function WorkItemDetail({
                     estimatedBusinessDays: e.target.value ? Number(e.target.value) : undefined,
                   })
                 }
-                className="w-full mt-1 px-3 py-2 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                className="w-full mt-1 px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
               {item.estimatedBusinessDays && !item.scheduledDate && (
-                <p className="text-xs text-[#86868B] mt-1">
+                <p className="text-xs text-[var(--text-secondary)] mt-1">
                   Scheduled on approval: {formatDate(addBusinessDays(new Date(), item.estimatedBusinessDays))}
                 </p>
               )}
             </div>
             <div className="flex-1">
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
                 Scheduled Date
               </label>
               <input
@@ -315,10 +315,10 @@ export default function WorkItemDetail({
                     scheduledDate: e.target.value ? new Date(e.target.value) : undefined,
                   })
                 }
-                className="w-full mt-1 px-3 py-2 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                className="w-full mt-1 px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
               {item.scheduledDate && item.estimatedBusinessDays && (
-                <p className="text-xs text-[#86868B] mt-1">
+                <p className="text-xs text-[var(--text-secondary)] mt-1">
                   Set by {item.estimatedBusinessDays} business day estimate
                 </p>
               )}
@@ -327,14 +327,14 @@ export default function WorkItemDetail({
           {/* Recurrence (maintenance) */}
           {item.type === 'maintenance' && (
             <div>
-              <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide">
+              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
                 Repeat
               </label>
               <div className="flex gap-1.5 mt-1 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setItem({ ...item!, recurrence: undefined })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!item.recurrence ? 'bg-[#1A1A2E] text-white' : 'bg-[#F2F2F7] text-[#86868B]'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!item.recurrence ? 'bg-[var(--text-primary)] text-[var(--bg-page)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                 >
                   None
                 </button>
@@ -343,7 +343,7 @@ export default function WorkItemDetail({
                     key={freq}
                     type="button"
                     onClick={() => setItem({ ...item!, recurrence: { frequency: freq } })}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === freq ? 'bg-[#E67E22] text-white' : 'bg-[#F2F2F7] text-[#86868B]'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === freq ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                   >
                     {RECURRENCE_LABELS[freq]}
                   </button>
@@ -351,14 +351,14 @@ export default function WorkItemDetail({
                 <button
                   type="button"
                   onClick={() => setItem({ ...item!, recurrence: { frequency: 'custom', customDays: item.recurrence?.customDays ?? 3 } })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === 'custom' ? 'bg-[#E67E22] text-white' : 'bg-[#F2F2F7] text-[#86868B]'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === 'custom' ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                 >
                   Custom
                 </button>
               </div>
               {item.recurrence?.frequency === 'custom' && (
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-[#86868B]">Every</span>
+                  <span className="text-xs text-[var(--text-secondary)]">Every</span>
                   <input
                     type="number"
                     min="1"
@@ -373,29 +373,29 @@ export default function WorkItemDetail({
                         },
                       })
                     }
-                    className="w-16 px-2 py-1.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] text-center focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
+                    className="w-16 px-2 py-1.5 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
                   />
-                  <span className="text-xs text-[#86868B]">days</span>
+                  <span className="text-xs text-[var(--text-secondary)]">days</span>
                 </div>
               )}
             </div>
           )}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
               Billing Type
             </label>
-            <div className="flex items-center gap-1 mt-1 bg-[#F2F2F7] rounded-lg p-0.5 text-xs font-semibold w-fit">
+            <div className="flex items-center gap-1 mt-1 bg-[var(--bg-input)] rounded-lg p-0.5 text-xs font-semibold w-fit">
               <button
                 type="button"
                 onClick={() => setItem({ ...item!, deductFromRetainer: false })}
-                className={`px-4 py-1.5 rounded-md transition-colors ${!item.deductFromRetainer ? 'bg-[#4BA8A8] text-white' : 'text-[#86868B]'}`}
+                className={`px-4 py-1.5 rounded-md transition-colors ${!item.deductFromRetainer ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)]'}`}
               >
                 Hourly
               </button>
               <button
                 type="button"
                 onClick={() => setItem({ ...item!, deductFromRetainer: true })}
-                className={`px-4 py-1.5 rounded-md transition-colors ${item.deductFromRetainer ? 'bg-[#E67E22] text-white' : 'text-[#86868B]'}`}
+                className={`px-4 py-1.5 rounded-md transition-colors ${item.deductFromRetainer ? 'bg-[#E67E22] text-white' : 'text-[var(--text-secondary)]'}`}
               >
                 Retainer
               </button>
@@ -405,22 +405,22 @@ export default function WorkItemDetail({
       </div>
 
       {/* Totals */}
-      <div className="bg-white rounded-xl border border-[#E5E5EA] p-5 mb-6">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-[#86868B]">Total Hours</span>
+          <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
           <span className="text-sm font-semibold">{item.totalHours.toFixed(1)} hrs</span>
         </div>
-        <div className="flex justify-between items-center mb-2 border-t border-[#F5F5F7] pt-2">
-          <span className="text-sm text-[#86868B]">Hourly Rate</span>
+        <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
+          <span className="text-sm text-[var(--text-secondary)]">Hourly Rate</span>
           <span className="text-sm font-semibold">{formatCurrency(hourlyRate)}</span>
         </div>
-        <div className="flex justify-between items-center border-t border-[#F5F5F7] pt-2">
-          <span className="font-bold text-[#1A1A2E]">Total Cost</span>
-          <span className="text-xl font-extrabold text-[#4BA8A8]">
+        <div className="flex justify-between items-center border-t border-[var(--border)] pt-2">
+          <span className="font-bold text-[var(--text-primary)]">Total Cost</span>
+          <span className="text-xl font-extrabold text-[var(--accent)]">
             {formatCurrency(item.totalCost)}
           </span>
         </div>
-        <div className="flex justify-between items-center border-t border-[#F5F5F7] pt-2 mt-2">
+        <div className="flex justify-between items-center border-t border-[var(--border)] pt-2 mt-2">
           {item.deductFromRetainer ? (
             <>
               <span className="text-sm text-[#E67E22] font-medium">Retainer Deduction</span>
@@ -430,8 +430,8 @@ export default function WorkItemDetail({
             </>
           ) : (
             <>
-              <span className="text-sm text-[#4BA8A8] font-medium">Billing</span>
-              <span className="text-sm font-semibold text-[#4BA8A8]">Hourly</span>
+              <span className="text-sm text-[var(--accent)] font-medium">Billing</span>
+              <span className="text-sm font-semibold text-[var(--accent)]">Hourly</span>
             </>
           )}
         </div>
@@ -441,21 +441,21 @@ export default function WorkItemDetail({
       <div className="flex gap-3">
         <button
           onClick={handleDiscard}
-          className="flex-1 py-3 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+          className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
         >
           Discard
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="py-3 px-6 rounded-xl border border-[#4BA8A8] text-sm font-semibold text-[#4BA8A8] hover:bg-[#4BA8A8]/5 disabled:opacity-50 transition-colors"
+          className="py-3 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
         <button
           onClick={handleApproveAndGenerate}
           disabled={generatingPdf}
-          className="flex-1 py-3 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+          className="flex-1 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
         >
           {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
         </button>
@@ -473,7 +473,7 @@ export default function WorkItemDetail({
             setPreviewUrl(blobUrl);
             setShowPdfPreview(true);
           }}
-          className="w-full mt-3 py-3 rounded-xl border border-[#4BA8A8] text-sm font-semibold text-[#4BA8A8] hover:bg-[#4BA8A8]/5 transition-colors"
+          className="w-full mt-3 py-3 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors"
         >
           View PDF
         </button>
@@ -483,7 +483,7 @@ export default function WorkItemDetail({
       {client?.email && (
         <button
           onClick={handleSendToClient}
-          className="w-full mt-3 py-3 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#1A1A2E] hover:bg-[#F2F2F7] transition-colors"
+          className="w-full mt-3 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
         >
           Send to Client →
         </button>
@@ -492,14 +492,14 @@ export default function WorkItemDetail({
       {/* PDF Preview Modal */}
       {showPdfPreview && previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl h-[85vh] flex flex-col mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#F5F5F7]">
-              <h3 className="text-sm font-bold text-[#1A1A2E]">Change Order Preview</h3>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-3xl h-[85vh] flex flex-col mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Change Order Preview</h3>
               <div className="flex items-center gap-2">
                 <a
                   href={previewUrl}
                   download={`change-order-${item.id}.pdf`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4BA8A8] border border-[#4BA8A8] hover:bg-[#4BA8A8]/5 transition-colors"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--accent)] border border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors"
                 >
                   Download PDF
                 </a>
@@ -509,7 +509,7 @@ export default function WorkItemDetail({
                     if (previewUrl) URL.revokeObjectURL(previewUrl);
                     setPreviewUrl(null);
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
                 >
                   ✕
                 </button>

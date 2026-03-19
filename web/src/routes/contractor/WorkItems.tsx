@@ -105,13 +105,13 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
   return (
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
+        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Work Items
         </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={handleExport}
-            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] active:scale-[0.97] transition-all"
+            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -122,7 +122,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
           </button>
           <button
             onClick={() => setShowNewOrder(true)}
-            className="px-4 py-2 min-h-[44px] bg-[#4BA8A8] text-white text-sm font-semibold rounded-full hover:bg-[#3A9090] transition-colors"
+            className="px-4 py-2 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-full hover:bg-[var(--accent-dark)] transition-colors"
           >
             + New Work Order
           </button>
@@ -136,7 +136,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search work items..."
-          className="w-full px-4 py-2.5 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+          className="w-full px-4 py-2.5 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
         />
       </div>
 
@@ -148,8 +148,8 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-xl border border-[#E5E5EA]">
-          <span className="text-sm text-[#86868B]">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)]">
+          <span className="text-sm text-[var(--text-secondary)]">
             {selectedIds.size} selected
           </span>
           <button
@@ -168,7 +168,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs min-h-[44px] text-[#86868B] hover:text-[#1A1A2E] sm:ml-auto"
+            className="text-xs min-h-[44px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] sm:ml-auto"
           >
             Clear
           </button>
@@ -193,8 +193,8 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
       {filtered.length === 0 && (
         <div className="text-center py-20">
           <div className="text-5xl mb-4 opacity-40">✦</div>
-          <div className="text-lg font-bold text-[#1A1A2E]">Nothing here yet</div>
-          <div className="text-sm text-[#86868B] mt-1">
+          <div className="text-lg font-bold text-[var(--text-primary)]">Nothing here yet</div>
+          <div className="text-sm text-[var(--text-secondary)] mt-1">
             Try adjusting your filters or create a new work order.
           </div>
         </div>

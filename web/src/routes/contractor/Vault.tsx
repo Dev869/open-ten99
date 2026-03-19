@@ -27,7 +27,7 @@ function serviceInfo(id: string) {
   const found = VAULT_SERVICES.find((s) => s.id === id);
   if (found) return found;
   // Custom service — use the id as the label
-  return { id, label: id, color: '#86868B' } as const;
+  return { id, label: id, color: 'var(--text-secondary)' } as const;
 }
 
 /* ── Props ────────────────────────────────────────── */
@@ -207,13 +207,13 @@ export default function Vault({ user, clients }: VaultProps) {
   if (metaLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 animate-fade-in-up">
-        <div className="w-12 h-12 rounded-2xl bg-[#1A1A2E] flex items-center justify-center mb-4">
+        <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center mb-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0110 0v4" />
           </svg>
         </div>
-        <div className="text-sm text-[#86868B]">Loading vault...</div>
+        <div className="text-sm text-[var(--text-secondary)]">Loading vault...</div>
       </div>
     );
   }
@@ -229,16 +229,16 @@ export default function Vault({ user, clients }: VaultProps) {
   return (
     <div className="max-w-3xl animate-fade-in-up">
       {/* Encryption status banner */}
-      <div className="py-2 px-4 rounded-xl bg-[#1A1A2E]/5 flex items-center gap-3 text-xs text-[#86868B] mb-4 flex-wrap">
+      <div className="py-2 px-4 rounded-xl bg-[var(--bg-input)] flex items-center gap-3 text-xs text-[var(--text-secondary)] mb-4 flex-wrap">
         <span className="inline-flex items-center gap-1.5 font-medium">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4BA8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
           End-to-end encrypted
         </span>
-        <span className="text-[#C7C7CC]">&middot;</span>
+        <span className="text-[var(--text-secondary)]">&middot;</span>
         <span>{credentials.length} credential{credentials.length !== 1 ? 's' : ''}</span>
-        <span className="text-[#C7C7CC]">&middot;</span>
+        <span className="text-[var(--text-secondary)]">&middot;</span>
         <span className="inline-flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -251,14 +251,14 @@ export default function Vault({ user, clients }: VaultProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
+          <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
             Key Vault
           </h1>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => { setEditingCred(null); setShowModal(true); }}
-            className="inline-flex items-center gap-2 py-2.5 px-5 min-h-[44px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] active:scale-[0.97] transition-all"
+            className="inline-flex items-center gap-2 py-2.5 px-5 min-h-[44px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -267,7 +267,7 @@ export default function Vault({ user, clients }: VaultProps) {
           </button>
           <button
             onClick={lock}
-            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] active:scale-[0.97] transition-all"
+            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -285,7 +285,7 @@ export default function Vault({ user, clients }: VaultProps) {
           height="18"
           viewBox="0 0 18 18"
           fill="none"
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868B] pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none"
         >
           <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.8" />
           <path d="M11.5 11.5L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -295,7 +295,7 @@ export default function Vault({ user, clients }: VaultProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search credentials..."
-          className="w-full pl-11 pr-4 py-2.5 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] shadow-sm transition-shadow"
+          className="w-full pl-11 pr-4 py-2.5 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-sm transition-shadow"
         />
       </div>
 
@@ -305,7 +305,7 @@ export default function Vault({ user, clients }: VaultProps) {
           onClick={() => setFilter('all')}
           className={cn(
             'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
-            filter === 'all' ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
+            filter === 'all' ? 'bg-[var(--accent)] text-white' : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)]',
           )}
         >
           All ({credentials.length})
@@ -316,7 +316,7 @@ export default function Vault({ user, clients }: VaultProps) {
             onClick={() => setFilter(c.id!)}
             className={cn(
               'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
-              filter === c.id ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
+              filter === c.id ? 'bg-[var(--accent)] text-white' : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)]',
             )}
           >
             {c.name}
@@ -327,17 +327,17 @@ export default function Vault({ user, clients }: VaultProps) {
       {/* Credentials */}
       {filtered.length === 0 ? (
         <div className="text-center py-20 animate-fade-in-up">
-          <div className="mx-auto mb-5 w-20 h-20 rounded-2xl bg-[#1A1A2E]/5 flex items-center justify-center">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1A1A2E" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-30">
+          <div className="mx-auto mb-5 w-20 h-20 rounded-2xl bg-[var(--bg-input)] flex items-center justify-center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-30">
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
               <circle cx="12" cy="16" r="1" />
             </svg>
           </div>
-          <div className="text-base font-semibold text-[#1A1A2E]">
+          <div className="text-base font-semibold text-[var(--text-primary)]">
             {credentials.length === 0 ? 'Your vault is empty' : 'No matching credentials'}
           </div>
-          <div className="text-sm text-[#86868B] mt-1.5 max-w-xs mx-auto">
+          <div className="text-sm text-[var(--text-secondary)] mt-1.5 max-w-xs mx-auto">
             {credentials.length === 0
               ? 'Store API keys, passwords, and service credentials for your clients — all encrypted end-to-end.'
               : 'Try adjusting your search or filter.'}
@@ -345,7 +345,7 @@ export default function Vault({ user, clients }: VaultProps) {
           {credentials.length === 0 && (
             <button
               onClick={() => { setEditingCred(null); setShowModal(true); }}
-              className="inline-flex items-center gap-2 mt-5 py-2.5 px-5 min-h-[44px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] active:scale-[0.97] transition-all"
+              className="inline-flex items-center gap-2 mt-5 py-2.5 px-5 min-h-[44px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -425,21 +425,21 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
             <circle cx="12" cy="16" r="1" />
           </svg>
         </div>
-        <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
+        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Create Your Vault
         </h1>
-        <p className="text-sm text-[#86868B] mt-2 max-w-xs mx-auto">
+        <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-xs mx-auto">
           Set a master password to encrypt your client credentials. This password is never stored — if you forget it, your data cannot be recovered.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-lg p-6 space-y-4">
         <div>
-          <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
             Master Password
           </label>
           <div className="relative">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>
@@ -449,7 +449,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
               placeholder="At least 8 characters"
               autoFocus
-              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
             />
           </div>
           {strengthLabel && (
@@ -457,7 +457,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
               <p className={cn('text-xs font-medium', strengthColor)}>
                 Strength: {strengthLabel}
               </p>
-              <div className="mt-1 h-1 rounded-full bg-[#E5E5EA] overflow-hidden">
+              <div className="mt-1 h-1 rounded-full bg-[var(--border)] overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-300',
@@ -469,11 +469,11 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
           )}
         </div>
         <div>
-          <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
             Confirm Password
           </label>
           <div className="relative">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>
@@ -482,7 +482,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
               value={confirm}
               onChange={(e) => { setConfirm(e.target.value); setError(''); }}
               placeholder="Repeat your password"
-              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
             />
           </div>
         </div>
@@ -492,7 +492,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
+          className="w-full py-3 min-h-[48px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -501,7 +501,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
         </button>
       </form>
 
-      <p className="text-center text-[10px] text-[#86868B] mt-4 max-w-xs mx-auto leading-relaxed">
+      <p className="text-center text-[10px] text-[var(--text-secondary)] mt-4 max-w-xs mx-auto leading-relaxed">
         Credentials are encrypted with AES-256-GCM using a key derived from your master password via PBKDF2 (600k iterations). The plaintext never leaves your browser.
       </p>
     </div>
@@ -536,17 +536,17 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
             <path d="M7 11V7a5 5 0 0110 0v4" />
           </svg>
         </div>
-        <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
+        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Vault Locked
         </h1>
-        <p className="text-sm text-[#86868B] mt-2">
+        <p className="text-sm text-[var(--text-secondary)] mt-2">
           Enter your master password to unlock.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-lg p-6 space-y-4">
         <div className="relative">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
             <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
           </svg>
           <input
@@ -556,7 +556,7 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
             placeholder="Master password"
             autoFocus
             className={cn(
-              'w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow',
+              'w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow',
               error ? 'border-red-300 animate-[shake_0.3s_ease-in-out]' : 'border-transparent',
             )}
           />
@@ -567,7 +567,7 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
+          className="w-full py-3 min-h-[48px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -624,7 +624,7 @@ function CredentialCard({
 
   return (
     <div
-      className="rounded-xl border border-[#E5E5EA] overflow-hidden animate-fade-in-up hover-lift active:scale-[0.97] transition-transform"
+      className="rounded-xl border border-[var(--border)] overflow-hidden animate-fade-in-up hover-lift active:scale-[0.97] transition-transform"
       style={{ animationDelay: `${index * 40}ms`, borderLeft: `4px solid ${svc.color}`, background: `linear-gradient(to right, ${svc.color}08, transparent 40%) white` }}
     >
       {/* Header — always visible */}
@@ -639,16 +639,16 @@ function CredentialCard({
           {svc.label.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-[#1A1A2E] truncate">{credential.label}</div>
+          <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{credential.label}</div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ color: svc.color, backgroundColor: `${svc.color}15` }}>
               {svc.label}
             </span>
-            <span className="text-xs text-[#86868B]">{clientName}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{clientName}</span>
           </div>
         </div>
         <svg
-          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="2" strokeLinecap="round"
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
           className={cn('transition-transform duration-200 flex-shrink-0', expanded && 'rotate-180')}
         >
           <polyline points="6 9 12 15 18 9" />
@@ -657,7 +657,7 @@ function CredentialCard({
 
       {/* Expanded details */}
       {expanded && hasFields && (
-        <div className="px-4 pb-4 space-y-2 border-t border-[#F2F2F7] pt-3 bg-[#FAFAFA]">
+        <div className="px-4 pb-4 space-y-2 border-t border-[var(--border)] pt-3 bg-[var(--bg-page)]">
           {fields.filter((f) => decrypted?.[f.key]).map((f, idx) => {
             const val = decrypted?.[f.key];
             if (!val) return null;
@@ -665,11 +665,11 @@ function CredentialCard({
             const displayVal = isRevealed ? val : '\u2022'.repeat(Math.min(val.length, 24));
 
             return (
-              <div key={f.key} className={cn('flex items-center gap-2', idx % 2 === 0 && 'bg-white rounded-lg px-2 py-1.5')}>
-                <span className="text-xs text-[#86868B] w-20 flex-shrink-0">{f.label}</span>
+              <div key={f.key} className={cn('flex items-center gap-2', idx % 2 === 0 && 'bg-[var(--bg-card)] rounded-lg px-2 py-1.5')}>
+                <span className="text-xs text-[var(--text-secondary)] w-20 flex-shrink-0">{f.label}</span>
                 <span className={cn(
                   'flex-1 text-sm truncate',
-                  f.key === 'notes' ? 'text-[#86868B]' : 'text-[#1A1A2E] font-mono text-xs',
+                  f.key === 'notes' ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)] font-mono text-xs',
                   !isRevealed && f.sensitive && 'tracking-wider',
                 )}>
                   {displayVal}
@@ -678,7 +678,7 @@ function CredentialCard({
                   {f.sensitive && (
                     <button
                       onClick={() => toggleReveal(f.key)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--bg-input)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                       title={isRevealed ? 'Hide' : 'Reveal'}
                     >
                       {isRevealed ? (
@@ -697,7 +697,7 @@ function CredentialCard({
                   )}
                   <button
                     onClick={() => copyValue(f.key, val)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--bg-input)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                     title="Copy"
                   >
                     {copied === f.key ? (
@@ -720,7 +720,7 @@ function CredentialCard({
           <div className="flex items-center gap-2 pt-2">
             <button
               onClick={onEdit}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 hover:bg-[#4BA8A8]/20 min-h-[32px] transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 min-h-[32px] transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 3a2.85 2.85 0 014 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
@@ -745,7 +745,7 @@ function CredentialCard({
               <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium text-[#86868B] border border-[#E5E5EA] min-h-[32px] transition-colors hover:bg-[#F2F2F7]"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] border border-[var(--border)] min-h-[32px] transition-colors hover:bg-[var(--bg-input)]"
                 >
                   Cancel
                 </button>
@@ -823,17 +823,17 @@ function CredentialModal({
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <form
         onSubmit={handleSubmit}
-        className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-scale-in"
+        className="relative bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-scale-in"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white z-10 flex justify-between items-center px-5 py-4 border-b border-[#E5E5EA]">
-          <h2 className="text-lg font-extrabold text-[#1A1A2E] uppercase tracking-wide">
+        <div className="sticky top-0 bg-[var(--bg-card)] z-10 flex justify-between items-center px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-lg font-extrabold text-[var(--text-primary)] uppercase tracking-wide">
             {existing ? 'Edit Credential' : 'Add Credential'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -845,7 +845,7 @@ function CredentialModal({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {/* Service */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-2">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-2">
               Service
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -856,8 +856,8 @@ function CredentialModal({
                   onClick={() => setService(s.id as VaultServiceId)}
                   className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl min-h-[40px] text-xs font-semibold transition-all active:scale-[0.95]"
                   style={{
-                    backgroundColor: service === s.id ? s.color : '#F5F5F7',
-                    color: service === s.id ? 'white' : '#86868B',
+                    backgroundColor: service === s.id ? s.color : 'var(--bg-input)',
+                    color: service === s.id ? 'white' : 'var(--text-secondary)',
                   }}
                 >
                   <span
@@ -879,23 +879,23 @@ function CredentialModal({
                 onChange={(e) => setCustomService(e.target.value)}
                 placeholder="Enter service name (e.g. Cloudflare, DigitalOcean)"
                 autoFocus
-                className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                className="w-full px-3 py-3 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
           )}
 
           {/* Divider */}
-          <div className="border-t border-[#F2F2F7] my-4" />
+          <div className="border-t border-[var(--border)] my-4" />
 
           {/* Client */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Client
             </label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             >
               <option value="">Select a client</option>
               {clients.map((c) => (
@@ -906,7 +906,7 @@ function CredentialModal({
 
           {/* Label */}
           <div className="mt-3">
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Label
             </label>
             <input
@@ -914,16 +914,16 @@ function CredentialModal({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production API Key"
-              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#F2F2F7] my-4" />
+          <div className="border-t border-[var(--border)] my-4" />
 
           {/* Username */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Username / Email
             </label>
             <input
@@ -932,13 +932,13 @@ function CredentialModal({
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Optional"
               autoComplete="off"
-              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>
 
           {/* Password */}
           <div className="mt-3">
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Password / Secret
             </label>
             <div className="relative">
@@ -948,12 +948,12 @@ function CredentialModal({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Optional"
                 autoComplete="new-password"
-                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
+                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E] transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   {showPassword ? (
@@ -975,7 +975,7 @@ function CredentialModal({
 
           {/* API Key */}
           <div className="mt-3">
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               API Key
             </label>
             <div className="relative">
@@ -985,12 +985,12 @@ function CredentialModal({
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Optional"
                 autoComplete="off"
-                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
+                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E] transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   {showApiKey ? (
@@ -1011,11 +1011,11 @@ function CredentialModal({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#F2F2F7] my-4" />
+          <div className="border-t border-[var(--border)] my-4" />
 
           {/* Notes */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide block mb-1.5">
               Notes
             </label>
             <textarea
@@ -1023,13 +1023,13 @@ function CredentialModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional context, URLs, etc."
               rows={2}
-              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>
         </div>
 
         {/* Encryption indicator */}
-        <div className="text-[10px] text-[#86868B] text-center py-2 flex items-center justify-center gap-1">
+        <div className="text-[10px] text-[var(--text-secondary)] text-center py-2 flex items-center justify-center gap-1">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0110 0v4" />
@@ -1038,18 +1038,18 @@ function CredentialModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white z-10 flex gap-3 px-5 py-4 border-t border-[#E5E5EA]">
+        <div className="sticky bottom-0 bg-[var(--bg-card)] z-10 flex gap-3 px-5 py-4 border-t border-[var(--border)]">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 min-h-[48px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+            className="flex-1 py-3 min-h-[48px] rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!isValid || saving}
-            className="flex-1 py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 py-3 min-h-[48px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
