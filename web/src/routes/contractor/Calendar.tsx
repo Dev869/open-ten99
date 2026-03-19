@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import type { WorkItem, Client, RecurrenceFrequency } from '../../lib/types';
 import { typeColor } from '../../lib/theme';
 import { WORK_ITEM_TYPE_LABELS, RECURRENCE_LABELS } from '../../lib/types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, cn } from '../../lib/utils';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +21,8 @@ interface CalendarItem {
   /** True when this is a generated recurring instance, not the original. */
   isRecurring: boolean;
 }
+
+/* ── Date helpers ─────────────────────────────────── */
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
@@ -45,10 +47,6 @@ function sameDay(a: Date, b: Date) {
   );
 }
 
-/**
- * Advance a date by the given recurrence frequency.
- * Returns a new Date; does not mutate the input.
- */
 function advanceByFrequency(date: Date, frequency: RecurrenceFrequency, customDays?: number): Date {
   const d = new Date(date);
   switch (frequency) {
@@ -71,43 +69,36 @@ function advanceByFrequency(date: Date, frequency: RecurrenceFrequency, customDa
   return d;
 }
 
-/**
- * Generate virtual recurring CalendarItem entries for items that have a recurrence,
- * limited to the window [rangeStart, rangeEnd].
- */
 function generateRecurrences(
   items: WorkItem[],
   rangeStart: Date,
   rangeEnd: Date,
 ): CalendarItem[] {
   const results: CalendarItem[] = [];
-
   for (const item of items) {
     if (!item.recurrence) continue;
-
     const baseDate = itemDate(item);
     const { frequency, customDays, endDate } = item.recurrence;
-
-    // Walk forward from the base date, generating occurrences
     let next = advanceByFrequency(baseDate, frequency, customDays);
     while (next <= rangeEnd) {
-      // Stop if past the recurrence end date
       if (endDate && next > endDate) break;
-
-      // Only include if within the visible range
       if (next >= rangeStart) {
-        results.push({
-          item,
-          displayDate: new Date(next),
-          isRecurring: true,
-        });
+        results.push({ item, displayDate: new Date(next), isRecurring: true });
       }
       next = advanceByFrequency(next, frequency, customDays);
     }
   }
-
   return results;
 }
+
+/* ── Work item type colors (semantic) ─────────────── */
+const TYPE_COLORS: Record<string, string> = {
+  changeRequest: '#4BA8A8',
+  featureRequest: '#5A9A5A',
+  maintenance: '#D4873E',
+};
+
+/* ── Component ────────────────────────────────────── */
 
 export default function Calendar({ workItems, clients }: CalendarProps) {
   const [view, setView] = useState<View>('month');
@@ -122,7 +113,6 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
 
   const active = workItems.filter((i) => i.status !== 'archived');
 
-  /** The visible date range for the current view. */
   const visibleRange = useMemo<{ start: Date; end: Date }>(() => {
     if (view === 'week') {
       const start = startOfWeek(current);
@@ -131,7 +121,6 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
       end.setHours(23, 59, 59, 999);
       return { start, end };
     }
-    // month and list views both show the full month
     const year = current.getFullYear();
     const month = current.getMonth();
     const start = new Date(year, month, 1);
@@ -139,18 +128,13 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
     return { start, end };
   }, [current, view]);
 
-  /** All calendar entries: originals + virtual recurring instances. */
   const calendarItems = useMemo<CalendarItem[]>(() => {
-    // Original items
     const originals: CalendarItem[] = active.map((item) => ({
       item,
       displayDate: itemDate(item),
       isRecurring: false,
     }));
-
-    // Virtual recurring occurrences within the visible range
     const recurrences = generateRecurrences(active, visibleRange.start, visibleRange.end);
-
     return [...originals, ...recurrences];
   }, [active, visibleRange]);
 
@@ -170,20 +154,28 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
 
   const monthLabel = current.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  // Month grid
   const monthGrid = useMemo(() => {
     const year = current.getFullYear();
     const month = current.getMonth();
     const totalDays = daysInMonth(year, month);
     const firstDow = new Date(year, month, 1).getDay();
     const cells: (Date | null)[] = [];
-    for (let i = 0; i < firstDow; i++) cells.push(null);
+    // Fill leading days from previous month
+    if (firstDow > 0) {
+      const prevMonthDays = daysInMonth(year, month - 1);
+      for (let i = firstDow - 1; i >= 0; i--) {
+        cells.push(new Date(year, month - 1, prevMonthDays - i));
+      }
+    }
     for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, month, d));
-    while (cells.length % 7 !== 0) cells.push(null);
+    // Fill trailing days from next month
+    let nextDay = 1;
+    while (cells.length % 7 !== 0) {
+      cells.push(new Date(year, month + 1, nextDay++));
+    }
     return cells;
   }, [current]);
 
-  // Week days
   const weekDays = useMemo(() => {
     const start = startOfWeek(current);
     return Array.from({ length: 7 }, (_, i) => {
@@ -193,7 +185,6 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
     });
   }, [current]);
 
-  // List items for current month
   const listItems = useMemo(() => {
     const year = current.getFullYear();
     const month = current.getMonth();
@@ -210,336 +201,375 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
   }
 
   const today = new Date();
+  const currentMonth = current.getMonth();
 
-  /** Build a unique key for a CalendarItem (avoids duplicate React keys for recurring instances). */
   function calendarItemKey(ci: CalendarItem): string {
     const id = ci.item.id ?? 'no-id';
     return ci.isRecurring ? `${id}-rec-${ci.displayDate.toISOString()}` : id;
   }
 
-  // --- Month View day cell ---
-  function renderDayCell(day: Date | null, index: number) {
-    if (!day) {
-      return (
-        <div
-          key={`empty-${index}`}
-          className="min-h-[70px] sm:min-h-[110px] bg-[var(--bg-page)] border-b border-r border-[var(--border)]"
-        />
-      );
-    }
-    const items = itemsForDay(day);
-    const isToday = sameDay(day, today);
-    const maxVisible = 3;
+  const numRows = monthGrid.length / 7;
 
-    return (
-      <div
-        key={day.toISOString()}
-        className="min-h-[70px] sm:min-h-[110px] border-b border-r border-[var(--border)] p-1 sm:p-2 group hover:bg-[var(--bg-card)]/80 transition-colors cursor-default"
-      >
-        {/* Day number */}
-        <div className="flex items-center justify-start mb-1.5">
-          <span
-            className={`
-              inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full transition-colors
-              ${isToday
-                ? 'bg-[var(--accent)] text-white shadow-sm'
-                : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
-              }
-            `}
-          >
-            {day.getDate()}
-          </span>
-        </div>
-        {/* Work items */}
-        <div className="space-y-1">
-          {items.slice(0, maxVisible).map((ci) => (
-            <button
-              key={calendarItemKey(ci)}
-              onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-              className={`block w-full text-left text-[10px] leading-snug px-2 py-1 rounded-md truncate text-white font-medium shadow-sm hover:shadow-md hover:brightness-110 transition-all ${
-                ci.isRecurring ? 'opacity-70 border border-dashed border-white/60' : ''
-              }`}
-              style={{ backgroundColor: typeColor(ci.item.type) }}
-              title={`${ci.item.subject} - ${ci.item.totalHours.toFixed(1)} hrs${ci.isRecurring && ci.item.recurrence ? ` (${ci.item.recurrence.frequency === 'custom' ? `Every ${ci.item.recurrence.customDays} days` : RECURRENCE_LABELS[ci.item.recurrence.frequency]})` : ''}`}
-            >
-              {ci.item.subject}
-              <span className="ml-1 opacity-70">{ci.item.totalHours.toFixed(1)}h</span>
-            </button>
-          ))}
-          {items.length > maxVisible && (
-            <span className="inline-block text-[10px] font-semibold text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full">
-              +{items.length - maxVisible} more
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // --- View toggle segmented control ---
   const viewOptions: View[] = ['month', 'week', 'list'];
 
+  /* ── Day header letters ─────────────────────────── */
+  const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-          Calendar
-        </h1>
-        {/* Segmented Control */}
-        <div className="inline-flex bg-[var(--bg-input)] rounded-lg p-0.5 shadow-inner">
-          {viewOptions.map((v) => (
+    <div
+      className="flex flex-col"
+      style={{
+        height: 'calc(100vh - 7.5rem)',
+      }}
+    >
+      {/* Use a media query via a wrapper to set desktop height */}
+      <style>{`
+        @media (min-width: 768px) {
+          .cal-root { height: calc(100vh - 4rem) !important; }
+        }
+      `}</style>
+
+      {/* ══ Header Bar ══════════════════════════════════ */}
+      <div className="cal-root flex flex-col" style={{ height: 'inherit' }}>
+        <div className="flex-shrink-0 flex items-center justify-between gap-2 pb-3">
+          {/* Left: nav + month label */}
+          <div className="flex items-center gap-1.5">
             <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-4 py-1.5 min-h-[44px] rounded-md text-xs font-semibold transition-all ${
-                view === v
-                  ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+              onClick={prev}
+              className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
+              aria-label="Previous"
             >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center gap-2 mb-5">
-        <button
-          onClick={prev}
-          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] hover:shadow-sm transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <span className="text-sm font-bold text-[var(--text-primary)] min-w-[160px] text-center">
-          {monthLabel}
-        </span>
-        <button
-          onClick={next}
-          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] hover:shadow-sm transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <button
-          onClick={() => setCurrent(new Date())}
-          className="ml-2 px-3 py-1.5 min-h-[44px] text-xs font-semibold text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 rounded-lg transition-colors"
-        >
-          Today
-        </button>
-      </div>
-
-      {/* ===== Month View ===== */}
-      {view === 'month' && (
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-x-auto">
-          <div className="min-w-[500px]">
-            {/* Day-of-week headers */}
-            <div className="grid grid-cols-7 bg-[var(--bg-page)]">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                <div
-                  key={d}
-                  className="text-center text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider py-3 border-b border-r border-[var(--border)]"
-                >
-                  <span className="hidden sm:inline">{d}</span>
-                  <span className="sm:hidden">{d.charAt(0)}</span>
-                </div>
-              ))}
-            </div>
-            {/* Day cells */}
-            <div className="grid grid-cols-7">
-              {monthGrid.map((day, idx) => renderDayCell(day, idx))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== Week View ===== */}
-      {view === 'week' && (
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] overflow-x-auto">
-          <div className="min-w-[500px]">
-          {/* Day headers */}
-          <div className="grid grid-cols-7 bg-[var(--bg-page)] border-b border-[var(--border)]">
-            {weekDays.map((day) => {
-              const isToday = sameDay(day, today);
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`text-center py-3 border-r last:border-r-0 border-[var(--border)] transition-colors ${
-                    isToday ? 'bg-[var(--accent)]/10' : ''
-                  }`}
-                >
-                  <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-semibold">
-                    {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                  </div>
-                  <div className="mt-0.5">
-                    <span
-                      className={`
-                        inline-flex items-center justify-center w-8 h-8 text-base font-bold rounded-full
-                        ${isToday ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--text-primary)]'}
-                      `}
-                    >
-                      {day.getDate()}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Day columns - full height, no truncation */}
-          <div className="grid grid-cols-7 items-start">
-            {weekDays.map((day) => {
-              const isToday = sameDay(day, today);
-              const items = itemsForDay(day);
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={`border-r last:border-r-0 border-[var(--border)] min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 space-y-2 ${
-                    isToday ? 'bg-[var(--accent)]/5' : ''
-                  }`}
-                >
-                  {items.map((ci) => (
-                    <button
-                      key={calendarItemKey(ci)}
-                      onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-                      className={`block w-full text-left p-2.5 rounded-lg text-white shadow-sm hover:shadow-md hover:brightness-110 transition-all ${
-                        ci.isRecurring ? 'opacity-70 border border-dashed border-white/60' : ''
-                      }`}
-                      style={{ backgroundColor: typeColor(ci.item.type) }}
-                    >
-                      {/* Subject */}
-                      <div className="text-xs font-bold leading-snug mb-1">{ci.item.subject}</div>
-                      {/* Client */}
-                      <div className="text-[10px] text-white/80 font-medium">
-                        {clientMap[ci.item.clientId] ?? 'Unknown'}
-                      </div>
-                      {/* Hours + type badge row */}
-                      <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                        <span className="text-[10px] bg-[var(--bg-card)]/20 px-1.5 py-0.5 rounded font-semibold">
-                          {ci.item.totalHours.toFixed(1)} hrs
-                        </span>
-                        <span className="text-[9px] bg-[var(--bg-card)]/15 px-1.5 py-0.5 rounded">
-                          {WORK_ITEM_TYPE_LABELS[ci.item.type]}
-                        </span>
-                      </div>
-                      {/* Billing type */}
-                      <div className="text-[9px] text-white/60 mt-1 font-medium">
-                        {ci.item.deductFromRetainer ? 'Retainer' : 'Hourly'}
-                      </div>
-                      {/* Recurrence */}
-                      {ci.item.recurrence && (
-                        <div className="text-[9px] text-white/60 mt-0.5 flex items-center gap-0.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                          </svg>
-                          {ci.item.recurrence.frequency === 'custom' ? `Every ${ci.item.recurrence.customDays} days` : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                  {items.length === 0 && (
-                    <div className="flex items-center justify-center h-20 text-[var(--border)]">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 opacity-40" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== List View ===== */}
-      {view === 'list' && (
-        <div className="space-y-3">
-          {listItems.length === 0 && (
-            <div className="text-center py-20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto text-[var(--border)] mb-3" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
-              <p className="text-[var(--text-secondary)] font-medium">No items this month</p>
+            </button>
+            <button
+              onClick={next}
+              className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
+              aria-label="Next"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setCurrent(new Date())}
+              className="px-2.5 py-1 min-h-[44px] md:min-h-0 text-[11px] font-semibold text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 rounded-lg transition-colors"
+            >
+              Today
+            </button>
+            <h1 className="text-lg font-bold text-[var(--text-primary)] ml-2 tracking-tight">
+              {monthLabel}
+            </h1>
+          </div>
+
+          {/* Right: segmented view toggle */}
+          <div className="inline-flex bg-[var(--bg-input)] rounded-lg p-0.5">
+            {viewOptions.map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={cn(
+                  'px-3 py-1.5 min-h-[44px] md:min-h-0 rounded-md text-[11px] font-semibold transition-all',
+                  view === v
+                    ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                )}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ══ Calendar Body ═══════════════════════════════ */}
+        <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+
+          {/* ── Month View ──────────────────────────────── */}
+          {view === 'month' && (
+            <div className="flex flex-col h-full">
+              {/* Day-of-week headers */}
+              <div className="flex-shrink-0 grid grid-cols-7 border-b border-[var(--border)]">
+                {dayLetters.map((letter, i) => {
+                  const isWeekend = i === 0 || i === 6;
+                  return (
+                    <div
+                      key={`hdr-${i}`}
+                      className={cn(
+                        'text-center text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest py-2',
+                        i < 6 && 'border-r border-[var(--border)]',
+                        isWeekend && 'bg-[var(--bg-input)]/40'
+                      )}
+                    >
+                      {letter}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Day grid — fills remaining space */}
+              <div
+                className="flex-1 min-h-0 grid grid-cols-7"
+                style={{ gridTemplateRows: `repeat(${numRows}, 1fr)` }}
+              >
+                {monthGrid.map((day, idx) => {
+                  if (!day) return null;
+                  const items = itemsForDay(day);
+                  const isToday = sameDay(day, today);
+                  const isCurrentMonth = day.getMonth() === currentMonth;
+                  const dow = idx % 7;
+                  const isWeekend = dow === 0 || dow === 6;
+                  const maxVisible = 2;
+
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={cn(
+                        'flex flex-col p-1 overflow-hidden border-b border-r border-[var(--border)] transition-colors cursor-default group',
+                        isWeekend && 'bg-[var(--bg-input)]/30',
+                        !isCurrentMonth && 'opacity-40',
+                        isToday && 'ring-1 ring-inset ring-[var(--accent)]/50 bg-[var(--accent)]/5',
+                        'hover:bg-[var(--bg-input)]/50'
+                      )}
+                    >
+                      {/* Day number */}
+                      <div className="flex-shrink-0 mb-0.5">
+                        <span
+                          className={cn(
+                            'inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full',
+                            isToday
+                              ? 'bg-[var(--accent)] text-white'
+                              : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
+                          )}
+                        >
+                          {day.getDate()}
+                        </span>
+                      </div>
+
+                      {/* Work items — tiny pills */}
+                      <div className="flex-1 min-h-0 flex flex-col gap-px overflow-hidden">
+                        {items.slice(0, maxVisible).map((ci) => (
+                          <button
+                            key={calendarItemKey(ci)}
+                            onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
+                            className={cn(
+                              'flex items-center gap-1 w-full text-left rounded px-1 py-px transition-all hover:brightness-110 min-w-0',
+                              ci.isRecurring && 'opacity-70'
+                            )}
+                            title={`${ci.item.subject} - ${clientMap[ci.item.clientId] ?? 'Unknown'} - ${ci.item.totalHours.toFixed(1)}h`}
+                          >
+                            {/* Color dot */}
+                            <span
+                              className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                            />
+                            {/* Title — hidden on small screens, shown as truncated pill on md+ */}
+                            <span className="hidden md:block text-[9px] leading-tight font-medium text-[var(--text-primary)] truncate">
+                              {ci.item.subject}
+                            </span>
+                          </button>
+                        ))}
+                        {items.length > maxVisible && (
+                          <span className="text-[8px] font-semibold text-[var(--accent)] px-1">
+                            +{items.length - maxVisible}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
-          {listItems.map((ci) => {
-            const d = ci.displayDate;
-            const isToday = sameDay(d, today);
-            return (
-              <button
-                key={calendarItemKey(ci)}
-                onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-                className={`w-full flex items-start gap-3 sm:gap-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-3 sm:p-5 text-left hover:shadow-md hover:border-[var(--border)] transition-all group ${
-                  ci.isRecurring ? 'border-dashed opacity-80' : ''
-                }`}
-              >
-                {/* Date block */}
-                <div
-                  className={`flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${
-                    isToday
-                      ? 'bg-[var(--accent)] text-white shadow-sm'
-                      : 'bg-[var(--bg-input)] text-[var(--text-primary)]'
-                  }`}
-                >
-                  <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-white/80' : 'text-[var(--text-secondary)]'}`}>
-                    {d.toLocaleDateString('en-US', { month: 'short' })}
-                  </span>
-                  <span className="text-lg font-extrabold leading-none">{d.getDate()}</span>
-                </div>
-                {/* Color stripe */}
-                <div
-                  className="w-1 self-stretch rounded-full flex-shrink-0"
-                  style={{ backgroundColor: typeColor(ci.item.type) }}
-                />
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors truncate">
-                        {ci.item.subject}
-                      </div>
-                      <div className="text-xs text-[var(--text-secondary)] mt-0.5">
-                        {clientMap[ci.item.clientId] ?? 'Unknown'}
-                      </div>
-                    </div>
-                    <StatusBadge status={ci.item.status} />
-                  </div>
-                  {/* Meta row */}
-                  <div className="flex items-center gap-3 mt-2.5 flex-wrap">
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ backgroundColor: typeColor(ci.item.type) }}
+
+          {/* ── Week View ───────────────────────────────── */}
+          {view === 'week' && (
+            <div className="flex flex-col h-full">
+              {/* Day headers */}
+              <div className="flex-shrink-0 grid grid-cols-7 border-b border-[var(--border)]">
+                {weekDays.map((day, i) => {
+                  const isToday = sameDay(day, today);
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={cn(
+                        'text-center py-2 transition-colors',
+                        i < 6 && 'border-r border-[var(--border)]',
+                        isToday && 'bg-[var(--accent)]/10'
+                      )}
                     >
-                      {WORK_ITEM_TYPE_LABELS[ci.item.type]}
-                    </span>
-                    <span className="text-xs text-[var(--text-secondary)] font-semibold">
-                      {ci.item.totalHours.toFixed(1)} hrs
-                    </span>
-                    <span className="text-xs text-[var(--text-secondary)]">
-                      {formatCurrency(ci.item.totalCost)}
-                    </span>
-                    <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full font-medium">
-                      {ci.item.deductFromRetainer ? 'Retainer' : 'Hourly'}
-                    </span>
-                    {ci.item.recurrence && (
-                      <span className="text-[10px] text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                        </svg>
-                        {ci.item.recurrence.frequency === 'custom' ? `Every ${ci.item.recurrence.customDays} days` : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
+                      <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wide font-semibold">
+                        {dayLetters[day.getDay()]}
+                      </div>
+                      <span
+                        className={cn(
+                          'inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full mt-0.5',
+                          isToday
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'text-[var(--text-primary)]'
+                        )}
+                      >
+                        {day.getDate()}
                       </span>
-                    )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Day columns — fill remaining height */}
+              <div className="flex-1 min-h-0 grid grid-cols-7">
+                {weekDays.map((day, i) => {
+                  const isToday = sameDay(day, today);
+                  const items = itemsForDay(day);
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={cn(
+                        'flex flex-col gap-1.5 p-1.5 overflow-y-auto',
+                        i < 6 && 'border-r border-[var(--border)]',
+                        isToday && 'bg-[var(--accent)]/5'
+                      )}
+                    >
+                      {items.map((ci) => (
+                        <button
+                          key={calendarItemKey(ci)}
+                          onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
+                          className={cn(
+                            'block w-full text-left p-1.5 md:p-2 rounded-lg text-white transition-all hover:brightness-110 flex-shrink-0',
+                            ci.isRecurring && 'opacity-70 border border-dashed border-white/50'
+                          )}
+                          style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                        >
+                          <div className="text-[10px] md:text-[11px] font-bold leading-snug truncate">
+                            {ci.item.subject}
+                          </div>
+                          <div className="text-[9px] text-white/75 font-medium truncate mt-0.5">
+                            {clientMap[ci.item.clientId] ?? 'Unknown'}
+                          </div>
+                          <div className="hidden md:flex items-center gap-1 mt-1 flex-wrap">
+                            <span className="text-[8px] bg-black/15 px-1 py-px rounded font-semibold">
+                              {ci.item.totalHours.toFixed(1)}h
+                            </span>
+                            <span className="text-[8px] bg-black/10 px-1 py-px rounded">
+                              {WORK_ITEM_TYPE_LABELS[ci.item.type]}
+                            </span>
+                          </div>
+                          {ci.item.recurrence && (
+                            <div className="hidden md:flex text-[8px] text-white/55 mt-0.5 items-center gap-0.5">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                              </svg>
+                              {ci.item.recurrence.frequency === 'custom'
+                                ? `${ci.item.recurrence.customDays}d`
+                                : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                      {items.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-1 h-1 rounded-full bg-[var(--border)]" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── List View ───────────────────────────────── */}
+          {view === 'list' && (
+            <div className="flex flex-col h-full overflow-y-auto">
+              {listItems.length === 0 && (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 mx-auto text-[var(--border)] mb-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-xs text-[var(--text-secondary)] font-medium">No items this month</p>
                   </div>
                 </div>
-              </button>
-            );
-          })}
+              )}
+              {listItems.map((ci, idx) => {
+                const d = ci.displayDate;
+                const isToday = sameDay(d, today);
+                // Group separator: show date header when date changes
+                const prevDate = idx > 0 ? listItems[idx - 1].displayDate : null;
+                const showDateHeader = !prevDate || !sameDay(prevDate, d);
+
+                return (
+                  <div key={calendarItemKey(ci)}>
+                    {showDateHeader && (
+                      <div
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b border-[var(--border)]',
+                          isToday
+                            ? 'text-[var(--accent)] bg-[var(--accent)]/5'
+                            : 'text-[var(--text-secondary)] bg-[var(--bg-input)]/40'
+                        )}
+                      >
+                        <span>{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                        <span>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        {isToday && <span className="text-[8px] bg-[var(--accent)]/15 px-1.5 py-px rounded-full">Today</span>}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2 text-left border-b border-[var(--border)] hover:bg-[var(--bg-input)]/40 transition-colors group',
+                        ci.isRecurring && 'opacity-75'
+                      )}
+                    >
+                      {/* Color stripe */}
+                      <div
+                        className="w-0.5 self-stretch rounded-full flex-shrink-0"
+                        style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                      />
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors truncate">
+                            {ci.item.subject}
+                          </span>
+                          <StatusBadge status={ci.item.status} />
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-[var(--text-secondary)]">
+                            {clientMap[ci.item.clientId] ?? 'Unknown'}
+                          </span>
+                          <span className="text-[10px] text-[var(--text-secondary)] font-semibold">
+                            {ci.item.totalHours.toFixed(1)}h
+                          </span>
+                          <span className="text-[10px] text-[var(--text-secondary)]">
+                            {formatCurrency(ci.item.totalCost)}
+                          </span>
+                          <span
+                            className="text-[8px] font-bold px-1.5 py-px rounded-full text-white"
+                            style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                          >
+                            {WORK_ITEM_TYPE_LABELS[ci.item.type]}
+                          </span>
+                          {ci.item.recurrence && (
+                            <span className="text-[8px] text-[var(--accent)] font-medium flex items-center gap-0.5">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                              </svg>
+                              {ci.item.recurrence.frequency === 'custom'
+                                ? `${ci.item.recurrence.customDays}d`
+                                : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
