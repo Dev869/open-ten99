@@ -406,7 +406,15 @@ export default function WorkItemDetail({
 
       {/* Totals */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
+        {/* Assignee */}
+        {/* TODO: Enhance to show a member picker dropdown when team context is available */}
         <div className="flex justify-between items-center mb-2">
+          <span className="text-[var(--text-secondary)] text-sm">Assignee</span>
+          <span className="text-[var(--text-primary)] text-sm">
+            {item.assigneeId || 'Unassigned'}
+          </span>
+        </div>
+        <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
           <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
           <span className="text-sm font-semibold">{item.totalHours.toFixed(1)} hrs</span>
         </div>

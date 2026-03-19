@@ -3,8 +3,11 @@ import {
   subscribeWorkItems,
   subscribeClients,
   subscribeSettings,
+  subscribeTeam,
+  subscribeTeamMembers,
+  subscribeTeamInvites,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings } from '../lib/types';
+import type { WorkItem, Client, AppSettings, Team, TeamMember, TeamInvite } from '../lib/types';
 
 export function useWorkItems(clientId?: string) {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -59,4 +62,55 @@ export function useSettings(userId: string | undefined) {
   }, [userId]);
 
   return { settings, loading };
+}
+
+export function useTeam(teamId: string | undefined) {
+  const [team, setTeam] = useState<Team | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!teamId) { setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeTeam(teamId, (t) => {
+      setTeam(t);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [teamId]);
+
+  return { team, loading };
+}
+
+export function useTeamMembers(teamId: string | undefined) {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!teamId) { setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeTeamMembers(teamId, (m) => {
+      setMembers(m);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [teamId]);
+
+  return { members, loading };
+}
+
+export function useTeamInvites(teamId: string | undefined) {
+  const [invites, setInvites] = useState<TeamInvite[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!teamId) { setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeTeamInvites(teamId, (i) => {
+      setInvites(i);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [teamId]);
+
+  return { invites, loading };
 }

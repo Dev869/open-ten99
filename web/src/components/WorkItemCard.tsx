@@ -55,6 +55,11 @@ export function WorkItemCard({
               Non-Billable
             </span>
           )}
+          {item.assigneeId && (
+            <span className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-[8px] font-bold" title={item.assigneeId}>
+              {item.assigneeId.charAt(0).toUpperCase()}
+            </span>
+          )}
           <span className="ml-auto text-xs text-[var(--text-secondary)]">
             {formatHours(item.totalHours)}
           </span>

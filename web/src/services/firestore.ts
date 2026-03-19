@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole } from '../lib/types';
 
 // --- Converters ---
 
@@ -113,6 +113,7 @@ export function subscribeSettings(
       hourlyRate: data?.hourlyRate ?? 150,
       companyName: data?.companyName ?? 'DW Tailored',
       pdfLogoUrl: data?.pdfLogoUrl ?? undefined,
+      teamId: data?.teamId ?? undefined,
       sidebarOrder: data?.sidebarOrder ?? undefined,
       sidebarHidden: data?.sidebarHidden ?? undefined,
     });
@@ -337,6 +338,131 @@ export async function updateVaultCredential(
 
 export async function deleteVaultCredential(userId: string, credentialId: string) {
   const ref = doc(db, 'vaults', userId, 'credentials', credentialId);
+  await deleteDoc(ref);
+}
+
+// --- Teams ---
+
+export function subscribeTeam(
+  teamId: string,
+  callback: (team: Team | null) => void,
+) {
+  const ref = doc(db, 'teams', teamId);
+  return onSnapshot(ref, (snapshot) => {
+    const data = snapshot.data();
+    if (!data) { callback(null); return; }
+    callback({
+      id: snapshot.id,
+      name: data.name,
+      ownerId: data.ownerId,
+      createdAt: toDate(data.createdAt),
+    });
+  });
+}
+
+export async function createTeam(team: Omit<Team, 'id' | 'createdAt'>) {
+  const ref = collection(db, 'teams');
+  const clean: Record<string, unknown> = { createdAt: Timestamp.now() };
+  for (const [k, v] of Object.entries(team)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  const docRef = await addDoc(ref, clean);
+  return docRef.id;
+}
+
+export async function updateTeam(teamId: string, data: Partial<Team>) {
+  const ref = doc(db, 'teams', teamId);
+  await updateDoc(ref, { ...data });
+}
+
+export function subscribeTeamMembers(
+  teamId: string,
+  callback: (members: TeamMember[]) => void,
+) {
+  const ref = collection(db, 'teams', teamId, 'members');
+  const q = query(ref, orderBy('joinedAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => ({
+        id: d.id,
+        email: d.data().email,
+        displayName: d.data().displayName,
+        role: d.data().role,
+        photoURL: d.data().photoURL ?? undefined,
+        joinedAt: toDate(d.data().joinedAt),
+      })),
+    );
+  });
+}
+
+export async function addTeamMember(
+  teamId: string,
+  userId: string,
+  member: Omit<TeamMember, 'id' | 'joinedAt'>,
+) {
+  const ref = doc(db, 'teams', teamId, 'members', userId);
+  const { setDoc } = await import('firebase/firestore');
+  await setDoc(ref, { ...member, joinedAt: Timestamp.now() });
+}
+
+export async function updateTeamMemberRole(
+  teamId: string,
+  userId: string,
+  role: TeamRole,
+) {
+  const ref = doc(db, 'teams', teamId, 'members', userId);
+  await updateDoc(ref, { role });
+}
+
+export async function removeTeamMember(teamId: string, userId: string) {
+  const ref = doc(db, 'teams', teamId, 'members', userId);
+  await deleteDoc(ref);
+}
+
+export function subscribeTeamInvites(
+  teamId: string,
+  callback: (invites: TeamInvite[]) => void,
+) {
+  const ref = collection(db, 'teams', teamId, 'invites');
+  const q = query(ref, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => ({
+        id: d.id,
+        email: d.data().email,
+        role: d.data().role,
+        invitedBy: d.data().invitedBy,
+        status: d.data().status,
+        createdAt: toDate(d.data().createdAt),
+      })),
+    );
+  });
+}
+
+export async function createTeamInvite(
+  teamId: string,
+  invite: Omit<TeamInvite, 'id' | 'createdAt' | 'status'>,
+) {
+  const ref = collection(db, 'teams', teamId, 'invites');
+  const docRef = await addDoc(ref, {
+    ...invite,
+    status: 'pending',
+    createdAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export async function updateInviteStatus(
+  teamId: string,
+  inviteId: string,
+  status: 'accepted' | 'declined',
+) {
+  const ref = doc(db, 'teams', teamId, 'invites', inviteId);
+  await updateDoc(ref, { status });
+}
+
+export async function deleteTeamInvite(teamId: string, inviteId: string) {
+  const ref = doc(db, 'teams', teamId, 'invites', inviteId);
   await deleteDoc(ref);
 }
 

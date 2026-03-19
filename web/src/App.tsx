@@ -16,6 +16,7 @@ const Calendar = lazy(() => import('./routes/contractor/Calendar'));
 const Clients = lazy(() => import('./routes/contractor/Clients'));
 const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
 const Analytics = lazy(() => import('./routes/contractor/Analytics'));
+const Team = lazy(() => import('./routes/contractor/Team'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
 const Vault = lazy(() => import('./routes/contractor/Vault'));
@@ -144,6 +145,10 @@ function ContractorRoutes() {
       <Route
         path="analytics"
         element={<Analytics workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="team"
+        element={user ? <Team user={user} settings={settings} /> : null}
       />
       <Route
         path="settings"

@@ -21,6 +21,7 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency | ''>('');
   const [customDays, setCustomDays] = useState<number>(3);
   const [scheduledDate, setScheduledDate] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +72,7 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
         totalCost,
         isBillable,
         deductFromRetainer,
+        assigneeId: assigneeId.trim() || undefined,
         estimatedBusinessDays,
         recurrence: recurrenceFrequency
           ? {
@@ -141,6 +143,20 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Assignee (optional) */}
+          <div>
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+              Assign To
+            </label>
+            <input
+              type="text"
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              placeholder="Team member email or ID (optional)"
+              className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            />
           </div>
 
           {/* Subject */}

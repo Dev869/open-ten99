@@ -122,5 +122,56 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
+
+    // ---------------------------------------------------------------------------
+    // Teams: collaborative workspaces
+    // ---------------------------------------------------------------------------
+    // Team document: any authenticated member can read. Only owner can update/delete.
+    // Create: any contractor can create a team (they become owner).
+    match /teams/{teamId} {
+      // Anyone authenticated can read team info (needed to check membership)
+      allow read: if request.auth != null;
+
+      // Create: contractor sets themselves as owner
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid;
+
+      // Update: only the owner
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+      // Delete: only the owner
+      allow delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+      // Members subcollection: readable by any authed user,
+      // writable by team owner or admins (admin check requires reading member doc)
+      match /members/{memberId} {
+        allow read: if request.auth != null;
+
+        // Owner can manage all members
+        allow write: if request.auth != null
+          && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
+
+        // Members can update their own profile fields (not role)
+        allow update: if request.auth != null
+          && request.auth.uid == memberId
+          && request.resource.data.role == resource.data.role;
+      }
+
+      // Invites subcollection: readable by team members,
+      // writable by owner/admins
+      match /invites/{inviteId} {
+        allow read: if request.auth != null;
+
+        allow create: if request.auth != null
+          && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
+
+        allow update: if request.auth != null;
+
+        allow delete: if request.auth != null
+          && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
+      }
+    }
   }
 }

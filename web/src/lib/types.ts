@@ -34,6 +34,8 @@ export interface WorkItem {
   estimatedBusinessDays?: number;
   recurrence?: Recurrence;
   scheduledDate?: Date;
+  assigneeId?: string;
+  teamId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +58,7 @@ export interface Client {
   retainerHours?: number;
   retainerRenewalDay?: number;
   retainerPaused?: boolean;
+  teamId?: string;
   createdAt: Date;
 }
 
@@ -64,6 +67,7 @@ export interface AppSettings {
   hourlyRate: number;
   companyName: string;
   pdfLogoUrl?: string;
+  teamId?: string;
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys
 }
@@ -128,6 +132,42 @@ export const VAULT_SERVICES = [
 ] as const;
 
 export type VaultServiceId = (typeof VAULT_SERVICES)[number]['id'] | string;
+
+/* ── Teams ─────────────────────────────────────────── */
+
+export type TeamRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+export const TEAM_ROLE_LABELS: Record<TeamRole, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  member: 'Member',
+  viewer: 'Viewer',
+};
+
+export interface Team {
+  id?: string;
+  name: string;
+  ownerId: string;
+  createdAt: Date;
+}
+
+export interface TeamMember {
+  id?: string;         // document ID = userId
+  email: string;
+  displayName: string;
+  role: TeamRole;
+  photoURL?: string;
+  joinedAt: Date;
+}
+
+export interface TeamInvite {
+  id?: string;
+  email: string;
+  role: TeamRole;
+  invitedBy: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: Date;
+}
 
 export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
   changeRequest: 'Change Request',
