@@ -43,6 +43,8 @@ export function useSettings(userId: string | undefined) {
     accentColor: '#4BA8A8',
     hourlyRate: 150,
     companyName: 'DW Tailored',
+    sidebarOrder: undefined,
+    sidebarHidden: undefined,
   });
   const [loading, setLoading] = useState(true);
 

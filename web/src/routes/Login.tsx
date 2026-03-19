@@ -5,7 +5,7 @@ interface LoginProps {
 
 export default function Login({ onSignIn, loading }: LoginProps) {
   return (
-    <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#2C2417] flex items-center justify-center p-4">
       <div className="w-full max-w-sm animate-fade-in-up">
         {/* Brand */}
         <div className="text-center mb-8">
@@ -20,16 +20,16 @@ export default function Login({ onSignIn, loading }: LoginProps) {
           <p className="text-white/40 text-sm mt-2">Contractor work order management</p>
         </div>
 
-        <div className="bg-white rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="bg-[var(--bg-card)] rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div className="p-8">
-            <p className="text-sm text-[#86868B] text-center mb-6">
+            <p className="text-sm text-[#8C7E6A] text-center mb-6">
               Sign in to manage your work orders.
             </p>
 
             <button
               onClick={onSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[#F2F2F7] text-[#1A1A2E] text-sm font-semibold hover:bg-[#E5E5EA] disabled:opacity-50 transition-colors border border-[#E5E5EA]"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[#EDE9E2] text-[#2C2417] text-sm font-semibold hover:bg-[#DDD5C8] disabled:opacity-50 transition-colors border border-[#DDD5C8]"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

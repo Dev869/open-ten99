@@ -9,8 +9,8 @@ const statusBgMap: Record<WorkItemStatus, string> = {
   draft: 'bg-[#FFF3E0]',
   inReview: 'bg-[#E8F5F5]',
   approved: 'bg-[#E8F5E9]',
-  completed: 'bg-[#F2F2F7]',
-  archived: 'bg-[#F2F2F7]',
+  completed: 'bg-[#EDE9E2]',
+  archived: 'bg-[#EDE9E2]',
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

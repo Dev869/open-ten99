@@ -45,7 +45,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
 
   return (
     <div className="animate-fade-in-up">
-      <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider mb-6">
+      <h1 className="text-xl font-extrabold text-[#2C2417] uppercase tracking-wider mb-6">
         Dashboard
       </h1>
 
@@ -54,7 +54,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
         {[
           <StatCard key="pending" label="Pending" value={String(pending.length)} />,
           <StatCard key="week" label="This Week" value={`${thisWeekHours.toFixed(1)}h`} color="#4BA8A8" />,
-          <StatCard key="revenue" label="Revenue (Month)" value={formatCurrency(monthRevenue)} color="#27AE60" />,
+          <StatCard key="revenue" label="Revenue (Month)" value={formatCurrency(monthRevenue)} color="#5A9A5A" />,
         ].map((card, i) => (
           <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 75}ms` }}>
             {card}
@@ -65,7 +65,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
       {/* Pending Work Orders */}
       {pending.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-bold text-[#8C7E6A] uppercase tracking-wider mb-3">
             Needs Attention
           </h2>
           <div className="space-y-2">
@@ -84,7 +84,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
       {/* Recently Completed */}
       {recentCompleted.length > 0 && (
         <div>
-          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-bold text-[#8C7E6A] uppercase tracking-wider mb-3">
             Recently Completed
           </h2>
           <div className="space-y-2">
@@ -103,8 +103,8 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
       {pending.length === 0 && recentCompleted.length === 0 && (
         <div className="text-center py-20 animate-fade-in-up">
           <div className="text-5xl mb-4 opacity-30">&#10022;</div>
-          <div className="text-lg font-bold text-[#1A1A2E]">All clear</div>
-          <div className="text-sm text-[#86868B] mt-1">No pending work orders right now.</div>
+          <div className="text-lg font-bold text-[#2C2417]">All clear</div>
+          <div className="text-sm text-[#8C7E6A] mt-1">No pending work orders right now.</div>
         </div>
       )}
     </div>

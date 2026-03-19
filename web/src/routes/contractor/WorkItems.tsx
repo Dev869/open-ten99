@@ -3,6 +3,8 @@ import { WorkItemCard } from '../../components/WorkItemCard';
 import { FilterTabs } from '../../components/FilterTabs';
 import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
 import type { WorkItem, Client, AppSettings } from '../../lib/types';
+import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
+import { formatDate, exportToCsv } from '../../lib/utils';
 import { bulkUpdateStatus } from '../../services/firestore';
 
 interface WorkItemsProps {
@@ -74,6 +76,23 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
     setBulkLoading(false);
   }
 
+  function handleExport() {
+    const headers = ['Subject', 'Client', 'Type', 'Status', 'Hours', 'Cost', 'Billable', 'Created', 'Updated'];
+    const rows = filtered.map(item => [
+      item.subject,
+      clientMap[item.clientId] ?? 'Unknown',
+      WORK_ITEM_TYPE_LABELS[item.type],
+      WORK_ITEM_STATUS_LABELS[item.status],
+      item.totalHours.toFixed(1),
+      item.totalCost.toFixed(2),
+      item.isBillable ? 'Yes' : 'No',
+      formatDate(item.createdAt),
+      formatDate(item.updatedAt),
+    ]);
+    const date = new Date().toISOString().split('T')[0];
+    exportToCsv(`openchanges-work-items-${date}.csv`, headers, rows);
+  }
+
   async function handleBulkArchive() {
     const ids = [...selectedIds];
     if (!ids.length) return;
@@ -89,12 +108,25 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
         <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
           Work Items
         </h1>
-        <button
-          onClick={() => setShowNewOrder(true)}
-          className="px-4 py-2 min-h-[44px] bg-[#4BA8A8] text-white text-sm font-semibold rounded-full hover:bg-[#3A9090] transition-colors"
-        >
-          + New Work Order
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] active:scale-[0.97] transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export
+          </button>
+          <button
+            onClick={() => setShowNewOrder(true)}
+            className="px-4 py-2 min-h-[44px] bg-[#4BA8A8] text-white text-sm font-semibold rounded-full hover:bg-[#3A9090] transition-colors"
+          >
+            + New Work Order
+          </button>
+        </div>
       </div>
 
       {/* Search */}

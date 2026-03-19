@@ -64,6 +64,8 @@ export interface AppSettings {
   hourlyRate: number;
   companyName: string;
   pdfLogoUrl?: string;
+  sidebarOrder?: string[];    // ordered array of nav item route keys
+  sidebarHidden?: string[];   // array of hidden nav item route keys
 }
 
 export interface MagicLink {

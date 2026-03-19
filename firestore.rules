@@ -8,32 +8,113 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Clients collection: authenticated users only
+    // ---------------------------------------------------------------------------
+    // Helper functions
+    // ---------------------------------------------------------------------------
+
+    // Returns true for Google Sign-In users (contractors).
+    // Firebase stores sign-in provider in token.firebase.sign_in_provider.
+    function isContractor() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    // Returns true if a document is owned by the current user.
+    // Migration-friendly: if ownerId is absent (legacy data), the rule passes so
+    // existing records remain accessible while we backfill the field.
+    function isOwnerOrLegacy(data) {
+      return !('ownerId' in data) || data.ownerId == request.auth.uid;
+    }
+
+    // For writes: the incoming document must claim the current user as owner.
+    function claimsOwnership() {
+      return request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Clients collection
+    // ---------------------------------------------------------------------------
+    // Only contractors can manage clients. Scoped to the owning contractor.
+    // Legacy documents without ownerId remain readable/updatable until backfilled.
     match /clients/{clientId} {
-      allow read, write: if request.auth != null;
+      // Read: contractor + (their doc or legacy doc without ownerId)
+      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+
+      // Create: contractor must set themselves as owner
+      allow create: if isContractor() && claimsOwnership();
+
+      // Update: contractor must own the existing doc (or it's legacy), and cannot
+      // change ownerId to someone else
+      allow update: if isContractor()
+        && isOwnerOrLegacy(resource.data)
+        && (!('ownerId' in request.resource.data)
+            || request.resource.data.ownerId == request.auth.uid);
+
+      // Delete: contractor must own the existing doc (or it's legacy)
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
-    // Projects collection: authenticated users only
+    // ---------------------------------------------------------------------------
+    // Projects collection
+    // ---------------------------------------------------------------------------
     match /projects/{projectId} {
-      allow read, write: if request.auth != null;
+      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+      allow create: if isContractor() && claimsOwnership();
+      allow update: if isContractor()
+        && isOwnerOrLegacy(resource.data)
+        && (!('ownerId' in request.resource.data)
+            || request.resource.data.ownerId == request.auth.uid);
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
-    // Work items collection: authenticated users only
+    // ---------------------------------------------------------------------------
+    // Work items collection
+    // ---------------------------------------------------------------------------
+    // Contractors: full CRUD on their own items (or legacy items).
+    // Portal clients: read-only access scoped to work items belonging to their
+    //   clientId. The clientId claim is set in the custom token by the Cloud
+    //   Function that issues magic-link tokens. Portal users cannot write.
     match /workItems/{workItemId} {
-      allow read, write: if request.auth != null;
+      // Contractor read: owns the item or it's a legacy item
+      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+
+      // Portal client read: authenticated non-contractor whose clientId claim
+      // matches the item's clientId field. Read-only — no writes from portal.
+      allow read: if request.auth != null
+        && !isContractor()
+        && request.auth.token.clientId != null
+        && resource.data.clientId == request.auth.token.clientId;
+
+      // Contractor create: must set themselves as owner
+      allow create: if isContractor() && claimsOwnership();
+
+      // Contractor update: must own the existing item and cannot reassign ownership
+      allow update: if isContractor()
+        && isOwnerOrLegacy(resource.data)
+        && (!('ownerId' in request.resource.data)
+            || request.resource.data.ownerId == request.auth.uid);
+
+      // Contractor delete: must own the existing item
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
-    // Settings collection: authenticated user can only access their own settings doc
+    // ---------------------------------------------------------------------------
+    // Settings collection: user-scoped by document ID
+    // ---------------------------------------------------------------------------
     match /settings/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Profiles collection: authenticated user can only access their own profile doc
+    // ---------------------------------------------------------------------------
+    // Profiles collection: user-scoped by document ID
+    // ---------------------------------------------------------------------------
     match /profiles/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Vault: owner-only access — credentials are client-side encrypted
+    // ---------------------------------------------------------------------------
+    // Vault: owner-only — credentials are client-side encrypted
+    // ---------------------------------------------------------------------------
     match /vaults/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 

@@ -113,6 +113,8 @@ export function subscribeSettings(
       hourlyRate: data?.hourlyRate ?? 150,
       companyName: data?.companyName ?? 'DW Tailored',
       pdfLogoUrl: data?.pdfLogoUrl ?? undefined,
+      sidebarOrder: data?.sidebarOrder ?? undefined,
+      sidebarHidden: data?.sidebarHidden ?? undefined,
     });
   });
 }

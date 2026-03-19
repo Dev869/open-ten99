@@ -1,8 +1,11 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, useCallback } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth, isContractorUser } from './hooks/useAuth';
 import { useWorkItems, useClients, useSettings } from './hooks/useFirestore';
+import { updateSettings } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
+import { TimeTracker } from './components/TimeTracker';
+import { useTheme } from './hooks/useTheme';
 import Login from './routes/Login';
 
 // Lazy-loaded contractor routes
@@ -25,31 +28,48 @@ const PortalDetail = lazy(() => import('./routes/portal/PortalDetail'));
 function Loading() {
   return (
     <div className="flex items-center justify-center h-full py-20">
-      <div className="text-sm text-[#86868B]">Loading...</div>
+      <div className="text-sm text-[#8C7E6A]">Loading...</div>
     </div>
   );
 }
 
 function ContractorLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { dark, toggle } = useTheme();
+  const { user } = useAuth();
   const { workItems } = useWorkItems();
+  const { clients } = useClients();
+  const { settings } = useSettings(user?.uid);
   const pendingCount = workItems.filter(
     (i) => i.status === 'draft' || i.status === 'inReview'
   ).length;
 
+  const handleUpdateSidebar = useCallback(
+    (order: string[], hidden: string[]) => {
+      if (!user?.uid) return;
+      updateSettings(user.uid, { sidebarOrder: order, sidebarHidden: hidden });
+    },
+    [user?.uid]
+  );
+
   return (
-    <div className="flex h-screen bg-[#F5F5F7]">
+    <div className="flex h-screen bg-[var(--bg-page)]">
       <Sidebar
         pendingCount={pendingCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        sidebarOrder={settings.sidebarOrder}
+        sidebarHidden={settings.sidebarHidden}
+        onUpdateSidebar={handleUpdateSidebar}
+        dark={dark}
+        onToggleTheme={toggle}
       />
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
-        <header className="md:hidden flex items-center h-14 px-4 bg-white border-b border-[#E5E5EA] flex-shrink-0">
+        <header className="md:hidden flex items-center h-14 px-4 bg-[var(--bg-card)] border-b border-[var(--border)] flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-[#1A1A2E] hover:bg-[#F2F2F7] transition-colors"
+            className="p-2 -ml-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -58,14 +78,14 @@ function ContractorLayout() {
             </svg>
           </button>
           <div className="flex-1 flex items-center justify-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#1A1A2E] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-[#2C2417] flex items-center justify-center">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="font-semibold text-[#1A1A2E] text-sm tracking-tight">OpenChanges</span>
+            <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">OpenChanges</span>
           </div>
           <div className="w-10" />
         </header>
@@ -77,6 +97,7 @@ function ContractorLayout() {
           </Suspense>
         </main>
       </div>
+      <TimeTracker clients={clients} />
     </div>
   );
 }
@@ -166,7 +187,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1A1A2E] flex items-center justify-center">
+      <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
           <div className="w-16 h-16 rounded-full bg-[#4BA8A8] flex items-center justify-center mx-auto mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -182,38 +203,60 @@ export default function App() {
     );
   }
 
+  // A user is a contractor only if they signed in with Google.
+  // Portal clients authenticate via custom token and must not reach /dashboard.
+  const isContractor = user != null && isContractorUser(user);
+  // A portal user is any authenticated user who is NOT a Google contractor.
+  const isPortalUser = user != null && !isContractorUser(user);
+
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
         {/* Portal auth (public) */}
         <Route path="/portal/auth" element={<PortalAuth />} />
 
-        {/* Portal routes (authenticated clients) */}
+        {/* Portal routes — portal clients only.
+            Contractor users attempting /portal/* are sent to /dashboard
+            to prevent session confusion. */}
         <Route
           path="/portal/*"
-          element={user ? <PortalRoutes /> : <Navigate to="/portal/auth" />}
+          element={
+            isPortalUser ? (
+              <PortalRoutes />
+            ) : isContractor ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/portal/auth" replace />
+            )
+          }
         />
 
-        {/* Contractor routes (authenticated) */}
+        {/* Contractor routes — Google-authenticated contractors only.
+            Portal users attempting /dashboard/* are sent back to /portal
+            to prevent privilege escalation. */}
         <Route
           path="/dashboard/*"
           element={
-            user ? (
+            isContractor ? (
               <ContractorLayout />
+            ) : isPortalUser ? (
+              <Navigate to="/portal" replace />
             ) : (
-              <Navigate to="/" />
+              <Navigate to="/" replace />
             )
           }
         >
           <Route path="*" element={<ContractorRoutes />} />
         </Route>
 
-        {/* Login */}
+        {/* Login — redirect authenticated users to their correct home */}
         <Route
           path="/"
           element={
-            user ? (
-              <Navigate to="/dashboard" />
+            isContractor ? (
+              <Navigate to="/dashboard" replace />
+            ) : isPortalUser ? (
+              <Navigate to="/portal" replace />
             ) : (
               <Login onSignIn={signInWithGoogle} />
             )
@@ -221,7 +264,7 @@ export default function App() {
         />
 
         {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

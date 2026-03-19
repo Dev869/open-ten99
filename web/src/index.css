@@ -1,11 +1,35 @@
 @import "tailwindcss";
 
+:root {
+  --bg-page: #F4F1EC;
+  --bg-card: #FFFDF9;
+  --bg-sidebar: #FFFDF9;
+  --bg-input: #EDE9E2;
+  --text-primary: #2C2417;
+  --text-secondary: #8C7E6A;
+  --border: #DDD5C8;
+  --accent: #4BA8A8;
+  --accent-dark: #3A9090;
+}
+
+.dark {
+  --bg-page: #1A1710;
+  --bg-card: #242018;
+  --bg-sidebar: #1E1B14;
+  --bg-input: #2E2A20;
+  --text-primary: #E8E0D0;
+  --text-secondary: #7A6F5E;
+  --border: #3A3428;
+  --accent: #4BA8A8;
+  --accent-dark: #5BC0C0;
+}
+
 body {
   margin: 0;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F5F5F7;
+  background-color: var(--bg-page);
 }
 
 /* ── Animations ───────────────────────────────────────── */
