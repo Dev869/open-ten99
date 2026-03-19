@@ -39,19 +39,25 @@ export default function Clients({ workItems, clients }: ClientsProps) {
     );
   }, [clients, search]);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!newName.trim() || !newEmail.trim()) return;
-    createClient({
-      name: newName.trim(),
-      email: newEmail.trim(),
-      phone: newPhone.trim() || undefined,
-      company: newCompany.trim() || undefined,
-    }).catch(console.error);
-    setNewName('');
-    setNewEmail('');
-    setNewPhone('');
-    setNewCompany('');
-    setShowNew(false);
+    setSaving(true);
+    try {
+      await createClient({
+        name: newName.trim(),
+        email: newEmail.trim(),
+        phone: newPhone.trim() || undefined,
+        company: newCompany.trim() || undefined,
+      });
+      setNewName('');
+      setNewEmail('');
+      setNewPhone('');
+      setNewCompany('');
+      setShowNew(false);
+    } catch (err) {
+      console.error('Failed to create client:', err);
+    }
+    setSaving(false);
   }
 
   return (
