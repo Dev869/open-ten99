@@ -58,9 +58,14 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
-        Settings
-      </h1>
+      <div className="flex items-center gap-3 mb-6">
+        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+          Settings
+        </h1>
+        <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full tracking-wide">
+          v1.0
+        </span>
+      </div>
 
       {/* Theme */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5">
@@ -167,6 +172,121 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </button>
         </div>
       </div>
+
+      {/* ── About & Support ── */}
+      <div className="mt-10">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          About &amp; Support
+        </h2>
+
+        {/* App Info */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[var(--text-primary)]">OpenChanges v1.0</p>
+            <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>
+          </div>
+        </div>
+
+        {/* Support & Feedback */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Support &amp; Feedback
+          </h3>
+          <div className="divide-y divide-[var(--border)]">
+            <a
+              href="mailto:support@dwtailored.com?subject=OpenChanges%20Support%20Request"
+              className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M22 4l-10 8L2 4" />
+              </svg>
+              <span className="text-sm text-[var(--text-primary)]">Report an Issue</span>
+            </a>
+            <a
+              href="mailto:support@dwtailored.com?subject=OpenChanges%20Feature%20Request"
+              className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                <line x1="12" y1="2" x2="12" y2="6" />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+                <path d="M15.09 14A6 6 0 0 0 18 8 6 6 0 0 0 6 8a6 6 0 0 0 2.91 6" />
+              </svg>
+              <span className="text-sm text-[var(--text-primary)]">Feature Request</span>
+            </a>
+            <a
+              href="#"
+              className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+              </svg>
+              <span className="text-sm text-[var(--text-primary)]">Documentation</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Legal */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Legal
+          </h3>
+          <div className="divide-y divide-[var(--border)]">
+            <a
+              href="#"
+              className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <span className="text-sm text-[var(--text-primary)]">Terms of Service</span>
+            </a>
+            <a
+              href="#"
+              className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0110 0v4" />
+              </svg>
+              <span className="text-sm text-[var(--text-primary)]">Privacy Policy</span>
+            </a>
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] text-center mt-4">
+            &copy; 2026 DW Tailored Systems. All rights reserved.
+          </p>
+        </div>
+
+        {/* Credits / Attribution */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Credits
+          </h3>
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            Built with React, Firebase, and Tailwind CSS
+          </p>
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-1">
+            Designed and developed by Devin Wilson
+          </p>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-[var(--text-secondary)] text-center mt-6">
+        &copy; 2026 DW Tailored Systems. All rights reserved.
+      </p>
     </div>
   );
 }
