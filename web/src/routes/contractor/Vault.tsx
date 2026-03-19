@@ -24,7 +24,10 @@ import { cn } from '../../lib/utils';
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 function serviceInfo(id: string) {
-  return VAULT_SERVICES.find((s) => s.id === id) ?? VAULT_SERVICES[VAULT_SERVICES.length - 1];
+  const found = VAULT_SERVICES.find((s) => s.id === id);
+  if (found) return found;
+  // Custom service — use the id as the label
+  return { id, label: id, color: '#86868B' } as const;
 }
 
 /* ── Props ────────────────────────────────────────── */
@@ -203,7 +206,13 @@ export default function Vault({ user, clients }: VaultProps) {
   // Render
   if (metaLoading) {
     return (
-      <div className="flex items-center justify-center h-full py-20">
+      <div className="flex flex-col items-center justify-center py-32 animate-fade-in-up">
+        <div className="w-12 h-12 rounded-2xl bg-[#1A1A2E] flex items-center justify-center mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
+          </svg>
+        </div>
         <div className="text-sm text-[#86868B]">Loading vault...</div>
       </div>
     );
@@ -226,7 +235,7 @@ export default function Vault({ user, clients }: VaultProps) {
             Key Vault
           </h1>
           <p className="text-xs text-[#86868B] mt-1">
-            AES-256 encrypted &middot; Auto-locks after 5 min
+            AES-256 encrypted &middot; Auto-locks after 5 min &middot; {credentials.length} credential{credentials.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-2">
@@ -300,16 +309,33 @@ export default function Vault({ user, clients }: VaultProps) {
 
       {/* Credentials */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 animate-fade-in-up">
-          <div className="text-4xl mb-3 opacity-30">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mx-auto opacity-40">
+        <div className="text-center py-20 animate-fade-in-up">
+          <div className="mx-auto mb-5 w-20 h-20 rounded-2xl bg-[#1A1A2E]/5 flex items-center justify-center">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1A1A2E" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="opacity-30">
               <rect x="3" y="11" width="18" height="11" rx="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
+              <circle cx="12" cy="16" r="1" />
             </svg>
           </div>
-          <div className="text-sm text-[#86868B]">
-            {credentials.length === 0 ? 'No credentials yet. Add your first one.' : 'No results match your search.'}
+          <div className="text-base font-semibold text-[#1A1A2E]">
+            {credentials.length === 0 ? 'Your vault is empty' : 'No matching credentials'}
           </div>
+          <div className="text-sm text-[#86868B] mt-1.5 max-w-xs mx-auto">
+            {credentials.length === 0
+              ? 'Store API keys, passwords, and service credentials for your clients — all encrypted end-to-end.'
+              : 'Try adjusting your search or filter.'}
+          </div>
+          {credentials.length === 0 && (
+            <button
+              onClick={() => { setEditingCred(null); setShowModal(true); }}
+              className="inline-flex items-center gap-2 mt-5 py-2.5 px-5 min-h-[44px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] active:scale-[0.97] transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Add First Credential
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -716,11 +742,16 @@ function CredentialModal({
   const [password, setPassword] = useState(existingDecrypted?.password ?? '');
   const [apiKey, setApiKey] = useState(existingDecrypted?.apiKey ?? '');
   const [notes, setNotes] = useState(existingDecrypted?.notes ?? '');
+  const [customService, setCustomService] = useState(
+    existing?.service && !VAULT_SERVICES.some(s => s.id === existing.service)
+      ? existing.service
+      : ''
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const isValid = clientId && label.trim();
+  const isValid = clientId && label.trim() && (service !== 'other' || customService.trim());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -729,7 +760,7 @@ function CredentialModal({
     await onSave(
       {
         clientId,
-        service,
+        service: service === 'other' && customService.trim() ? customService.trim() : service,
         label: label.trim(),
         secret: {
           username: username.trim() || undefined,
@@ -796,6 +827,18 @@ function CredentialModal({
               ))}
             </div>
           </div>
+          {service === 'other' && (
+            <div className="mt-2">
+              <input
+                type="text"
+                value={customService}
+                onChange={(e) => setCustomService(e.target.value)}
+                placeholder="Enter service name (e.g. Cloudflare, DigitalOcean)"
+                autoFocus
+                className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              />
+            </div>
+          )}
 
           {/* Divider */}
           <div className="border-t border-[#F2F2F7] my-4" />

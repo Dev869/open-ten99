@@ -125,7 +125,7 @@ export const VAULT_SERVICES = [
   { id: 'other', label: 'Other', color: '#86868B' },
 ] as const;
 
-export type VaultServiceId = (typeof VAULT_SERVICES)[number]['id'];
+export type VaultServiceId = (typeof VAULT_SERVICES)[number]['id'] | string;
 
 export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
   changeRequest: 'Change Request',
