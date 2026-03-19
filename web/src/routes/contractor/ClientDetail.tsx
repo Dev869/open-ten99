@@ -63,12 +63,10 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
     return <div className="text-center py-20 text-[#86868B]">Client not found.</div>;
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!client) return;
-    setSaving(true);
-    await updateClient(client);
+    updateClient(client).catch(console.error);
     setEditing(false);
-    setSaving(false);
   }
 
   async function handleDelete() {

@@ -39,21 +39,19 @@ export default function Clients({ workItems, clients }: ClientsProps) {
     );
   }, [clients, search]);
 
-  async function handleCreate() {
+  function handleCreate() {
     if (!newName.trim() || !newEmail.trim()) return;
-    setSaving(true);
-    await createClient({
+    createClient({
       name: newName.trim(),
       email: newEmail.trim(),
       phone: newPhone.trim() || undefined,
       company: newCompany.trim() || undefined,
-    });
+    }).catch(console.error);
     setNewName('');
     setNewEmail('');
     setNewPhone('');
     setNewCompany('');
     setShowNew(false);
-    setSaving(false);
   }
 
   return (
