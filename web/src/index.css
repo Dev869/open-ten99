@@ -10,6 +10,11 @@
   --border: #DDD5C8;
   --accent: #4BA8A8;
   --accent-dark: #3A9090;
+  /* Retro sci-fi icon palette */
+  --icon-fill: #7CBCB0;
+  --icon-highlight: #FFFDF9;
+  --icon-accent: #D4873E;
+  --icon-stroke: #2C2417;
 }
 
 .dark {
@@ -22,6 +27,11 @@
   --border: #3D3426;
   --accent: #5BC4C4;
   --accent-dark: #7DD5D5;
+  /* Retro sci-fi icon palette */
+  --icon-fill: #4D9488;
+  --icon-highlight: #3D3426;
+  --icon-accent: #D4873E;
+  --icon-stroke: #F0E8D8;
 }
 
 body {

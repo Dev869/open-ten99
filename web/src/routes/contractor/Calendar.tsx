@@ -5,6 +5,7 @@ import { WORK_ITEM_TYPE_LABELS, RECURRENCE_LABELS } from '../../lib/types';
 import { formatCurrency, cn } from '../../lib/utils';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useNavigate } from 'react-router-dom';
+import { IconChevronLeft, IconChevronRight, IconCalendar as IconCalendarIcon, IconRepeat } from '../../components/icons';
 
 interface CalendarProps {
   workItems: WorkItem[];
@@ -239,18 +240,14 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
               aria-label="Previous"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
+              <IconChevronLeft size={14} />
             </button>
             <button
               onClick={next}
               className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
               aria-label="Next"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
+              <IconChevronRight size={14} />
             </button>
             <button
               onClick={() => setCurrent(new Date())}
@@ -456,9 +453,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                           </div>
                           {ci.item.recurrence && (
                             <div className="hidden md:flex text-[8px] text-white/55 mt-0.5 items-center gap-0.5">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                              </svg>
+                              <IconRepeat size={8} color="currentColor" />
                               {ci.item.recurrence.frequency === 'custom'
                                 ? `${ci.item.recurrence.customDays}d`
                                 : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
@@ -484,9 +479,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               {listItems.length === 0 && (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 mx-auto text-[var(--border)] mb-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                    </svg>
+                    <div className="mx-auto mb-2"><IconCalendarIcon size={32} color="var(--border)" /></div>
                     <p className="text-xs text-[var(--text-secondary)] font-medium">No items this month</p>
                   </div>
                 </div>
@@ -552,9 +545,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
                           </span>
                           {ci.item.recurrence && (
                             <span className="text-[8px] text-[var(--accent)] font-medium flex items-center gap-0.5">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                              </svg>
+                              <IconRepeat size={8} color="currentColor" />
                               {ci.item.recurrence.frequency === 'custom'
                                 ? `${ci.item.recurrence.customDays}d`
                                 : RECURRENCE_LABELS[ci.item.recurrence.frequency]}

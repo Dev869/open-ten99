@@ -1,5 +1,14 @@
 import { cn } from '../lib/utils';
 import type { WorkItem, Client } from '../lib/types';
+import {
+  IconBell,
+  IconRefresh,
+  IconDocument,
+  IconAlert,
+  IconUser,
+  IconCheck,
+  IconClose,
+} from './icons';
 
 /* ── Types ──────────────────────────────────────────── */
 
@@ -20,77 +29,11 @@ const TYPE_META: Record<NotificationType, { color: string; label: string }> = {
   unassigned: { color: '#9CA3AF', label: 'Unassigned' },
 };
 
-/* ── Icons ──────────────────────────────────────────── */
-
-function IconBell() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 01-3.46 0" />
-    </svg>
-  );
-}
-
-function IconRefresh({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10" />
-      <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-    </svg>
-  );
-}
-
-function IconFile({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
-
-function IconAlert({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-  );
-}
-
-function IconUser({ color }: { color: string }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function IconCheck() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
 function NotificationIcon({ type }: { type: NotificationType }) {
   const { color } = TYPE_META[type];
   switch (type) {
     case 'retainerRenewal': return <IconRefresh color={color} />;
-    case 'staleDraft': return <IconFile color={color} />;
+    case 'staleDraft': return <IconDocument color={color} />;
     case 'overdue': return <IconAlert color={color} />;
     case 'unassigned': return <IconUser color={color} />;
   }
@@ -332,7 +275,7 @@ export function NotificationPanel({
       {/* Body */}
       {count === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <IconCheck />
+          <IconCheck size={40} color="var(--accent)" />
           <p className="text-sm text-[var(--text-secondary)] font-medium">All caught up!</p>
         </div>
       ) : (

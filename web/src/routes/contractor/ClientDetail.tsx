@@ -4,6 +4,7 @@ import type { WorkItem, Client } from '../../lib/types';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { updateClient, deleteClient } from '../../services/firestore';
 import { formatDate, getRetainerPeriodStart } from '../../lib/utils';
+import { IconChevronLeft, IconEdit, IconClose, IconCheckSmall, IconTrash } from '../../components/icons';
 
 function ordinalSuffix(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -88,9 +89,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
         onClick={() => navigate('/dashboard/clients')}
         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] hover:shadow-sm border border-transparent hover:border-[var(--border)] active:scale-[0.97] transition-all mb-5 min-h-[44px]"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <IconChevronLeft size={16} className="flex-shrink-0" />
         Clients
       </button>
 
@@ -113,16 +112,12 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           >
             {editing ? (
               <>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 3l8 8M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <IconClose size={14} />
                 Cancel
               </>
             ) : (
               <>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M10.5 1.5l2 2-8 8H2.5v-2l8-8z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconEdit size={14} />
                 Edit
               </>
             )}
@@ -331,9 +326,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8.5l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconCheckSmall size={16} />
                 Save Changes
               </>
             )}
@@ -345,10 +338,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
               onClick={() => setShowDeleteConfirm(true)}
               className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 active:scale-[0.97] transition-all min-h-[44px]"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M6.667 7.333v4M9.333 7.333v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
+              <IconTrash size={16} />
               Delete Client
             </button>
           </div>
@@ -365,10 +355,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-sm animate-scale-in">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-500">
-                  <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
+                <IconTrash size={24} className="text-red-500" />
               </div>
               <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">Delete this client?</h3>
               <p className="text-sm text-[var(--text-secondary)]">This action cannot be undone. All client data will be permanently removed.</p>

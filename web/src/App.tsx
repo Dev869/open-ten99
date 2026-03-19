@@ -10,6 +10,7 @@ import { ToastContext, useToastState } from './hooks/useToast';
 import { useTheme } from './hooks/useTheme';
 import { GlobalSearch } from './components/GlobalSearch';
 import { computeNotifications, NotificationPanel, MobileNotificationBell } from './components/NotificationCenter';
+import { IconMenu, IconLayers, IconSearch } from './components/icons';
 import Login from './routes/Login';
 
 // Lazy-loaded contractor routes
@@ -168,19 +169,11 @@ function ContractorLayout() {
               onClick={() => setSidebarOpen(true)}
               className="p-2 -ml-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              <IconMenu size={22} />
             </button>
             <div className="flex-1 flex items-center justify-center gap-2">
               <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconLayers size={13} />
               </div>
               <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">OpenChanges</span>
             </div>
@@ -194,10 +187,7 @@ function ContractorLayout() {
                 onClick={() => setSearchOpen(true)}
                 className="p-2 -mr-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <IconSearch size={20} />
               </button>
             </div>
           </header>
@@ -326,11 +316,7 @@ export default function App() {
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
           <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <IconLayers size={28} />
           </div>
           <span className="text-white font-bold text-xl tracking-tight">OpenChanges</span>
           <div className="text-sm text-white/40 mt-3">Loading...</div>

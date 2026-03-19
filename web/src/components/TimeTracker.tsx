@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '../lib/utils';
+import { IconPlay, IconPause, IconStop, IconClose } from './icons';
 import type { Client } from '../lib/types';
 
 interface TimeTrackerProps {
@@ -62,17 +63,12 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
       >
         {isRunning ? (
           <>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="4" width="4" height="16" rx="1" />
-              <rect x="14" y="4" width="4" height="16" rx="1" />
-            </svg>
+            <IconPause size={16} />
             <span className="font-mono text-xs">{formatTime(elapsedSeconds)}</span>
           </>
         ) : (
           <>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
+            <IconPlay size={16} />
             <span>Track</span>
           </>
         )}
@@ -98,10 +94,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
           onClick={() => setIsExpanded(false)}
           className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--bg-input)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <IconClose size={14} />
         </button>
       </div>
 
@@ -135,14 +128,9 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
           )}
         >
           {isRunning ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="4" width="4" height="16" rx="1" />
-              <rect x="14" y="4" width="4" height="16" rx="1" />
-            </svg>
+            <IconPause size={18} />
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="6,3 20,12 6,21" />
-            </svg>
+            <IconPlay size={18} />
           )}
         </button>
         {(isRunning || elapsedSeconds > 0) && (
@@ -150,9 +138,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
             onClick={handleStop}
             className="w-10 h-10 rounded-full border border-[var(--border)] flex items-center justify-center hover:bg-[var(--bg-input)] transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
+            <IconStop size={16} />
           </button>
         )}
       </div>

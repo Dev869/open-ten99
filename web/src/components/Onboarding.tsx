@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import type { Client, AppSettings } from '../lib/types';
 import { createClient } from '../services/firestore';
 import { updateSettings } from '../services/firestore';
+import { IconLayers, IconUser, IconDollar, IconSun, IconPlus, IconCalendar, IconGear } from './icons';
 
 interface OnboardingProps {
   user: User;
@@ -100,11 +101,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
             <div className="animate-fade-in-up text-center">
               {/* App icon */}
               <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconLayers size={28} />
               </div>
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
                 Welcome to OpenChanges!
@@ -129,10 +126,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
             <div className="animate-fade-in-up">
               {/* Client icon */}
               <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+                <IconUser size={22} color="var(--accent)" />
               </div>
               <h2 className="text-lg font-extrabold text-[var(--text-primary)] text-center mb-1">
                 Add Your First Client
@@ -203,10 +197,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
             <div className="animate-fade-in-up">
               {/* Rate icon */}
               <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23" />
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
+                <IconDollar size={22} color="var(--accent)" />
               </div>
               <h2 className="text-lg font-extrabold text-[var(--text-primary)] text-center mb-1">
                 Set Your Hourly Rate
@@ -255,17 +246,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
             <div className="animate-fade-in-up text-center">
               {/* Confetti/celebration icon */}
               <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v4" />
-                  <path d="m15.5 7.5 2.5-2.5" />
-                  <path d="M19 12h3" />
-                  <path d="m17.5 17.5 2 2" />
-                  <path d="M12 19v3" />
-                  <path d="m6.5 17.5-2 2" />
-                  <path d="M2 12h3" />
-                  <path d="m6.5 6.5-2.5-2.5" />
-                  <circle cx="12" cy="12" r="4" />
-                </svg>
+                <IconSun size={30} color="var(--accent)" />
               </div>
               <h2 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
                 You're All Set!
@@ -281,10 +262,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
-                    </svg>
+                    <IconPlus size={16} color="var(--accent)" />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">Create Work Order</div>
@@ -297,12 +275,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
+                    <IconCalendar size={16} color="var(--accent)" />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">View Calendar</div>
@@ -315,10 +288,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>
+                    <IconGear size={16} color="var(--accent)" />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">Manage Settings</div>

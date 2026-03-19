@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../../lib/types';
 import { createClient } from '../../services/firestore';
+import { IconPlus, IconSearch, IconChevronRight, IconClose, IconCheckSmall } from '../../components/icons';
 
 interface ClientsProps {
   workItems: WorkItem[];
@@ -70,25 +71,14 @@ export default function Clients({ workItems, clients }: ClientsProps) {
           onClick={() => setShowNew(true)}
           className="inline-flex items-center gap-2 py-2.5 px-5 bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-            <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <IconPlus size={16} className="flex-shrink-0" />
           New Client
         </button>
       </div>
 
       {/* Search Input */}
       <div className="mb-4 relative">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          fill="none"
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none"
-        >
-          <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.8" />
-          <path d="M11.5 11.5L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
+        <IconSearch size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" />
         <input
           type="text"
           value={search}
@@ -128,9 +118,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
                 <div className="text-[10px] text-[var(--text-secondary)]">items</div>
               </div>
               {/* Chevron */}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[var(--text-secondary)]/50">
-                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <IconChevronRight size={16} className="text-[var(--text-secondary)]/50" />
             </div>
           </button>
         ))}
@@ -158,9 +146,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
               onClick={() => setShowNew(true)}
               className="inline-flex items-center gap-2 mt-5 py-2.5 px-5 bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <IconPlus size={16} />
               Add Your First Client
             </button>
           )}
@@ -185,9 +171,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
                 className="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
                 aria-label="Close"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <IconClose size={18} />
               </button>
             </div>
 
@@ -261,9 +245,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
                   'Saving...'
                 ) : (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8.5l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <IconCheckSmall size={16} />
                     Save Client
                   </>
                 )}

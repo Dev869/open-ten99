@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../lib/types';
+import { IconSearch, IconDocument, IconUser } from './icons';
 
 interface GlobalSearchProps {
   workItems: WorkItem[];
@@ -160,20 +161,7 @@ export function GlobalSearch({ workItems, clients, onClose }: GlobalSearchProps)
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
           {/* Magnifying glass icon */}
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--text-secondary)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="flex-shrink-0"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <IconSearch size={18} color="var(--text-secondary)" className="flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -226,22 +214,7 @@ export function GlobalSearch({ workItems, clients, onClose }: GlobalSearchProps)
                   >
                     {/* Work item icon */}
                     <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="var(--accent)"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                      </svg>
+                      <IconDocument size={16} color="var(--accent)" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-[var(--text-primary)] truncate">
@@ -279,19 +252,7 @@ export function GlobalSearch({ workItems, clients, onClose }: GlobalSearchProps)
                   >
                     {/* Client icon */}
                     <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="var(--accent)"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
+                      <IconUser size={16} color="var(--accent)" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-[var(--text-primary)] truncate">

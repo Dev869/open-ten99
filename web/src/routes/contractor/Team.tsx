@@ -4,6 +4,15 @@ import type {
   AppSettings,
   TeamRole,
 } from '../../lib/types';
+import {
+  IconPlus,
+  IconClose,
+  IconEdit,
+  IconCheckSmall,
+  IconChevronDown,
+  IconSend,
+  IconMail,
+} from '../../components/icons';
 import { TEAM_ROLE_LABELS } from '../../lib/types';
 import { useTeam, useTeamMembers, useTeamInvites } from '../../hooks/useFirestore';
 import {
@@ -254,9 +263,7 @@ export default function Team({ user, settings }: TeamProps) {
                 className="p-2 rounded-xl text-[var(--accent)] hover:bg-[var(--bg-input)] transition-colors"
                 aria-label="Save name"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M3 9.5l4 4L15 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconCheckSmall size={18} />
               </button>
               <button
                 onClick={() => {
@@ -266,9 +273,7 @@ export default function Team({ user, settings }: TeamProps) {
                 className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
                 aria-label="Cancel"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <IconClose size={18} />
               </button>
             </div>
           ) : (
@@ -282,9 +287,7 @@ export default function Team({ user, settings }: TeamProps) {
                   className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors flex-shrink-0"
                   aria-label="Edit team name"
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M10 2l2 2L5 11H3V9L10 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <IconEdit size={14} />
                 </button>
               )}
               <span className="text-xs text-[var(--text-secondary)] flex-shrink-0">
@@ -299,9 +302,7 @@ export default function Team({ user, settings }: TeamProps) {
             onClick={() => setShowInvite(true)}
             className="inline-flex items-center gap-2 py-2.5 px-5 bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px] flex-shrink-0"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
-              <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <IconPlus size={16} className="flex-shrink-0" />
             Invite Member
           </button>
         )}
@@ -376,9 +377,7 @@ export default function Team({ user, settings }: TeamProps) {
                       className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
                       aria-label="Change role"
                     >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <IconChevronDown size={14} />
                     </button>
                     {roleDropdownMemberId === member.id && (
                       <>
@@ -413,9 +412,7 @@ export default function Team({ user, settings }: TeamProps) {
                     className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
                     aria-label="Remove member"
                   >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
+                    <IconClose size={14} />
                   </button>
                 )}
               </div>
@@ -445,10 +442,7 @@ export default function Team({ user, settings }: TeamProps) {
               >
                 {/* Envelope icon */}
                 <div className="w-9 h-9 rounded-full bg-[var(--bg-input)] flex items-center justify-center flex-shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[var(--text-secondary)]">
-                    <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M1 5l7 4 7-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <IconMail size={16} className="text-[var(--text-secondary)]" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -481,9 +475,7 @@ export default function Team({ user, settings }: TeamProps) {
                     className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
                     aria-label="Cancel invite"
                   >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
+                    <IconClose size={14} />
                   </button>
                 )}
               </div>
@@ -518,9 +510,7 @@ export default function Team({ user, settings }: TeamProps) {
                 className="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
                 aria-label="Close"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <IconClose size={18} />
               </button>
             </div>
 
@@ -616,10 +606,7 @@ export default function Team({ user, settings }: TeamProps) {
                   'Sending...'
                 ) : (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M14 2L7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      <path d="M14 2l-4.5 12-2.5-5L2 6.5 14 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <IconSend size={16} />
                     Send Invite
                   </>
                 )}

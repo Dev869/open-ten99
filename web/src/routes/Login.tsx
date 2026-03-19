@@ -1,3 +1,5 @@
+import { IconLayers } from '../components/icons';
+
 interface LoginProps {
   onSignIn: () => void;
   loading?: boolean;
@@ -10,11 +12,7 @@ export default function Login({ onSignIn, loading }: LoginProps) {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <IconLayers size={28} />
           </div>
           <h1 className="text-white font-bold text-2xl tracking-tight">OpenChanges</h1>
           <p className="text-white/40 text-sm mt-2">Contractor work order management</p>

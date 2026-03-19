@@ -5,6 +5,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { updateWorkItemClientResponse } from '../../services/firestore';
+import { IconCheck, IconCheckSmall } from '../../components/icons';
 
 interface PortalDetailProps {
   workItems: WorkItem[];
@@ -168,9 +169,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
         {item.clientApproval === 'approved' && !successMsg && (
           <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#5A9A5A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <IconCheck size={20} color="#5A9A5A" />
               <span className="text-sm font-semibold text-[#5A9A5A]">You approved this work order</span>
             </div>
             {item.clientApprovalDate && (
@@ -207,9 +206,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
         {successMsg && (
           <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#5A9A5A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <IconCheck size={20} color="#5A9A5A" />
               <span className="text-sm font-semibold text-[#5A9A5A]">{successMsg}</span>
             </div>
           </div>
@@ -240,9 +237,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
                 disabled={submitting}
                 className="flex-1 flex items-center justify-center gap-2 bg-[#5A9A5A] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:bg-[#4e894e] transition-colors disabled:opacity-50"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <IconCheckSmall size={20} color="white" />
                 {submitting ? 'Submitting...' : 'Approve'}
               </button>
               <button
