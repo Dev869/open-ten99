@@ -213,6 +213,7 @@ interface CustomizePanelProps {
   onReset: () => void;
   onClose: () => void;
   isMobile: boolean;
+  sidebarExpanded?: boolean;
 }
 
 function CustomizePanel({
@@ -224,6 +225,7 @@ function CustomizePanel({
   onReset,
   onClose,
   isMobile,
+  sidebarExpanded,
 }: CustomizePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -366,7 +368,10 @@ function CustomizePanel({
   return (
     <div
       ref={panelRef}
-      className="fixed left-[80px] bottom-14 z-[60] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl p-4 w-[300px] animate-fade-in-up"
+      className={cn(
+        'fixed bottom-14 z-[60] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl p-4 w-[300px] animate-fade-in-up',
+        sidebarExpanded ? 'left-[228px]' : 'left-[80px]'
+      )}
       style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
     >
       {panelContent}
@@ -385,6 +390,8 @@ interface SidebarProps {
   onUpdateSidebar?: (order: string[], hidden: string[]) => void;
   dark: boolean;
   onToggleTheme: () => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
 export function Sidebar({
@@ -396,6 +403,8 @@ export function Sidebar({
   sidebarOrder,
   sidebarHidden,
   onUpdateSidebar,
+  expanded,
+  onToggleExpanded,
 }: SidebarProps) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -471,15 +480,14 @@ export function Sidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-full z-50 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex-shrink-0',
-          // Desktop: always visible, icon-only, static position
-          'hidden md:flex w-[72px]',
-          // Mobile: fixed drawer
+          'h-full z-50 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex-shrink-0 transition-all duration-200',
+          'hidden md:flex',
+          expanded ? 'w-[220px]' : 'w-[72px]',
           isOpen && '!flex fixed w-[280px] shadow-2xl animate-slide-in-right'
         )}
       >
         {/* Brand mark */}
-        <div className="flex items-center h-16 flex-shrink-0 px-4 md:justify-center">
+        <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
           <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
             <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -488,14 +496,17 @@ export function Sidebar({
                 <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="font-bold text-[var(--text-primary)] text-lg tracking-tight md:hidden">
+            <span className={cn(
+              'font-bold text-[var(--text-primary)] text-lg tracking-tight',
+              expanded ? '' : 'md:hidden'
+            )}>
               OpenChanges
             </span>
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 flex flex-col gap-1 px-3 md:items-center mt-2">
+        <nav className={cn('flex-1 flex flex-col gap-1 px-3 mt-2', !expanded && 'md:items-center')}>
           {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
@@ -505,10 +516,12 @@ export function Sidebar({
               className={({ isActive }) =>
                 cn(
                   'relative flex items-center rounded-xl transition-all duration-200',
-                  // Desktop: centered icon button
-                  'md:w-11 md:h-11 md:justify-center',
-                  // Mobile: full width with label
-                  'w-full px-4 py-3 gap-3 md:px-0 md:py-0 md:gap-0',
+                  // Mobile: always full width with label
+                  'w-full px-4 py-3 gap-3',
+                  // Desktop collapsed: icon only, centered
+                  !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                  // Desktop expanded: full width with label
+                  expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
                   isActive
                     ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
@@ -517,13 +530,17 @@ export function Sidebar({
             >
               <div className="relative flex-shrink-0">
                 <item.Icon />
-                {item.to === '/dashboard' && pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--accent)] rounded-full border-2 border-[var(--bg-sidebar)]" />
+                {item.to === '/dashboard' && pendingCount > 0 && !expanded && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--accent)] rounded-full border-2 border-[var(--bg-sidebar)] hidden md:block" />
                 )}
               </div>
               <span className="text-sm font-medium md:hidden">{item.label}</span>
+              {expanded && <span className="text-sm font-medium hidden md:inline">{item.label}</span>}
               {item.to === '/dashboard' && pendingCount > 0 && (
-                <span className="ml-auto md:hidden bg-[var(--accent)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className={cn(
+                  'ml-auto bg-[var(--accent)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full',
+                  expanded ? '' : 'md:hidden'
+                )}>
                   {pendingCount}
                 </span>
               )}
@@ -532,15 +549,16 @@ export function Sidebar({
         </nav>
 
         {/* Bottom section */}
-        <div className="flex flex-col gap-1 px-3 md:items-center pb-5">
+        <div className={cn('flex flex-col gap-1 px-3 pb-5', !expanded && 'md:items-center')}>
           <NavLink
             to="/dashboard/settings"
             onClick={onClose}
             className={({ isActive }) =>
               cn(
                 'flex items-center rounded-xl transition-all duration-200',
-                'md:w-11 md:h-11 md:justify-center',
-                'w-full px-4 py-3 gap-3 md:px-0 md:py-0 md:gap-0',
+                'w-full px-4 py-3 gap-3',
+                !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
                 isActive
                   ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
@@ -549,13 +567,21 @@ export function Sidebar({
           >
             <IconSettings />
             <span className="text-sm font-medium md:hidden">Settings</span>
+            {expanded && <span className="text-sm font-medium hidden md:inline">Settings</span>}
           </NavLink>
           <button
             onClick={onToggleTheme}
-            className="flex items-center gap-3 rounded-xl transition-all md:w-11 md:h-11 md:justify-center w-full px-4 py-3 md:px-0 md:py-0 md:gap-0 text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+            className={cn(
+              'flex items-center rounded-xl transition-all duration-200',
+              'w-full px-4 py-3 gap-3',
+              !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+              expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
+              'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+            )}
           >
             {dark ? <IconSun /> : <IconMoon />}
             <span className="text-sm font-medium md:hidden">{dark ? 'Light Mode' : 'Dark Mode'}</span>
+            {expanded && <span className="text-sm font-medium hidden md:inline">{dark ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
           <NavLink
             to="/dashboard/profile"
@@ -563,8 +589,9 @@ export function Sidebar({
             className={({ isActive }) =>
               cn(
                 'flex items-center rounded-xl transition-all duration-200',
-                'md:w-11 md:h-11 md:justify-center',
-                'w-full px-4 py-3 gap-3 md:px-0 md:py-0 md:gap-0',
+                'w-full px-4 py-3 gap-3',
+                !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
                 isActive
                   ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
@@ -573,6 +600,7 @@ export function Sidebar({
           >
             <IconProfile />
             <span className="text-sm font-medium md:hidden">Profile</span>
+            {expanded && <span className="text-sm font-medium hidden md:inline">Profile</span>}
           </NavLink>
 
           {/* Customize button — desktop only */}
@@ -580,7 +608,9 @@ export function Sidebar({
             <button
               onClick={() => setCustomizeOpen((v) => !v)}
               className={cn(
-                'hidden md:flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 mt-1',
+                'hidden md:flex items-center rounded-xl transition-all duration-200 mt-1',
+                !expanded && 'w-11 h-11 justify-center',
+                expanded && 'w-full px-3 py-2.5 justify-start gap-3',
                 customizeOpen
                   ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
@@ -588,8 +618,24 @@ export function Sidebar({
               title="Customize sidebar"
             >
               <IconCustomize />
+              {expanded && <span className="text-sm font-medium">Customize</span>}
             </button>
           )}
+
+          {/* Expand/Collapse toggle — desktop only */}
+          <button
+            onClick={onToggleExpanded}
+            className="hidden md:flex w-8 h-8 rounded-full border border-[var(--border)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all mx-auto mb-3 mt-2"
+            title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className={cn('transition-transform duration-200', expanded ? 'rotate-180' : '')}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
         </div>
       </aside>
 
@@ -604,6 +650,7 @@ export function Sidebar({
           onReset={handleReset}
           onClose={handleCloseCustomize}
           isMobile={isMobileView}
+          sidebarExpanded={expanded}
         />
       )}
     </>

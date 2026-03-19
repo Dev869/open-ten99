@@ -36,6 +36,10 @@ function Loading() {
 
 function ContractorLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    const stored = localStorage.getItem('oc-sidebar-expanded');
+    return stored === 'true';
+  });
   const { dark, toggle } = useTheme();
   const { user } = useAuth();
   const { workItems } = useWorkItems();
@@ -53,6 +57,14 @@ function ContractorLayout() {
     [user?.uid]
   );
 
+  function handleToggleExpanded() {
+    setSidebarExpanded(prev => {
+      const next = !prev;
+      localStorage.setItem('oc-sidebar-expanded', String(next));
+      return next;
+    });
+  }
+
   return (
     <div className="flex h-screen bg-[var(--bg-page)]">
       <Sidebar
@@ -64,6 +76,8 @@ function ContractorLayout() {
         onUpdateSidebar={handleUpdateSidebar}
         dark={dark}
         onToggleTheme={toggle}
+        expanded={sidebarExpanded}
+        onToggleExpanded={handleToggleExpanded}
       />
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
