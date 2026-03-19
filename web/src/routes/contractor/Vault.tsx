@@ -228,15 +228,32 @@ export default function Vault({ user, clients }: VaultProps) {
 
   return (
     <div className="max-w-3xl animate-fade-in-up">
+      {/* Encryption status banner */}
+      <div className="py-2 px-4 rounded-xl bg-[#1A1A2E]/5 flex items-center gap-3 text-xs text-[#86868B] mb-4 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 font-medium">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4BA8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          End-to-end encrypted
+        </span>
+        <span className="text-[#C7C7CC]">&middot;</span>
+        <span>{credentials.length} credential{credentials.length !== 1 ? 's' : ''}</span>
+        <span className="text-[#C7C7CC]">&middot;</span>
+        <span className="inline-flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Auto-locks in 5 min
+        </span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
             Key Vault
           </h1>
-          <p className="text-xs text-[#86868B] mt-1">
-            AES-256 encrypted &middot; Auto-locks after 5 min &middot; {credentials.length} credential{credentials.length !== 1 ? 's' : ''}
-          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -287,7 +304,7 @@ export default function Vault({ user, clients }: VaultProps) {
         <button
           onClick={() => setFilter('all')}
           className={cn(
-            'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-colors',
+            'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
             filter === 'all' ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
           )}
         >
@@ -298,7 +315,7 @@ export default function Vault({ user, clients }: VaultProps) {
             key={c.id}
             onClick={() => setFilter(c.id!)}
             className={cn(
-              'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-colors',
+              'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
               filter === c.id ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
             )}
           >
@@ -401,7 +418,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
   return (
     <div className="max-w-md mx-auto pt-20 animate-fade-in-up">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-[#1A1A2E] flex items-center justify-center mx-auto mb-4">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1A1A2E] to-[#2D2D3F] flex items-center justify-center mx-auto mb-4">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0110 0v4" />
@@ -416,36 +433,58 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 space-y-4">
         <div>
           <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
             Master Password
           </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); setError(''); }}
-            placeholder="At least 8 characters"
-            autoFocus
-            className="w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
-          />
+          <div className="relative">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="At least 8 characters"
+              autoFocus
+              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+            />
+          </div>
           {strengthLabel && (
-            <p className={cn('text-xs font-medium mt-1.5', strengthColor)}>
-              Strength: {strengthLabel}
-            </p>
+            <div className="mt-1.5">
+              <p className={cn('text-xs font-medium', strengthColor)}>
+                Strength: {strengthLabel}
+              </p>
+              <div className="mt-1 h-1 rounded-full bg-[#E5E5EA] overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-300',
+                    strengthLabel === 'Weak' ? 'w-1/3 bg-red-500' : strengthLabel === 'Good' ? 'w-2/3 bg-yellow-500' : 'w-full bg-green-500',
+                  )}
+                />
+              </div>
+            </div>
           )}
         </div>
         <div>
           <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
             Confirm Password
           </label>
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => { setConfirm(e.target.value); setError(''); }}
-            placeholder="Repeat your password"
-            className="w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
-          />
+          <div className="relative">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => { setConfirm(e.target.value); setError(''); }}
+              placeholder="Repeat your password"
+              className="w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+            />
+          </div>
         </div>
         {error && (
           <p className="text-sm text-red-500 font-medium">{error}</p>
@@ -491,7 +530,7 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
   return (
     <div className="max-w-sm mx-auto pt-20 animate-fade-in-up">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-[#1A1A2E] flex items-center justify-center mx-auto mb-4">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1A1A2E] to-[#2D2D3F] flex items-center justify-center mx-auto mb-4">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0110 0v4" />
@@ -505,18 +544,23 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] p-6 space-y-4">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); setError(false); }}
-          placeholder="Master password"
-          autoFocus
-          className={cn(
-            'w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow',
-            error ? 'border-red-300 animate-[shake_0.3s_ease-in-out]' : 'border-transparent',
-          )}
-        />
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 space-y-4">
+        <div className="relative">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+          </svg>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(false); }}
+            placeholder="Master password"
+            autoFocus
+            className={cn(
+              'w-full pl-11 pr-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow',
+              error ? 'border-red-300 animate-[shake_0.3s_ease-in-out]' : 'border-transparent',
+            )}
+          />
+        </div>
         {error && (
           <p className="text-sm text-red-500 font-medium text-center">Wrong password.</p>
         )}
@@ -580,8 +624,8 @@ function CredentialCard({
 
   return (
     <div
-      className="bg-white rounded-xl border border-[#E5E5EA] overflow-hidden animate-fade-in-up hover-lift"
-      style={{ animationDelay: `${index * 40}ms`, borderLeft: `3px solid ${svc.color}` }}
+      className="rounded-xl border border-[#E5E5EA] overflow-hidden animate-fade-in-up hover-lift active:scale-[0.97] transition-transform"
+      style={{ animationDelay: `${index * 40}ms`, borderLeft: `4px solid ${svc.color}`, background: `linear-gradient(to right, ${svc.color}08, transparent 40%) white` }}
     >
       {/* Header — always visible */}
       <button
@@ -613,15 +657,15 @@ function CredentialCard({
 
       {/* Expanded details */}
       {expanded && hasFields && (
-        <div className="px-4 pb-4 space-y-2 border-t border-[#F2F2F7] pt-3">
-          {fields.map((f) => {
+        <div className="px-4 pb-4 space-y-2 border-t border-[#F2F2F7] pt-3 bg-[#FAFAFA]">
+          {fields.filter((f) => decrypted?.[f.key]).map((f, idx) => {
             const val = decrypted?.[f.key];
             if (!val) return null;
             const isRevealed = revealed[f.key] || !f.sensitive;
             const displayVal = isRevealed ? val : '\u2022'.repeat(Math.min(val.length, 24));
 
             return (
-              <div key={f.key} className="flex items-center gap-2">
+              <div key={f.key} className={cn('flex items-center gap-2', idx % 2 === 0 && 'bg-white rounded-lg px-2 py-1.5')}>
                 <span className="text-xs text-[#86868B] w-20 flex-shrink-0">{f.label}</span>
                 <span className={cn(
                   'flex-1 text-sm truncate',
@@ -657,7 +701,7 @@ function CredentialCard({
                     title="Copy"
                   >
                     {copied === f.key ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27AE60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-[scale-bounce_0.3s_ease-out]" style={{ color: '#22C55E' }}>
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     ) : (
@@ -810,7 +854,7 @@ function CredentialModal({
                   key={s.id}
                   type="button"
                   onClick={() => setService(s.id as VaultServiceId)}
-                  className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl min-h-[40px] text-xs font-semibold transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl min-h-[40px] text-xs font-semibold transition-all active:scale-[0.95]"
                   style={{
                     backgroundColor: service === s.id ? s.color : '#F5F5F7',
                     color: service === s.id ? 'white' : '#86868B',
@@ -982,6 +1026,15 @@ function CredentialModal({
               className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             />
           </div>
+        </div>
+
+        {/* Encryption indicator */}
+        <div className="text-[10px] text-[#86868B] text-center py-2 flex items-center justify-center gap-1">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
+          </svg>
+          All fields encrypted with AES-256-GCM
         </div>
 
         {/* Footer */}

@@ -66,6 +66,12 @@ body {
   50%      { opacity: 1; }
 }
 
+@keyframes scale-bounce {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* Utility classes */
 .animate-fade-in-up {
   animation: fade-in-up 0.3s ease-out both;
