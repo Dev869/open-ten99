@@ -27,5 +27,19 @@ service cloud.firestore {
     match /settings/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Profiles collection: authenticated user can only access their own profile doc
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Vault: owner-only access — credentials are client-side encrypted
+    match /vaults/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /credentials/{credentialId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
   }
 }

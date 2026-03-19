@@ -87,6 +87,8 @@ firebase deploy --only storage
 | `clients` | Client profiles with contact info and retainer configuration |
 | `settings/{userId}` | Per-user app settings (company name, hourly rate, accent color, PDF logo) |
 | `profiles/{userId}` | Extended user profile (phone, company, bio, website, address) |
+| `vaults/{userId}` | Vault metadata (PBKDF2 salt, encrypted verification token) |
+| `vaults/{userId}/credentials/*` | Client credentials — AES-256-GCM encrypted, per-credential IV |
 
 ### Work Order Lifecycle
 
@@ -98,17 +100,34 @@ Email received → Gemini parses → Draft created
                                   PDF generated → sent to client
 ```
 
+## Key Vault
+
+Encrypted credential manager for storing client API keys, service logins, and secrets. Built with a zero-knowledge architecture — all encryption and decryption happens in the browser.
+
+**Security model:**
+
+- **Master password** — never stored; used to derive an AES-256 encryption key via PBKDF2 with 600,000 iterations and a random 256-bit salt
+- **AES-256-GCM** — authenticated encryption with a unique 96-bit IV per credential; tamper-evident by design
+- **Zero-knowledge storage** — Firestore only sees ciphertext; the plaintext never leaves the browser
+- **Verification token** — a known phrase encrypted with the derived key lets the app confirm the password is correct without storing it
+- **Auto-lock** — the derived key is held in memory only and cleared after 5 minutes of inactivity or when navigating away
+- **Owner-only Firestore rules** — vault documents are scoped to `request.auth.uid == userId`
+
+**Supported services:** Firebase, Google Cloud, Google AI Studio, AWS, GitHub, Vercel, Stripe, Netlify, and custom entries.
+
+Each credential stores a client association, service type, label (all plaintext for filtering), and an encrypted payload containing username, password, API key, and notes.
+
 ## Project Structure
 
 ```
 web/src/
   components/       Sidebar, StatCard, WorkItemCard, StatusBadge, FilterTabs, modals
   routes/
-    contractor/     Dashboard, WorkItems, Calendar, Clients, Analytics, Settings, Profile
+    contractor/     Dashboard, WorkItems, Calendar, Clients, Analytics, Vault, Settings, Profile
     portal/         PortalAuth, PortalHome, PortalDetail
   hooks/            useAuth, useFirestore
   services/         Firestore CRUD operations
-  lib/              Theme, types, utilities, PDF builder, Firebase config
+  lib/              Theme, types, utilities, crypto engine, PDF builder, Firebase config
 
 functions/src/
   index.ts          Function exports

@@ -86,6 +86,47 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
+/* ── Vault ─────────────────────────────────────────── */
+
+export interface VaultMeta {
+  salt: string;
+  verificationCiphertext: string;
+  verificationIv: string;
+  createdAt: Date;
+}
+
+export interface VaultCredential {
+  id?: string;
+  clientId: string;
+  service: string;
+  label: string;
+  encryptedData: string;
+  iv: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DecryptedCredentialData {
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  notes?: string;
+}
+
+export const VAULT_SERVICES = [
+  { id: 'firebase', label: 'Firebase', color: '#F5820D' },
+  { id: 'gcloud', label: 'Google Cloud', color: '#4285F4' },
+  { id: 'ai-studio', label: 'AI Studio', color: '#886FBF' },
+  { id: 'aws', label: 'AWS', color: '#FF9900' },
+  { id: 'github', label: 'GitHub', color: '#1A1A2E' },
+  { id: 'vercel', label: 'Vercel', color: '#1A1A2E' },
+  { id: 'stripe', label: 'Stripe', color: '#635BFF' },
+  { id: 'netlify', label: 'Netlify', color: '#00C7B7' },
+  { id: 'other', label: 'Other', color: '#86868B' },
+] as const;
+
+export type VaultServiceId = (typeof VAULT_SERVICES)[number]['id'];
+
 export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
   changeRequest: 'Change Request',
   featureRequest: 'Feature Request',

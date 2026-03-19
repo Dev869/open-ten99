@@ -15,6 +15,7 @@ const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
 const Analytics = lazy(() => import('./routes/contractor/Analytics'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
+const Vault = lazy(() => import('./routes/contractor/Vault'));
 
 // Lazy-loaded portal routes
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
@@ -130,6 +131,10 @@ function ContractorRoutes() {
       <Route
         path="profile"
         element={user ? <Profile user={user} onLogout={async () => { await logout(); navigate('/'); }} /> : null}
+      />
+      <Route
+        path="vault"
+        element={user ? <Vault user={user} clients={clients} /> : null}
       />
     </Routes>
   );

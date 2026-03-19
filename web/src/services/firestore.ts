@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential } from '../lib/types';
 
 // --- Converters ---
 
@@ -256,6 +256,80 @@ export async function updateProfile(userId: string, profile: Partial<UserProfile
   const ref = doc(db, 'profiles', userId);
   const { setDoc } = await import('firebase/firestore');
   await setDoc(ref, { ...profile, updatedAt: Timestamp.now() }, { merge: true });
+}
+
+// --- Vault ---
+
+export function subscribeVaultMeta(
+  userId: string,
+  callback: (meta: VaultMeta | null) => void,
+) {
+  const ref = doc(db, 'vaults', userId);
+  return onSnapshot(ref, (snapshot) => {
+    const data = snapshot.data();
+    if (!data) { callback(null); return; }
+    callback({
+      salt: data.salt,
+      verificationCiphertext: data.verificationCiphertext,
+      verificationIv: data.verificationIv,
+      createdAt: toDate(data.createdAt),
+    });
+  });
+}
+
+export async function createVaultMeta(
+  userId: string,
+  meta: Omit<VaultMeta, 'createdAt'>,
+) {
+  const ref = doc(db, 'vaults', userId);
+  const { setDoc } = await import('firebase/firestore');
+  await setDoc(ref, { ...meta, createdAt: Timestamp.now() });
+}
+
+export function subscribeVaultCredentials(
+  userId: string,
+  callback: (credentials: VaultCredential[]) => void,
+) {
+  const ref = collection(db, 'vaults', userId, 'credentials');
+  const q = query(ref, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(
+      snapshot.docs.map((d) => ({
+        id: d.id,
+        clientId: d.data().clientId,
+        service: d.data().service,
+        label: d.data().label,
+        encryptedData: d.data().encryptedData,
+        iv: d.data().iv,
+        createdAt: toDate(d.data().createdAt),
+        updatedAt: toDate(d.data().updatedAt),
+      })),
+    );
+  });
+}
+
+export async function createVaultCredential(
+  userId: string,
+  credential: Omit<VaultCredential, 'id' | 'createdAt' | 'updatedAt'>,
+) {
+  const ref = collection(db, 'vaults', userId, 'credentials');
+  const now = Timestamp.now();
+  const docRef = await addDoc(ref, { ...credential, createdAt: now, updatedAt: now });
+  return docRef.id;
+}
+
+export async function updateVaultCredential(
+  userId: string,
+  credentialId: string,
+  data: Partial<VaultCredential>,
+) {
+  const ref = doc(db, 'vaults', userId, 'credentials', credentialId);
+  await updateDoc(ref, { ...data, updatedAt: Timestamp.now() });
+}
+
+export async function deleteVaultCredential(userId: string, credentialId: string) {
+  const ref = doc(db, 'vaults', userId, 'credentials', credentialId);
+  await deleteDoc(ref);
 }
 
 // --- Cloud Functions ---
