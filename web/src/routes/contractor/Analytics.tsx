@@ -104,7 +104,7 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
       </h1>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="This Month" value={formatCurrency(stats.thisMonthRevenue)} color="#4BA8A8" />
         <StatCard label="Last Month" value={formatCurrency(stats.lastMonthRevenue)} />
         <StatCard label="All-Time Revenue" value={formatCurrency(stats.totalRevenue)} color="#27AE60" />
@@ -121,17 +121,17 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
         <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-4">
           Monthly Revenue
         </h2>
-        <div className="flex items-end gap-3 h-40">
+        <div className="flex items-end gap-2 sm:gap-3 h-32 sm:h-40 lg:h-48">
           {monthlyRevenue.map((month) => (
             <div key={month.label} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[#86868B]">
+              <span className="text-[10px] text-[#86868B] hidden sm:inline">
                 {month.revenue > 0 ? formatCurrency(month.revenue) : ''}
               </span>
               <div
                 className="w-full rounded-t-lg bg-[#4BA8A8] transition-all"
-                style={{ height: `${(month.revenue / maxRevenue) * 120}px`, minHeight: month.revenue > 0 ? 4 : 0 }}
+                style={{ height: `${(month.revenue / maxRevenue) * 80}%`, minHeight: month.revenue > 0 ? 4 : 0 }}
               />
-              <span className="text-xs font-semibold text-[#86868B]">{month.label}</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-[#86868B]">{month.label}</span>
             </div>
           ))}
         </div>

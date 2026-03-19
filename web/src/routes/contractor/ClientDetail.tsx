@@ -23,6 +23,7 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
   const [client, setClient] = useState<Client | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (source) setClient({ ...source });
@@ -76,18 +77,21 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this client? This cannot be undone.')) return;
     await deleteClient(client!.id!);
     navigate('/dashboard/clients');
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl animate-fade-in-up">
+      {/* Back Button */}
       <button
         onClick={() => navigate('/dashboard/clients')}
-        className="text-sm text-[#86868B] hover:text-[#1A1A2E] mb-4"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-[#86868B] hover:text-[#1A1A2E] hover:bg-white hover:shadow-sm border border-transparent hover:border-[#E5E5EA] active:scale-[0.97] transition-all mb-5 min-h-[44px]"
       >
-        ← Back to Clients
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Clients
       </button>
 
       {/* Client Header */}
@@ -105,9 +109,23 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           </div>
           <button
             onClick={() => setEditing(!editing)}
-            className="text-xs text-white/60 hover:text-white border border-white/20 px-3 py-1.5 rounded-lg"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white/70 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/10 rounded-xl active:scale-[0.97] transition-all min-h-[44px]"
           >
-            {editing ? 'Cancel' : 'Edit'}
+            {editing ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 3l8 8M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                Cancel
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M10.5 1.5l2 2-8 8H2.5v-2l8-8z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Edit
+              </>
+            )}
           </button>
         </div>
         <div className="flex gap-4 mt-3 text-xs text-white/50">
@@ -119,16 +137,47 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
       {/* Retainer Summary */}
       {retainerUsage && (
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
+        <div className="bg-white rounded-xl border border-[#E5E5EA] shadow-sm p-5 mb-4 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider">
               Retainer
             </h2>
-            {retainerUsage.paused && (
-              <span className="text-xs font-semibold text-[#E67E22] bg-[#E67E22]/10 px-2 py-0.5 rounded-full">
-                Paused
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {retainerUsage.paused && (
+                <span className="text-xs font-semibold text-[#E67E22] bg-[#E67E22]/10 px-2.5 py-1 rounded-full">
+                  Paused
+                </span>
+              )}
+              {editing && client.retainerHours && (
+                <button
+                  onClick={() =>
+                    setClient({ ...client, retainerPaused: !client.retainerPaused })
+                  }
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97] min-h-[44px] ${
+                    client.retainerPaused
+                      ? 'bg-[#4BA8A8]/10 text-[#4BA8A8] hover:bg-[#4BA8A8]/20'
+                      : 'bg-[#E67E22]/10 text-[#E67E22] hover:bg-[#E67E22]/20'
+                  }`}
+                >
+                  {client.retainerPaused ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M4 2.5l8 4.5-8 4.5V2.5z" fill="currentColor" />
+                      </svg>
+                      Resume
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <rect x="3" y="2" width="2.5" height="10" rx="0.5" fill="currentColor" />
+                        <rect x="8.5" y="2" width="2.5" height="10" rx="0.5" fill="currentColor" />
+                      </svg>
+                      Pause
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-end gap-6">
             <div>
@@ -161,61 +210,61 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
 
       {/* Edit Form */}
       {editing && (
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-4 space-y-3">
+        <div className="bg-white rounded-xl border border-[#E5E5EA] shadow-sm p-5 mb-4 space-y-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold">Name</label>
+            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Name</label>
             <input
               type="text"
               value={client.name}
               onChange={(e) => setClient({ ...client, name: e.target.value })}
-              className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold">Email</label>
+            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Email</label>
             <input
               type="email"
               value={client.email}
               onChange={(e) => setClient({ ...client, email: e.target.value })}
-              className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold">Phone</label>
+            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Phone</label>
             <input
               type="tel"
               value={client.phone ?? ''}
               onChange={(e) => setClient({ ...client, phone: e.target.value || undefined })}
-              className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold">Company</label>
+            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Company</label>
             <input
               type="text"
               value={client.company ?? ''}
               onChange={(e) => setClient({ ...client, company: e.target.value || undefined })}
-              className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
             />
           </div>
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold">Notes</label>
+            <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">Notes</label>
             <textarea
               value={client.notes ?? ''}
               onChange={(e) => setClient({ ...client, notes: e.target.value || undefined })}
               rows={3}
-              className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] resize-none border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all"
             />
           </div>
 
           {/* Retainer Settings */}
-          <div className="border-t border-[#E5E5EA] pt-3">
+          <div className="border-t border-[#E5E5EA] pt-4">
             <h3 className="text-xs text-[#86868B] uppercase font-semibold tracking-wide mb-3">
               Retainer
             </h3>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="text-xs text-[#86868B] uppercase font-semibold">
+                <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">
                   Hours / Month
                 </label>
                 <input
@@ -230,11 +279,11 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                       retainerHours: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
-                  className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                  className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-[#86868B] uppercase font-semibold">
+                <label className="block text-xs text-[#86868B] uppercase font-semibold mb-1.5">
                   Renewal Day
                 </label>
                 <input
@@ -249,58 +298,129 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
                       retainerRenewalDay: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
-                  className="w-full mt-1 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+                  className="w-full px-4 py-3 bg-[#F5F5F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] focus:border-[#4BA8A8] transition-all min-h-[44px]"
                 />
               </div>
             </div>
             {client.retainerHours && (
-              <label className="flex items-center gap-2 text-sm text-[#1A1A2E] mt-2">
+              <label className="flex items-center gap-2 text-sm text-[#1A1A2E] mt-3">
                 <input
                   type="checkbox"
                   checked={client.retainerPaused ?? false}
                   onChange={(e) => setClient({ ...client, retainerPaused: e.target.checked })}
-                  className="accent-[#E67E22]"
+                  className="accent-[#E67E22] w-4 h-4"
                 />
                 Pause renewal (retainer not active)
               </label>
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
+          {/* Save Button - Full Width */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 active:scale-[0.98] transition-all min-h-[48px] mt-2"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+                  <path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8.5l3.5 3.5L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Save Changes
+              </>
+            )}
+          </button>
+
+          {/* Delete Button */}
+          <div className="border-t border-[#E5E5EA] pt-4">
             <button
-              onClick={handleDelete}
-              className="py-2 px-4 rounded-xl border border-red-300 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 active:scale-[0.97] transition-all min-h-[44px]"
             >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M6.667 7.333v4M9.333 7.333v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
               Delete Client
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="ml-auto py-2 px-6 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm animate-scale-in">
+            <div className="p-6 text-center">
+              <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-red-500">
+                  <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-[#1A1A2E] mb-1">Delete this client?</h3>
+              <p className="text-sm text-[#86868B]">This action cannot be undone. All client data will be permanently removed.</p>
+            </div>
+            <div className="flex gap-3 p-5 border-t border-[#E5E5EA]">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F5F5F7] active:scale-[0.98] transition-all min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 active:scale-[0.98] transition-all min-h-[44px]"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Work Items */}
-      <div>
+      <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
         <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
           Work Items ({clientItems.length})
         </h2>
         <div className="space-y-2">
-          {clientItems.map((item) => (
-            <WorkItemCard
-              key={item.id}
-              item={item}
-              clientName={client.name}
-            />
+          {clientItems.map((item, i) => (
+            <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${200 + Math.min(i, 8) * 50}ms` }}>
+              <WorkItemCard
+                item={item}
+                clientName={client.name}
+              />
+            </div>
           ))}
         </div>
+
+        {/* Empty State for Work Items */}
         {clientItems.length === 0 && (
-          <div className="text-center py-12 text-[#86868B] text-sm">
-            No work items for this client yet.
+          <div className="text-center py-16 bg-white rounded-xl border border-[#E5E5EA] animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-[#86868B]/50">
+                <rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M4 11h20" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M9 16h10M9 19h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="text-sm font-semibold text-[#1A1A2E]">No work items yet</div>
+            <div className="text-xs text-[#86868B] mt-1 max-w-xs mx-auto">
+              Work items linked to {client.name} will appear here.
+            </div>
           </div>
         )}
       </div>

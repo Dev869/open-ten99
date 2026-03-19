@@ -52,7 +52,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             type="text"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            className="w-full mt-1.5 px-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+            className="w-full mt-1.5 px-3 py-2.5 min-h-[44px] bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
           />
           <p className="text-[10px] text-[#86868B] mt-1">
             Used in PDF headers and branding.
@@ -72,7 +72,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
               onChange={(e) => setHourlyRate(e.target.value)}
               step="5"
               min="0"
-              className="w-full pl-7 pr-3 py-2.5 bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full pl-7 pr-3 py-2.5 min-h-[44px] bg-[#F2F2F7] rounded-lg text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             />
           </div>
           <p className="text-[10px] text-[#86868B] mt-1">
@@ -85,12 +85,12 @@ export default function Settings({ settings, userId }: SettingsProps) {
           <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide">
             Accent Color
           </label>
-          <div className="flex gap-2 mt-1.5">
+          <div className="flex flex-wrap gap-3 mt-1.5">
             {colorPresets.map((color) => (
               <button
                 key={color}
                 onClick={() => setAccentColor(color)}
-                className="w-8 h-8 rounded-full transition-transform hover:scale-110"
+                className="w-11 h-11 rounded-full transition-transform hover:scale-110"
                 style={{
                   backgroundColor: color,
                   outline: accentColor === color ? '2px solid #1A1A2E' : 'none',
@@ -105,7 +105,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
               type="color"
               value={accentColor}
               onChange={(e) => setAccentColor(e.target.value)}
-              className="w-6 h-6 rounded cursor-pointer border-0"
+              className="w-11 h-11 rounded cursor-pointer border-0"
             />
             <span className="text-xs text-[#86868B] font-mono">{accentColor}</span>
           </div>
@@ -116,7 +116,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-2.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+            className="w-full py-2.5 min-h-[44px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
           </button>

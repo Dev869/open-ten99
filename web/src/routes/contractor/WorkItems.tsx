@@ -91,7 +91,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
         </h1>
         <button
           onClick={() => setShowNewOrder(true)}
-          className="px-4 py-2 bg-[#4BA8A8] text-white text-sm font-semibold rounded-full hover:bg-[#3A9090] transition-colors"
+          className="px-4 py-2 min-h-[44px] bg-[#4BA8A8] text-white text-sm font-semibold rounded-full hover:bg-[#3A9090] transition-colors"
         >
           + New Work Order
         </button>
@@ -104,7 +104,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search work items..."
-          className="w-full px-4 py-2.5 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+          className="w-full px-4 py-2.5 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
         />
       </div>
 
@@ -116,27 +116,27 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-white rounded-xl border border-[#E5E5EA]">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-xl border border-[#E5E5EA]">
           <span className="text-sm text-[#86868B]">
             {selectedIds.size} selected
           </span>
           <button
             onClick={handleBulkApprove}
             disabled={bulkLoading}
-            className="px-3 py-1.5 bg-[#27AE60] text-white text-xs font-semibold rounded-full hover:bg-[#219A52] disabled:opacity-50"
+            className="px-3 py-1.5 min-h-[44px] bg-[#27AE60] text-white text-xs font-semibold rounded-full hover:bg-[#219A52] disabled:opacity-50"
           >
             Approve Selected
           </button>
           <button
             onClick={handleBulkArchive}
             disabled={bulkLoading}
-            className="px-3 py-1.5 bg-[#888] text-white text-xs font-semibold rounded-full hover:bg-[#666] disabled:opacity-50"
+            className="px-3 py-1.5 min-h-[44px] bg-[#888] text-white text-xs font-semibold rounded-full hover:bg-[#666] disabled:opacity-50"
           >
             Archive Selected
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-[#86868B] hover:text-[#1A1A2E] ml-auto"
+            className="text-xs min-h-[44px] text-[#86868B] hover:text-[#1A1A2E] sm:ml-auto"
           >
             Clear
           </button>

@@ -223,7 +223,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
       return (
         <div
           key={`empty-${index}`}
-          className="min-h-[110px] bg-[#FAFAF7] border-b border-r border-[#F2F2F7]"
+          className="min-h-[70px] sm:min-h-[110px] bg-[#FAFAF7] border-b border-r border-[#F2F2F7]"
         />
       );
     }
@@ -234,7 +234,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
     return (
       <div
         key={day.toISOString()}
-        className="min-h-[110px] border-b border-r border-[#F2F2F7] p-2 group hover:bg-white/80 transition-colors cursor-default"
+        className="min-h-[70px] sm:min-h-[110px] border-b border-r border-[#F2F2F7] p-1 sm:p-2 group hover:bg-white/80 transition-colors cursor-default"
       >
         {/* Day number */}
         <div className="flex items-center justify-start mb-1.5">
@@ -282,7 +282,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
           Calendar
         </h1>
@@ -292,7 +292,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`px-4 py-1.5 min-h-[44px] rounded-md text-xs font-semibold transition-all ${
                 view === v
                   ? 'bg-white text-[#4BA8A8] shadow-sm'
                   : 'text-[#86868B] hover:text-[#1A1A2E]'
@@ -308,7 +308,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
       <div className="flex items-center gap-2 mb-5">
         <button
           onClick={prev}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
+          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -319,7 +319,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
         </span>
         <button
           onClick={next}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
+          className="w-11 h-11 flex items-center justify-center rounded-lg border border-[#E5E5EA] text-[#86868B] hover:bg-white hover:text-[#1A1A2E] hover:shadow-sm transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -327,7 +327,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
         </button>
         <button
           onClick={() => setCurrent(new Date())}
-          className="ml-2 px-3 py-1.5 text-xs font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 hover:bg-[#4BA8A8]/20 rounded-lg transition-colors"
+          className="ml-2 px-3 py-1.5 min-h-[44px] text-xs font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 hover:bg-[#4BA8A8]/20 rounded-lg transition-colors"
         >
           Today
         </button>
@@ -335,28 +335,32 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
 
       {/* ===== Month View ===== */}
       {view === 'month' && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-hidden">
-          {/* Day-of-week headers */}
-          <div className="grid grid-cols-7 bg-[#FAFAF7]">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <div
-                key={d}
-                className="text-center text-[11px] font-bold text-[#86868B] uppercase tracking-wider py-3 border-b border-r border-[#F2F2F7]"
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-          {/* Day cells */}
-          <div className="grid grid-cols-7">
-            {monthGrid.map((day, idx) => renderDayCell(day, idx))}
+        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-x-auto">
+          <div className="min-w-[500px]">
+            {/* Day-of-week headers */}
+            <div className="grid grid-cols-7 bg-[#FAFAF7]">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                <div
+                  key={d}
+                  className="text-center text-[11px] font-bold text-[#86868B] uppercase tracking-wider py-3 border-b border-r border-[#F2F2F7]"
+                >
+                  <span className="hidden sm:inline">{d}</span>
+                  <span className="sm:hidden">{d.charAt(0)}</span>
+                </div>
+              ))}
+            </div>
+            {/* Day cells */}
+            <div className="grid grid-cols-7">
+              {monthGrid.map((day, idx) => renderDayCell(day, idx))}
+            </div>
           </div>
         </div>
       )}
 
       {/* ===== Week View ===== */}
       {view === 'week' && (
-        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-hidden">
+        <div className="bg-white rounded-xl border border-[#E5E5EA] overflow-x-auto">
+          <div className="min-w-[500px]">
           {/* Day headers */}
           <div className="grid grid-cols-7 bg-[#FAFAF7] border-b border-[#F2F2F7]">
             {weekDays.map((day) => {
@@ -393,7 +397,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`border-r last:border-r-0 border-[#F2F2F7] min-h-[160px] p-2 space-y-2 ${
+                  className={`border-r last:border-r-0 border-[#F2F2F7] min-h-[120px] sm:min-h-[160px] p-1.5 sm:p-2 space-y-2 ${
                     isToday ? 'bg-[#4BA8A8]/5' : ''
                   }`}
                 >
@@ -447,6 +451,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               );
             })}
           </div>
+          </div>
         </div>
       )}
 
@@ -468,7 +473,7 @@ export default function Calendar({ workItems, clients }: CalendarProps) {
               <button
                 key={calendarItemKey(ci)}
                 onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-                className={`w-full flex items-start gap-5 bg-white rounded-xl border border-[#F2F2F7] p-5 text-left hover:shadow-md hover:border-[#E5E5EA] transition-all group ${
+                className={`w-full flex items-start gap-3 sm:gap-5 bg-white rounded-xl border border-[#F2F2F7] p-3 sm:p-5 text-left hover:shadow-md hover:border-[#E5E5EA] transition-all group ${
                   ci.isRecurring ? 'border-dashed opacity-80' : ''
                 }`}
               >

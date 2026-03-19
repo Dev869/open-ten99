@@ -220,7 +220,7 @@ export default function Vault({ user, clients }: VaultProps) {
   return (
     <div className="max-w-3xl animate-fade-in-up">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider">
             Key Vault
@@ -232,51 +232,70 @@ export default function Vault({ user, clients }: VaultProps) {
         <div className="flex gap-2">
           <button
             onClick={() => { setEditingCred(null); setShowModal(true); }}
-            className="px-4 py-2 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] transition-colors"
+            className="inline-flex items-center gap-2 py-2.5 px-5 min-h-[44px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] active:scale-[0.97] transition-all"
           >
-            + Add Credential
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Add Credential
           </button>
           <button
             onClick={lock}
-            className="px-4 py-2 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] active:scale-[0.97] transition-all"
           >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
             Lock
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 mb-4 flex-wrap items-center">
-        <div className="flex gap-1.5 flex-wrap flex-1">
-          <button
-            onClick={() => setFilter('all')}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
-              filter === 'all' ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
-            )}
-          >
-            All ({credentials.length})
-          </button>
-          {clients.filter((c) => credentials.some((cr) => cr.clientId === c.id)).map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setFilter(c.id!)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
-                filter === c.id ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
-              )}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
+      {/* Search */}
+      <div className="mb-4 relative">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868B] pointer-events-none"
+        >
+          <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M11.5 11.5L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
         <input
           type="text"
-          placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="px-3 py-1.5 rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] bg-white placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] w-44"
+          placeholder="Search credentials..."
+          className="w-full pl-11 pr-4 py-2.5 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] shadow-sm transition-shadow"
         />
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-1.5 flex-wrap mb-4">
+        <button
+          onClick={() => setFilter('all')}
+          className={cn(
+            'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-colors',
+            filter === 'all' ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
+          )}
+        >
+          All ({credentials.length})
+        </button>
+        {clients.filter((c) => credentials.some((cr) => cr.clientId === c.id)).map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setFilter(c.id!)}
+            className={cn(
+              'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-colors',
+              filter === c.id ? 'bg-[#4BA8A8] text-white' : 'border border-[#E5E5EA] text-[#86868B] hover:bg-[#F2F2F7]',
+            )}
+          >
+            {c.name}
+          </button>
+        ))}
       </div>
 
       {/* Credentials */}
@@ -339,6 +358,20 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
     setSaving(false);
   }
 
+  const strengthLabel = password.length === 0
+    ? null
+    : password.length < 8
+      ? 'Weak'
+      : password.length < 14
+        ? 'Good'
+        : 'Strong';
+
+  const strengthColor = strengthLabel === 'Weak'
+    ? 'text-red-500'
+    : strengthLabel === 'Good'
+      ? 'text-yellow-600'
+      : 'text-green-600';
+
   return (
     <div className="max-w-md mx-auto pt-20 animate-fade-in-up">
       <div className="text-center mb-8">
@@ -368,8 +401,13 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
             onChange={(e) => { setPassword(e.target.value); setError(''); }}
             placeholder="At least 8 characters"
             autoFocus
-            className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+            className="w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
           />
+          {strengthLabel && (
+            <p className={cn('text-xs font-medium mt-1.5', strengthColor)}>
+              Strength: {strengthLabel}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
@@ -380,7 +418,7 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setError(''); }}
             placeholder="Repeat your password"
-            className="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
+            className="w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border border-transparent focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow"
           />
         </div>
         {error && (
@@ -389,8 +427,11 @@ function VaultSetup({ onSetup }: { onSetup: (pw: string) => Promise<void> }) {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-2.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+          className="w-full py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
         >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
           {saving ? 'Creating Vault...' : 'Create Vault'}
         </button>
       </form>
@@ -446,8 +487,8 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
           placeholder="Master password"
           autoFocus
           className={cn(
-            'w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow',
-            error ? 'border-red-300' : 'border-transparent',
+            'w-full px-3.5 py-3 min-h-[44px] bg-[#F2F2F7] rounded-xl text-sm text-[#1A1A2E] border focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] transition-shadow',
+            error ? 'border-red-300 animate-[shake_0.3s_ease-in-out]' : 'border-transparent',
           )}
         />
         {error && (
@@ -456,8 +497,12 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
         <button
           type="submit"
           disabled={loading || !password}
-          className="w-full py-2.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+          className="w-full py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
         >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 018-4.3" />
+          </svg>
           {loading ? 'Unlocking...' : 'Unlock'}
         </button>
       </form>
@@ -515,10 +560,10 @@ function CredentialCard({
       {/* Header — always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 text-left"
+        className="w-full flex items-center gap-3 p-4 text-left min-h-[64px]"
       >
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
           style={{ backgroundColor: svc.color }}
         >
           {svc.label.charAt(0)}
@@ -534,7 +579,7 @@ function CredentialCard({
         </div>
         <svg
           width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="2" strokeLinecap="round"
-          className={cn('transition-transform flex-shrink-0', expanded && 'rotate-180')}
+          className={cn('transition-transform duration-200 flex-shrink-0', expanded && 'rotate-180')}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -551,7 +596,7 @@ function CredentialCard({
 
             return (
               <div key={f.key} className="flex items-center gap-2">
-                <span className="text-xs text-[#86868B] w-16 flex-shrink-0">{f.label}</span>
+                <span className="text-xs text-[#86868B] w-20 flex-shrink-0">{f.label}</span>
                 <span className={cn(
                   'flex-1 text-sm truncate',
                   f.key === 'notes' ? 'text-[#86868B]' : 'text-[#1A1A2E] font-mono text-xs',
@@ -563,17 +608,17 @@ function CredentialCard({
                   {f.sensitive && (
                     <button
                       onClick={() => toggleReveal(f.key)}
-                      className="p-1 rounded-md hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
                       title={isRevealed ? 'Hide' : 'Reveal'}
                     >
                       {isRevealed ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
                           <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
                           <line x1="1" y1="1" x2="23" y2="23" />
                         </svg>
                       ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
@@ -582,15 +627,15 @@ function CredentialCard({
                   )}
                   <button
                     onClick={() => copyValue(f.key, val)}
-                    className="p-1 rounded-md hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F2F2F7] text-[#86868B] hover:text-[#1A1A2E] transition-colors"
                     title="Copy"
                   >
                     {copied === f.key ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27AE60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#27AE60" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" />
                         <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                       </svg>
@@ -602,31 +647,41 @@ function CredentialCard({
           })}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-2">
             <button
               onClick={onEdit}
-              className="text-xs font-medium text-[#4BA8A8] hover:underline"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4BA8A8] bg-[#4BA8A8]/10 hover:bg-[#4BA8A8]/20 min-h-[32px] transition-colors"
             >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.85 0 014 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+              </svg>
               Edit
             </button>
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="text-xs font-medium text-red-400 hover:underline ml-auto"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 bg-red-50 hover:bg-red-100 min-h-[32px] transition-colors ml-auto"
               >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                </svg>
                 Delete
               </button>
             ) : (
-              <div className="flex gap-2 ml-auto">
+              <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-[#86868B] hover:underline"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium text-[#86868B] border border-[#E5E5EA] min-h-[32px] transition-colors hover:bg-[#F2F2F7]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={onDelete}
-                  className="text-xs font-semibold text-red-500 hover:underline"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 text-white min-h-[32px] transition-colors hover:bg-red-600"
                 >
                   Confirm Delete
                 </button>
@@ -689,45 +744,61 @@ function CredentialModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <form
         onSubmit={handleSubmit}
-        className="relative bg-[#F5F5F7] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in"
+        className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-scale-in"
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-[#E5E5EA]">
+        <div className="sticky top-0 bg-white z-10 flex justify-between items-center px-5 py-4 border-b border-[#E5E5EA]">
           <h2 className="text-lg font-extrabold text-[#1A1A2E] uppercase tracking-wide">
             {existing ? 'Edit Credential' : 'Add Credential'}
           </h2>
-          <button type="button" onClick={onClose} className="text-[#86868B] hover:text-[#1A1A2E] text-xl leading-none">
-            &times;
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {/* Service */}
           <div>
-            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
+            <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-2">
               Service
             </label>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="grid grid-cols-3 gap-2">
               {VAULT_SERVICES.map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => setService(s.id as VaultServiceId)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                  className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl min-h-[40px] text-xs font-semibold transition-colors"
                   style={{
-                    backgroundColor: service === s.id ? s.color : '#F2F2F7',
+                    backgroundColor: service === s.id ? s.color : '#F5F5F7',
                     color: service === s.id ? 'white' : '#86868B',
                   }}
                 >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{
+                      backgroundColor: service === s.id ? 'rgba(255,255,255,0.5)' : s.color,
+                    }}
+                  />
                   {s.label}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-[#F2F2F7] my-4" />
 
           {/* Client */}
           <div>
@@ -737,7 +808,7 @@ function CredentialModal({
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             >
               <option value="">Select a client</option>
               {clients.map((c) => (
@@ -747,7 +818,7 @@ function CredentialModal({
           </div>
 
           {/* Label */}
-          <div>
+          <div className="mt-3">
             <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
               Label
             </label>
@@ -756,9 +827,12 @@ function CredentialModal({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production API Key"
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             />
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-[#F2F2F7] my-4" />
 
           {/* Username */}
           <div>
@@ -771,12 +845,12 @@ function CredentialModal({
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Optional"
               autoComplete="off"
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             />
           </div>
 
           {/* Password */}
-          <div>
+          <div className="mt-3">
             <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
               Password / Secret
             </label>
@@ -787,12 +861,12 @@ function CredentialModal({
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Optional"
                 autoComplete="new-password"
-                className="w-full px-3 py-2.5 pr-10 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
+                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868B] hover:text-[#1A1A2E]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E] transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   {showPassword ? (
@@ -813,7 +887,7 @@ function CredentialModal({
           </div>
 
           {/* API Key */}
-          <div>
+          <div className="mt-3">
             <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
               API Key
             </label>
@@ -824,12 +898,12 @@ function CredentialModal({
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Optional"
                 autoComplete="off"
-                className="w-full px-3 py-2.5 pr-10 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
+                className="w-full px-3 py-3 min-h-[44px] pr-12 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#4BA8A8] font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868B] hover:text-[#1A1A2E]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-[#86868B] hover:bg-[#F2F2F7] hover:text-[#1A1A2E] transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   {showApiKey ? (
@@ -849,6 +923,9 @@ function CredentialModal({
             </div>
           </div>
 
+          {/* Divider */}
+          <div className="border-t border-[#F2F2F7] my-4" />
+
           {/* Notes */}
           <div>
             <label className="text-xs text-[#86868B] uppercase font-semibold tracking-wide block mb-1.5">
@@ -859,26 +936,34 @@ function CredentialModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional context, URLs, etc."
               rows={2}
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
+              className="w-full px-3 py-3 min-h-[44px] bg-white rounded-xl border border-[#E5E5EA] text-sm text-[#1A1A2E] placeholder:text-[#C7C7CC] resize-none focus:outline-none focus:ring-2 focus:ring-[#4BA8A8]"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-5 border-t border-[#E5E5EA]">
+        <div className="sticky bottom-0 bg-white z-10 flex gap-3 px-5 py-4 border-t border-[#E5E5EA]">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
+            className="flex-1 py-3 min-h-[48px] rounded-xl border border-[#E5E5EA] text-sm font-medium text-[#86868B] hover:bg-[#F2F2F7] transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!isValid || saving}
-            className="flex-1 py-2.5 rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors"
+            className="flex-1 py-3 min-h-[48px] rounded-xl bg-[#4BA8A8] text-white text-sm font-semibold hover:bg-[#3A9090] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
-            {saving ? 'Encrypting...' : existing ? 'Update' : 'Save'}
+            {saving ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+                Encrypting...
+              </>
+            ) : existing ? 'Update' : 'Save'}
           </button>
         </div>
       </form>
