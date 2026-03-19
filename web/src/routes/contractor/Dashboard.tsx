@@ -1,0 +1,112 @@
+import { useMemo } from 'react';
+import { StatCard } from '../../components/StatCard';
+import { WorkItemCard } from '../../components/WorkItemCard';
+import type { WorkItem, Client } from '../../lib/types';
+import { formatCurrency } from '../../lib/utils';
+
+interface DashboardProps {
+  workItems: WorkItem[];
+  clients: Client[];
+}
+
+export default function Dashboard({ workItems, clients }: DashboardProps) {
+  const clientMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
+    return map;
+  }, [clients]);
+
+  const pending = workItems.filter(
+    (i) => i.status === 'draft' || i.status === 'inReview'
+  );
+
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+
+  const thisWeekHours = workItems
+    .filter((i) => i.updatedAt >= weekStart && i.status !== 'archived')
+    .reduce((s, i) => s + i.totalHours, 0);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthRevenue = workItems
+    .filter(
+      (i) =>
+        i.createdAt >= monthStart &&
+        i.status !== 'archived' &&
+        i.isBillable
+    )
+    .reduce((s, i) => s + i.totalCost, 0);
+
+  const recentCompleted = workItems
+    .filter((i) => i.status === 'approved' || i.status === 'completed')
+    .slice(0, 5);
+
+  return (
+    <div className="animate-fade-in-up">
+      <h1 className="text-xl font-extrabold text-[#1A1A2E] uppercase tracking-wider mb-6">
+        Dashboard
+      </h1>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        {[
+          <StatCard key="pending" label="Pending" value={String(pending.length)} />,
+          <StatCard key="week" label="This Week" value={`${thisWeekHours.toFixed(1)}h`} color="#4BA8A8" />,
+          <StatCard key="revenue" label="Revenue (Month)" value={formatCurrency(monthRevenue)} color="#27AE60" />,
+        ].map((card, i) => (
+          <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 75}ms` }}>
+            {card}
+          </div>
+        ))}
+      </div>
+
+      {/* Pending Work Orders */}
+      {pending.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+            Needs Attention
+          </h2>
+          <div className="space-y-2">
+            {pending.map((item, i) => (
+              <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${(i + 3) * 50}ms` }}>
+                <WorkItemCard
+                  item={item}
+                  clientName={clientMap[item.clientId] ?? 'Unknown'}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recently Completed */}
+      {recentCompleted.length > 0 && (
+        <div>
+          <h2 className="text-xs font-bold text-[#86868B] uppercase tracking-wider mb-3">
+            Recently Completed
+          </h2>
+          <div className="space-y-2">
+            {recentCompleted.map((item, i) => (
+              <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${(i + 3) * 50}ms` }}>
+                <WorkItemCard
+                  item={item}
+                  clientName={clientMap[item.clientId] ?? 'Unknown'}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {pending.length === 0 && recentCompleted.length === 0 && (
+        <div className="text-center py-20 animate-fade-in-up">
+          <div className="text-5xl mb-4 opacity-30">&#10022;</div>
+          <div className="text-lg font-bold text-[#1A1A2E]">All clear</div>
+          <div className="text-sm text-[#86868B] mt-1">No pending work orders right now.</div>
+        </div>
+      )}
+    </div>
+  );
+}

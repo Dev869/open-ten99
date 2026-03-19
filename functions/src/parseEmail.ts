@@ -1,0 +1,264 @@
+import { onRequest } from "firebase-functions/v2/https";
+import { defineString } from "firebase-functions/params";
+import * as admin from "firebase-admin";
+import * as logger from "firebase-functions/logger";
+import { getGeminiClient } from "./utils/geminiClient";
+
+const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
+
+interface PostmarkInboundPayload {
+  From: string;
+  FromName: string;
+  FromFull: { Email: string; Name: string };
+  To: string;
+  Subject: string;
+  TextBody: string;
+  HtmlBody: string;
+  Date: string;
+  MessageID: string;
+  [key: string]: unknown;
+}
+
+interface ParsedLineItem {
+  description: string;
+  hours: number;
+  cost: number;
+}
+
+interface GeminiParseResult {
+  items: Array<{ description: string; hours: number }>;
+}
+
+/**
+ * HTTP function that receives Postmark inbound email webhooks.
+ *
+ * Flow:
+ * 1. Validate webhook secret
+ * 2. Extract sender, subject, body
+ * 3. Look up or create client in Firestore
+ * 4. Call Gemini to extract change items and hour estimates
+ * 5. Calculate costs using the user's hourly rate
+ * 6. Create a workItems doc in Firestore
+ */
+export const onEmailReceived = onRequest(
+  { maxInstances: 10, timeoutSeconds: 120 },
+  async (req, res) => {
+    // Only accept POST requests
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    // Validate webhook secret via query param or header
+    const secret = req.query.secret || req.headers["x-postmark-secret"];
+    if (secret !== webhookSecret.value()) {
+      logger.warn("Invalid webhook secret received");
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    try {
+      const payload = req.body as PostmarkInboundPayload;
+      const senderEmail = payload.FromFull?.Email || payload.From;
+      const senderName = payload.FromFull?.Name || payload.FromName || "";
+      const subject = payload.Subject || "(No Subject)";
+      const textBody = payload.TextBody || "";
+
+      if (!senderEmail) {
+        logger.error("No sender email found in payload");
+        res.status(400).send("Missing sender email");
+        return;
+      }
+
+      logger.info("Processing inbound email", {
+        from: senderEmail,
+        subject,
+      });
+
+      const db = admin.firestore();
+
+      // --- Step 1: Look up or create client ---
+      const clientId = await findOrCreateClient(
+        db,
+        senderEmail,
+        senderName
+      );
+
+      // --- Step 2: Get user settings for hourly rate ---
+      const settingsSnap = await db.collection("settings").limit(1).get();
+      let hourlyRate = 150; // sensible default
+      if (!settingsSnap.empty) {
+        const settingsData = settingsSnap.docs[0].data();
+        hourlyRate = settingsData.hourlyRate ?? hourlyRate;
+      }
+
+      // --- Step 3: Call Gemini to extract change items ---
+      const parseResult = await extractChangeItems(subject, textBody);
+
+      // --- Step 4: Calculate costs ---
+      const lineItems: ParsedLineItem[] = parseResult.items.map((item) => ({
+        description: item.description,
+        hours: item.hours,
+        cost: parseFloat((item.hours * hourlyRate).toFixed(2)),
+      }));
+
+      const totalHours = lineItems.reduce((sum, li) => sum + li.hours, 0);
+      const totalCost = parseFloat((totalHours * hourlyRate).toFixed(2));
+
+      // --- Step 5: Create workItem doc ---
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      const workItemRef = await db.collection("workItems").add({
+        type: "changeRequest",
+        status: "draft",
+        clientId,
+        sourceEmail: textBody,
+        subject,
+        lineItems,
+        totalHours,
+        totalCost,
+        isBillable: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      logger.info("Work item created", {
+        workItemId: workItemRef.id,
+        clientId,
+        totalHours,
+        totalCost,
+        itemCount: lineItems.length,
+      });
+
+      res.status(200).json({
+        success: true,
+        workItemId: workItemRef.id,
+        clientId,
+        lineItems: lineItems.length,
+        totalHours,
+        totalCost,
+      });
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const errStack = error instanceof Error ? error.stack : undefined;
+      logger.error("Failed to process inbound email", { message: errMsg, stack: errStack });
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
+
+/**
+ * Looks up a client by email. If none exists, creates a draft client doc.
+ */
+async function findOrCreateClient(
+  db: admin.firestore.Firestore,
+  email: string,
+  name: string
+): Promise<string> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const clientsSnap = await db
+    .collection("clients")
+    .where("email", "==", normalizedEmail)
+    .limit(1)
+    .get();
+
+  if (!clientsSnap.empty) {
+    return clientsSnap.docs[0].id;
+  }
+
+  // Create a draft client
+  const newClient = await db.collection("clients").add({
+    name: name || normalizedEmail.split("@")[0],
+    email: normalizedEmail,
+    notes: "Auto-created from inbound email",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  logger.info("Created draft client", {
+    clientId: newClient.id,
+    email: normalizedEmail,
+  });
+
+  return newClient.id;
+}
+
+/**
+ * Calls Gemini to extract discrete change items and hour estimates
+ * from an email subject and body.
+ */
+async function extractChangeItems(
+  subject: string,
+  body: string
+): Promise<GeminiParseResult> {
+  const genAI = getGeminiClient();
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  const prompt = `You are an assistant that extracts change order items from client emails sent to a contractor.
+
+Given the following email, extract each distinct change or task being requested. For each item, provide:
+- A clear, concise description of the change
+- An estimated number of hours to complete (be realistic for a skilled contractor)
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "items": [
+    { "description": "Description of the change", "hours": 2.0 }
+  ]
+}
+
+If the email does not contain any clear change requests, return:
+{ "items": [{ "description": "General inquiry - review and respond to client", "hours": 0.5 }] }
+
+---
+Subject: ${subject}
+
+Body:
+${body}
+---`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    logger.info("Gemini raw response", { text });
+
+    const parsed = JSON.parse(text) as GeminiParseResult;
+
+    // Validate structure
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      throw new Error("Parsed result has no items array");
+    }
+
+    // Sanitize: ensure every item has required fields with valid types
+    parsed.items = parsed.items.map((item) => ({
+      description:
+        typeof item.description === "string"
+          ? item.description
+          : "Unspecified change",
+      hours:
+        typeof item.hours === "number" && item.hours > 0
+          ? parseFloat(item.hours.toFixed(2))
+          : 1.0,
+    }));
+
+    logger.info("Parsed line items", { count: parsed.items.length, items: parsed.items });
+
+    return parsed;
+  } catch (parseError: unknown) {
+    const errMsg = parseError instanceof Error ? parseError.message : String(parseError);
+    logger.error("Failed to parse Gemini response", { message: errMsg });
+    return {
+      items: [
+        {
+          description: "Review client email and respond",
+          hours: 0.5,
+        },
+      ],
+    };
+  }
+}

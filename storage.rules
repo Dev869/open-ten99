@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Deny all access by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Change order PDFs: authenticated users can read; writes handled by Cloud Functions (admin SDK)
+    match /changeOrders/{fileName} {
+      allow read: if request.auth != null;
+    }
+  }
+}
