@@ -22,3 +22,4 @@ export { onPlaidLinkToken, onPlaidExchange, onPlaidSync, onPlaidWebhook } from "
 export { onStripeConnect, onStripeSync, onStripeWebhook } from "./stripe";
 export { onManualSync, onDeleteConnectedAccount, onPlaidUpdateLinkToken } from "./manualSync";
 export { onTransactionCreated } from './matchTransaction';
+export { onSmartCategorize } from './smartCategorize';

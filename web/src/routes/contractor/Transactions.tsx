@@ -7,7 +7,8 @@ import { fetchTransactions, updateTransactionCategory, confirmMatch, rejectMatch
 import { TransactionRow } from '../../components/finance/TransactionRow';
 import { MatchSuggestion } from '../../components/finance/MatchSuggestion';
 import { formatDate } from '../../lib/utils';
-import { db } from '../../lib/firebase';
+import { db, functions } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
 const PAGE_SIZE = 50;
@@ -61,6 +62,10 @@ export default function Transactions() {
 
   // Pagination state — combined into one object to allow atomic resets
   const [page, setPage] = useState<PageState>(INITIAL_PAGE_STATE);
+
+  // Smart sort state
+  const [smartSorting, setSmartSorting] = useState(false);
+  const [smartSortResult, setSmartSortResult] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Match suggestion state
@@ -125,6 +130,36 @@ export default function Transactions() {
     updateTransactionCategory(id, category).catch((err) => {
       console.error('Failed to update category:', err);
     });
+  }
+
+  async function handleSmartSort() {
+    setSmartSorting(true);
+    setSmartSortResult(null);
+    try {
+      const fn = httpsCallable<Record<string, never>, { categorized: number; total: number; message: string }>(
+        functions,
+        'onSmartCategorize'
+      );
+      const result = await fn({});
+      setSmartSortResult(result.data.message);
+      // Refetch to show updated categories
+      const refreshed = await fetchTransactions({
+        pageSize: PAGE_SIZE,
+        accountId: filterAccountId || undefined,
+        type: filterType || undefined,
+      });
+      setPage({
+        transactions: refreshed.transactions,
+        lastDoc: refreshed.lastDoc,
+        hasMore: refreshed.hasMore,
+        loading: false,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Smart sort failed';
+      setSmartSortResult(message);
+    } finally {
+      setSmartSorting(false);
+    }
   }
 
   function handleFilterAccountChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -214,38 +249,69 @@ export default function Transactions() {
         <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Transactions
         </h1>
+        <button
+          onClick={handleSmartSort}
+          disabled={smartSorting || transactions.length === 0}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {smartSorting ? (
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Sorting...
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1v4M5.5 3.5L8 1l2.5 2.5M2 8h12M5.5 12.5L8 15l2.5-2.5M8 11v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Smart Sort
+            </>
+          )}
+        </button>
       </div>
 
+      {/* Smart sort result */}
+      {smartSortResult && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-sm text-[var(--text-primary)] flex items-center justify-between">
+          <span>{smartSortResult}</span>
+          <button onClick={() => setSmartSortResult(null)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+      )}
+
       {/* Connected Accounts Bar */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-4 py-3 mb-4 flex items-center gap-4 flex-wrap">
-        {accountsLoading ? (
-          <div className="h-4 w-48 bg-[var(--border)] rounded animate-pulse" />
-        ) : accounts.length === 0 ? (
-          <span className="text-sm text-[var(--text-secondary)]">No accounts connected.</span>
-        ) : (
-          accounts.map((account) => (
-            <div key={account.id} className="flex items-center gap-2 text-sm">
-              <AccountStatusDot status={account.status} />
-              <span className="font-medium text-[var(--text-primary)]">{account.accountName}</span>
-              <span className="text-[var(--text-secondary)]">·</span>
-              <span className="text-[var(--text-secondary)]">{account.institutionName}</span>
-              {account.lastSyncedAt && (
-                <>
-                  <span className="text-[var(--text-secondary)]">·</span>
-                  <span className="text-xs text-[var(--text-secondary)]">
-                    Synced {formatDate(account.lastSyncedAt)}
-                  </span>
-                </>
-              )}
-            </div>
-          ))
-        )}
-        <Link
-          to="/dashboard/finance/accounts"
-          className="ml-auto text-sm font-medium text-[var(--accent)] hover:underline whitespace-nowrap"
-        >
-          + Connect Account
-        </Link>
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-4 py-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap">
+          {accountsLoading ? (
+            <div className="h-4 w-48 bg-[var(--border)] rounded animate-pulse" />
+          ) : accounts.length === 0 ? (
+            <span className="text-sm text-[var(--text-secondary)]">No accounts connected.</span>
+          ) : (
+            accounts.map((account) => (
+              <div key={account.id} className="flex items-center gap-2 text-sm min-w-0">
+                <AccountStatusDot status={account.status} />
+                <span className="font-medium text-[var(--text-primary)] truncate">{account.accountName}</span>
+                <span className="text-[var(--text-secondary)] hidden sm:inline">·</span>
+                <span className="text-[var(--text-secondary)] truncate hidden sm:inline">{account.institutionName}</span>
+                {account.lastSyncedAt && (
+                  <>
+                    <span className="text-[var(--text-secondary)] hidden sm:inline">·</span>
+                    <span className="text-xs text-[var(--text-secondary)] hidden sm:inline">
+                      Synced {formatDate(account.lastSyncedAt)}
+                    </span>
+                  </>
+                )}
+              </div>
+            ))
+          )}
+          <Link
+            to="/dashboard/finance/accounts"
+            className="sm:ml-auto text-sm font-medium text-[var(--accent)] hover:underline whitespace-nowrap min-h-[44px] flex items-center"
+          >
+            + Connect Account
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -253,7 +319,7 @@ export default function Transactions() {
         <select
           value={filterAccountId}
           onChange={handleFilterAccountChange}
-          className="text-sm px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="text-sm px-3 py-2 min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           aria-label="Filter by account"
         >
           <option value="">All Accounts</option>
@@ -267,7 +333,7 @@ export default function Transactions() {
         <select
           value={filterType}
           onChange={handleFilterTypeChange}
-          className="text-sm px-3 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="text-sm px-3 py-2 min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           aria-label="Filter by type"
         >
           <option value="">All Types</option>
