@@ -174,7 +174,6 @@ export function useConnectedAccounts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     const unsubscribe = subscribeConnectedAccounts((items) => {
       setAccounts(items);
       setLoading(false);

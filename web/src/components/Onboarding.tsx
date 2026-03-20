@@ -100,8 +100,8 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
           {step === 0 && (
             <div className="animate-fade-in-up text-center">
               {/* App icon */}
-              <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
-                <IconLayers size={28} />
+              <div className="w-24 h-24 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[var(--accent)]/30">
+                <IconLayers size={44} />
               </div>
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
                 Welcome to <span style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>!

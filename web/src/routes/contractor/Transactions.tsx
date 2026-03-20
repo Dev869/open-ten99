@@ -9,6 +9,20 @@ import type { DocumentSnapshot } from 'firebase/firestore';
 
 const PAGE_SIZE = 50;
 
+interface PageState {
+  transactions: Transaction[];
+  lastDoc: DocumentSnapshot | null;
+  hasMore: boolean;
+  loading: boolean;
+}
+
+const INITIAL_PAGE_STATE: PageState = {
+  transactions: [],
+  lastDoc: null,
+  hasMore: true,
+  loading: true,
+};
+
 function AccountStatusDot({ status }: { status: ConnectedAccount['status'] }) {
   const colors: Record<ConnectedAccount['status'], string> = {
     active: 'bg-green-500',
@@ -42,35 +56,35 @@ export default function Transactions() {
   const [filterAccountId, setFilterAccountId] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
 
-  // Pagination state
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
+  // Pagination state — combined into one object to allow atomic resets
+  const [page, setPage] = useState<PageState>(INITIAL_PAGE_STATE);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const loadInitial = useCallback(async () => {
-    setLoading(true);
-    setTransactions([]);
-    setLastDoc(null);
-    setHasMore(true);
+  // Convenience aliases
+  const { transactions, lastDoc, hasMore, loading } = page;
+
+  const loadInitial = useCallback(async (accountId: string, type: string) => {
+    // Reset to loading state atomically before fetching
+    setPage(INITIAL_PAGE_STATE);
 
     const result = await fetchTransactions({
       pageSize: PAGE_SIZE,
-      accountId: filterAccountId || undefined,
-      type: filterType || undefined,
+      accountId: accountId || undefined,
+      type: type || undefined,
     });
 
-    setTransactions(result.transactions);
-    setLastDoc(result.lastDoc);
-    setHasMore(result.hasMore);
-    setLoading(false);
-  }, [filterAccountId, filterType]);
+    setPage({
+      transactions: result.transactions,
+      lastDoc: result.lastDoc,
+      hasMore: result.hasMore,
+      loading: false,
+    });
+  }, []);
 
   // Reload whenever filters change
   useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
+    void loadInitial(filterAccountId, filterType);
+  }, [filterAccountId, filterType, loadInitial]);
 
   async function loadMore() {
     if (!hasMore || loadingMore || !lastDoc) return;
@@ -83,17 +97,21 @@ export default function Transactions() {
       type: filterType || undefined,
     });
 
-    setTransactions((prev) => [...prev, ...result.transactions]);
-    setLastDoc(result.lastDoc);
-    setHasMore(result.hasMore);
+    setPage((prev) => ({
+      transactions: [...prev.transactions, ...result.transactions],
+      lastDoc: result.lastDoc,
+      hasMore: result.hasMore,
+      loading: false,
+    }));
     setLoadingMore(false);
   }
 
   function handleCategoryChange(id: string, category: string) {
     // Optimistic update
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, category } : t))
-    );
+    setPage((prev) => ({
+      ...prev,
+      transactions: prev.transactions.map((t) => (t.id === id ? { ...t, category } : t)),
+    }));
     // Persist to Firestore (fire-and-forget; errors are logged in the service)
     updateTransactionCategory(id, category).catch((err) => {
       console.error('Failed to update category:', err);

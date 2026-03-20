@@ -1,4 +1,4 @@
-import { IconLayers } from '../components/icons';
+import { BrandWordmark } from '../components/Brand';
 
 interface LoginProps {
   onSignIn: () => void;
@@ -11,10 +11,9 @@ export default function Login({ onSignIn, loading }: LoginProps) {
       <div className="w-full max-w-sm animate-fade-in-up">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
-            <IconLayers size={28} />
+          <div className="flex justify-center mb-5">
+            <BrandWordmark size={48} variant="light" />
           </div>
-          <h1 className="text-white font-bold text-2xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</h1>
           <p className="text-white/40 text-sm mt-2">Contractor work order management</p>
         </div>
 

@@ -18,17 +18,18 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 export function InvoicePreview({ workItem, client, onClose, onNavigate }: InvoicePreviewProps) {
   const status = workItem.invoiceStatus ?? 'draft';
   const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
+  const now = new Date().getTime();
 
   const daysInfo = (() => {
     if (status === 'paid' && workItem.invoicePaidDate) {
       return `Paid on ${formatDate(workItem.invoicePaidDate)}`;
     }
     if (status === 'overdue' && workItem.invoiceDueDate) {
-      const days = Math.floor((Date.now() - workItem.invoiceDueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const days = Math.floor((now - workItem.invoiceDueDate.getTime()) / (1000 * 60 * 60 * 24));
       return `${days} day${days !== 1 ? 's' : ''} overdue`;
     }
     if (status === 'sent' && workItem.invoiceDueDate) {
-      const days = Math.floor((workItem.invoiceDueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const days = Math.floor((workItem.invoiceDueDate.getTime() - now) / (1000 * 60 * 60 * 24));
       return days > 0 ? `Due in ${days} day${days !== 1 ? 's' : ''}` : 'Due today';
     }
     return null;
