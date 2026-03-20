@@ -50,12 +50,12 @@ describe('getDateRange', () => {
   });
   it('returns QTD range', () => {
     const ref = new Date('2026-05-15');
-    const { start, end } = getDateRange('qtd', ref);
+    const { start } = getDateRange('qtd', ref);
     expect(start).toEqual(new Date('2026-04-01'));
   });
   it('returns YTD range', () => {
     const ref = new Date('2026-03-15');
-    const { start, end } = getDateRange('ytd', ref);
+    const { start } = getDateRange('ytd', ref);
     expect(start).toEqual(new Date('2026-01-01'));
   });
 });
