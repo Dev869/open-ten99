@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
   IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconApps,
-  IconSettings, IconUser, IconLock, IconBell, IconGear,
+  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconLayers,
 } from './icons';
 
@@ -16,6 +16,7 @@ interface NavItem {
   key: string;
   label: string;
   Icon: (props: IconProps) => React.JSX.Element;
+  children?: NavItem[];
 }
 
 const defaultNavItems: NavItem[] = [
@@ -24,7 +25,17 @@ const defaultNavItems: NavItem[] = [
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
   { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },
-  { to: '/dashboard/analytics', key: 'analytics', label: 'Analytics', Icon: IconAnalytics },
+  {
+    to: '/dashboard/finance',
+    key: 'finance',
+    label: 'Finance',
+    Icon: IconAnalytics,
+    children: [
+      { to: '/dashboard/finance', key: 'finance-overview', label: 'Overview', Icon: IconDashboard },
+      { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
+      { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
+    ],
+  },
   { key: 'team', to: '/dashboard/team', label: 'Team', Icon: IconTeam },
   { to: '/dashboard/vault', key: 'vault', label: 'Vault', Icon: IconLock },
 ];
@@ -262,8 +273,43 @@ export function Sidebar({
   notificationBellRef,
   onNotificationsClick,
 }: SidebarProps) {
+  const location = useLocation();
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+
+  // Track which nav groups are expanded
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const expanded = new Set<string>();
+    for (const item of defaultNavItems) {
+      if (item.children?.some((child) => location.pathname.startsWith(child.to))) {
+        expanded.add(item.key);
+      }
+    }
+    return expanded;
+  });
+
+  const toggleGroup = useCallback((key: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // Auto-expand group when navigating to a child route
+  useEffect(() => {
+    for (const item of defaultNavItems) {
+      if (item.children?.some((child) => location.pathname.startsWith(child.to))) {
+        setExpandedGroups((prev) => {
+          if (prev.has(item.key)) return prev;
+          const next = new Set(prev);
+          next.add(item.key);
+          return next;
+        });
+      }
+    }
+  }, [location.pathname]);
 
   // Track viewport for mobile detection
   useEffect(() => {
@@ -278,10 +324,12 @@ export function Sidebar({
   // Resolve current order and hidden sets
   const currentOrder = useMemo(() => {
     if (sidebarOrder && sidebarOrder.length > 0) {
+      // Migrate legacy 'analytics' key to 'finance'
+      const migrated = sidebarOrder.map((k) => (k === 'analytics' ? 'finance' : k));
       // Make sure all default keys are included (in case new nav items were added)
-      const orderSet = new Set(sidebarOrder);
+      const orderSet = new Set(migrated);
       const extras = defaultOrder.filter((k) => !orderSet.has(k));
-      return [...sidebarOrder, ...extras];
+      return [...migrated, ...extras];
     }
     return defaultOrder;
   }, [sidebarOrder]);
@@ -359,45 +407,131 @@ export function Sidebar({
 
         {/* Navigation */}
         <nav className={cn('flex-1 flex flex-col gap-1 px-3 mt-2', !expanded && 'md:items-center')}>
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/dashboard'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'relative flex items-center rounded-xl transition-all duration-200',
-                  // Mobile: always full width with label
-                  'w-full px-4 py-3 gap-3',
-                  // Desktop collapsed: icon only, centered
-                  !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
-                  // Desktop expanded: full width with label
-                  expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
-                  isActive
-                    ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
-                )
-              }
-            >
-              <div className="relative flex-shrink-0">
-                <item.Icon />
-                {item.to === '/dashboard' && pendingCount > 0 && !expanded && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--accent)] rounded-full border-2 border-[var(--bg-sidebar)] hidden md:block" />
+          {visibleNavItems.map((item) => {
+            if (item.children) {
+              const isGroupExpanded = expandedGroups.has(item.key);
+              const isGroupActive = item.children.some((child) =>
+                location.pathname.startsWith(child.to)
+              );
+
+              return (
+                <div key={item.key}>
+                  {/* Group header — collapsed sidebar navigates to first child */}
+                  {!expanded ? (
+                    <NavLink
+                      to={item.children[0].to}
+                      onClick={onClose}
+                      className={cn(
+                        'relative flex items-center rounded-xl transition-all duration-200',
+                        'w-full px-4 py-3 gap-3',
+                        'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                        isGroupActive
+                          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <div className="flex-shrink-0">
+                        <item.Icon />
+                      </div>
+                      <span className="text-sm font-medium md:hidden">{item.label}</span>
+                    </NavLink>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(item.key)}
+                      className={cn(
+                        'relative flex items-center rounded-xl transition-all duration-200',
+                        'w-full px-4 py-3 gap-3 md:px-3 md:py-2.5',
+                        isGroupActive
+                          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      <div className="flex-shrink-0">
+                        <item.Icon />
+                      </div>
+                      <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
+                      <span className="flex-shrink-0 transition-transform duration-200 inline-flex">
+                        {isGroupExpanded ? (
+                          <IconChevronDown size={14} />
+                        ) : (
+                          <IconChevronRight size={14} />
+                        )}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Children — only shown when sidebar is expanded and group is open */}
+                  {expanded && isGroupExpanded && (
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          end={child.to === '/dashboard/finance'}
+                          onClick={onClose}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center rounded-xl transition-all duration-200',
+                              'w-full pl-10 pr-3 py-2 gap-3',
+                              isActive
+                                ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                            )
+                          }
+                        >
+                          <div className="flex-shrink-0">
+                            <child.Icon size={18} />
+                          </div>
+                          <span className="text-sm font-medium">{child.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/dashboard'}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    'relative flex items-center rounded-xl transition-all duration-200',
+                    // Mobile: always full width with label
+                    'w-full px-4 py-3 gap-3',
+                    // Desktop collapsed: icon only, centered
+                    !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                    // Desktop expanded: full width with label
+                    expanded && 'md:w-full md:px-3 md:py-2.5 md:justify-start md:gap-3',
+                    isActive
+                      ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                  )
+                }
+              >
+                <div className="relative flex-shrink-0">
+                  <item.Icon />
+                  {item.to === '/dashboard' && pendingCount > 0 && !expanded && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--accent)] rounded-full border-2 border-[var(--bg-sidebar)] hidden md:block" />
+                  )}
+                </div>
+                <span className="text-sm font-medium md:hidden">{item.label}</span>
+                {expanded && <span className="text-sm font-medium hidden md:inline">{item.label}</span>}
+                {item.to === '/dashboard' && pendingCount > 0 && (
+                  <span className={cn(
+                    'ml-auto bg-[var(--accent)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    expanded ? '' : 'md:hidden'
+                  )}>
+                    {pendingCount}
+                  </span>
                 )}
-              </div>
-              <span className="text-sm font-medium md:hidden">{item.label}</span>
-              {expanded && <span className="text-sm font-medium hidden md:inline">{item.label}</span>}
-              {item.to === '/dashboard' && pendingCount > 0 && (
-                <span className={cn(
-                  'ml-auto bg-[var(--accent)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full',
-                  expanded ? '' : 'md:hidden'
-                )}>
-                  {pendingCount}
-                </span>
-              )}
-            </NavLink>
-          ))}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Bottom section */}
