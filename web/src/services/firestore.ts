@@ -742,12 +742,19 @@ export function subscribeConnectedAccounts(
     orderBy('createdAt', 'desc')
   );
 
-  return onSnapshot(q, (snapshot) => {
-    const accounts = snapshot.docs.map((doc) =>
-      docToConnectedAccount(doc.id, doc.data())
-    );
-    callback(accounts);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const accounts = snapshot.docs.map((doc) =>
+        docToConnectedAccount(doc.id, doc.data())
+      );
+      callback(accounts);
+    },
+    (error) => {
+      console.error('connectedAccounts subscription error:', error);
+      callback([]);
+    }
+  );
 }
 
 export async function deleteConnectedAccount(accountId: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
 import { useConnectedAccounts } from '../../hooks/useFirestore';
@@ -63,29 +63,29 @@ export default function Transactions() {
   // Convenience aliases
   const { transactions, lastDoc, hasMore, loading } = page;
 
-  const loadInitial = useCallback(async (accountId: string, type: string) => {
-    // Reset to loading state atomically before fetching
+  // Reload whenever filters change — with cleanup to prevent state updates after unmount
+  useEffect(() => {
+    let cancelled = false;
+
     setPage(INITIAL_PAGE_STATE);
 
-    const result = await fetchTransactions({
+    fetchTransactions({
       pageSize: PAGE_SIZE,
-      accountId: accountId || undefined,
-      type: type || undefined,
+      accountId: filterAccountId || undefined,
+      type: filterType || undefined,
+    }).then((result) => {
+      if (!cancelled) {
+        setPage({
+          transactions: result.transactions,
+          lastDoc: result.lastDoc,
+          hasMore: result.hasMore,
+          loading: false,
+        });
+      }
     });
 
-    setPage({
-      transactions: result.transactions,
-      lastDoc: result.lastDoc,
-      hasMore: result.hasMore,
-      loading: false,
-    });
-  }, []);
-
-  // Reload whenever filters change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadInitial(filterAccountId, filterType);
-  }, [filterAccountId, filterType, loadInitial]);
+    return () => { cancelled = true; };
+  }, [filterAccountId, filterType]);
 
   async function loadMore() {
     if (!hasMore || loadingMore || !lastDoc) return;
