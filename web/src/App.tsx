@@ -29,6 +29,7 @@ const Profile = lazy(() => import('./routes/contractor/Profile'));
 const Vault = lazy(() => import('./routes/contractor/Vault'));
 const AppsList = lazy(() => import('./routes/contractor/AppsList'));
 const AppDetail = lazy(() => import('./routes/contractor/AppDetail'));
+const GitHubCallback = lazy(() => import('./routes/contractor/GitHubCallback'));
 
 // Lazy-loaded portal routes
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
@@ -308,6 +309,7 @@ function ContractorRoutes() {
         path="vault"
         element={user ? <Vault user={user} clients={clients} /> : null}
       />
+      <Route path="github/callback" element={<GitHubCallback />} />
     </Routes>
   );
 }
