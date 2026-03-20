@@ -259,8 +259,8 @@ export default function Settings({ settings, userId }: SettingsProps) {
                 <p className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
                   Webhook URL
                 </p>
-                <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2">
-                  <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate">
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2 min-w-0">
+                  <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate min-w-0">
                     {WEBHOOK_URL}
                   </code>
                   <button
@@ -269,7 +269,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
                       setWebhookCopied(true);
                       setTimeout(() => setWebhookCopied(false), 2000);
                     }}
-                    className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0"
+                    className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0 min-h-[44px] flex items-center"
                   >
                     {webhookCopied ? 'Copied!' : 'Copy'}
                   </button>
@@ -329,7 +329,16 @@ export default function Settings({ settings, userId }: SettingsProps) {
                   try {
                     const getGitHubAuthUrl = httpsCallable<object, { url: string }>(functions, 'getGitHubAuthUrl');
                     const result = await getGitHubAuthUrl({});
-                    window.location.href = result.data.url;
+                    const url = result.data.url;
+                    try {
+                      const parsed = new URL(url);
+                      if (parsed.origin !== 'https://github.com') {
+                        throw new Error('Unexpected redirect target');
+                      }
+                    } catch {
+                      throw new Error('Invalid GitHub auth URL');
+                    }
+                    window.location.href = url;
                   } catch (err) {
                     console.error('GitHub auth URL error:', err);
                     addToast('Could not start GitHub connection. Please try again.', 'error');
@@ -355,7 +364,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
         {/* App Info */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5 flex items-center gap-4">
-          <BrandIcon size={36} />
+          <BrandIcon size={28} />
           <div>
             <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
             <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>

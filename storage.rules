@@ -8,9 +8,9 @@ service firebase.storage {
       allow read, write: if false;
     }
 
-    // Change order PDFs: authenticated users can read; writes handled by Cloud Functions (admin SDK)
+    // Change order PDFs: served via signed URLs from Cloud Functions only — no direct client reads
     match /changeOrders/{fileName} {
-      allow read: if request.auth != null;
+      allow read: if false;
     }
 
     // Receipt uploads (Phase 3)

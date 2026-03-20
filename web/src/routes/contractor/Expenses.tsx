@@ -6,7 +6,7 @@ import { ExpenseForm } from '../../components/finance/ExpenseForm';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
 import { getDateRange } from '../../lib/finance';
 import type { DateRangePreset } from '../../lib/finance';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, sanitizeUrl } from '../../lib/utils';
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ function CategorySummary({ expenses, loading }: { expenses: Transaction[]; loadi
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {[...Array(5)].map((_, i) => <SkeletonCategoryCard key={i} />)}
       </div>
     );
@@ -132,9 +132,9 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
               Manual
             </span>
           )}
-          {expense.receiptUrl && (
+          {expense.receiptUrl && sanitizeUrl(expense.receiptUrl) && (
             <a
-              href={expense.receiptUrl}
+              href={sanitizeUrl(expense.receiptUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-medium text-[var(--accent)] hover:underline whitespace-nowrap"

@@ -19,6 +19,7 @@ export function isContractorUser(user: User): boolean {
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const [claims, setClaims] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -28,14 +29,25 @@ export function useAuth() {
     // when the component unmounts or across hot-reload cycles.
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
+      async (firebaseUser) => {
         setUser(firebaseUser);
+        if (firebaseUser) {
+          try {
+            const tokenResult = await firebaseUser.getIdTokenResult();
+            setClaims(tokenResult.claims as Record<string, unknown>);
+          } catch {
+            setClaims({});
+          }
+        } else {
+          setClaims({});
+        }
         setLoading(false);
       },
       (error) => {
         // Auth state errors (e.g. network failure retrieving token)
         console.error('Auth state error:', error);
         setUser(null);
+        setClaims({});
         setLoading(false);
       }
     );
@@ -71,11 +83,9 @@ export function useAuth() {
 
   const logout = async () => {
     setAuthError(null);
-    // Eagerly clear user state so the UI responds immediately rather than
-    // waiting for the onAuthStateChanged callback after signOut resolves.
-    setUser(null);
     await signOut(auth);
+    setUser(null);
   };
 
-  return { user, loading, authError, signInWithGoogle, signInWithToken, logout };
+  return { user, claims, loading, authError, signInWithGoogle, signInWithToken, logout };
 }

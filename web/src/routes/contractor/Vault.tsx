@@ -67,7 +67,7 @@ export default function Vault({ user, clients }: VaultProps) {
   const [editingCred, setEditingCred] = useState<VaultCredential | null>(null);
   const [search, setSearch] = useState('');
   const cryptoKeyRef = useRef<CryptoKey | null>(null);
-  const lockTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const clientMap: Record<string, string> = {};
   clients.forEach((c) => { if (c.id) clientMap[c.id] = c.name; });
@@ -597,7 +597,7 @@ function VaultUnlock({ onUnlock }: { onUnlock: (pw: string) => Promise<boolean> 
 
       <form onSubmit={handleSubmit} className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-lg p-6 space-y-4">
         <div className="relative">
-          <IconKey size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <IconKey size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-secondary)]" />
           <input
             type="password"
             value={password}
@@ -757,7 +757,7 @@ function CredentialCard({
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 bg-red-50 hover:bg-red-100 min-h-[32px] transition-colors ml-auto"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[var(--color-red)] bg-[var(--color-red)]/10 hover:bg-[var(--color-red)]/20 min-h-[32px] transition-colors ml-auto"
               >
                 <IconTrash size={14} />
                 Delete
@@ -772,7 +772,7 @@ function CredentialCard({
                 </button>
                 <button
                   onClick={onDelete}
-                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 text-white min-h-[32px] transition-colors hover:bg-red-600"
+                  className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-red)] text-white min-h-[32px] transition-all hover:brightness-90"
                 >
                   Confirm Delete
                 </button>
@@ -841,7 +841,7 @@ function CredentialModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <form
         onSubmit={handleSubmit}
         className="relative bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-scale-in"

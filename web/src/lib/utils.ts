@@ -58,6 +58,20 @@ export function exportToCsv(filename: string, headers: string[], rows: string[][
   URL.revokeObjectURL(url);
 }
 
+export function sanitizeUrl(url: string | undefined | null): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return url;
+    }
+  } catch {
+    // not a valid absolute URL — check for relative paths
+    if (url.startsWith('/')) return url;
+  }
+  return undefined;
+}
+
 export function addBusinessDays(start: Date, days: number): Date {
   const result = new Date(start);
   let added = 0;

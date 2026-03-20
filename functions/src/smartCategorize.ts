@@ -34,6 +34,20 @@ export const onSmartCategorize = onCall(
     const uid = request.auth.uid;
     const db = getFirestore();
 
+    // Rate limit: 60 seconds between calls per user
+    const COOLDOWN_MS = 60 * 1000;
+    const rateLimitRef = db.collection('_rateLimit').doc(`smartCategorize_${uid}`);
+    const rateLimitDoc = await rateLimitRef.get();
+    const lastCalledAt = rateLimitDoc.data()?.lastCalledAt?.toDate?.();
+    if (lastCalledAt && Date.now() - lastCalledAt.getTime() < COOLDOWN_MS) {
+      const secondsRemaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastCalledAt.getTime())) / 1000);
+      throw new HttpsError(
+        'resource-exhausted',
+        `Please wait ${secondsRemaining} second${secondsRemaining !== 1 ? 's' : ''} before running Smart Sort again.`
+      );
+    }
+    await rateLimitRef.set({ lastCalledAt: Timestamp.now() }, { merge: true });
+
     // Fetch uncategorized transactions for this user
     const snapshot = await db
       .collection('transactions')

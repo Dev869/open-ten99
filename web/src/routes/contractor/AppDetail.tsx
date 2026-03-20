@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { sanitizeUrl } from '../../lib/utils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { App, WorkItem, Client } from '../../lib/types';
 import {
@@ -134,9 +135,9 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
       </Link>
 
       {/* App Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{app.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">{app.name}</h1>
           {clientName && (
             <p className="text-sm text-[var(--text-secondary)] mt-0.5">{clientName}</p>
           )}
@@ -146,14 +147,14 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
         </div>
         <button
           onClick={() => setShowNewWorkOrder(true)}
-          className="flex-shrink-0 px-4 py-2 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
+          className="flex-shrink-0 px-4 py-2 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px] self-start whitespace-nowrap"
         >
           + New Work Order
         </button>
       </div>
 
       {/* Stat Cards */}
-      <div className="flex gap-3 mb-6 flex-wrap">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex gap-3 mb-6">
         <div className="animate-fade-in-up flex-1 min-w-[120px]" style={{ animationDelay: '0ms' }}>
           <StatCard label="Total" value={String(appWorkOrders.length)} />
         </div>
@@ -235,7 +236,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                 activities.map((activity, i) => (
                   <a
                     key={activity.id ?? i}
-                    href={activity.url}
+                    href={sanitizeUrl(activity.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-start gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:shadow-md transition-shadow group"
@@ -344,7 +345,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                         {/* Author */}
                         <span className="text-xs text-[var(--text-secondary)]">{activity.author}</span>
                         {/* Timestamp */}
-                        <span className="text-xs text-[var(--text-tertiary)]">
+                        <span className="text-xs text-[var(--text-secondary)]">
                           {formatRelativeTime(activity.updatedAt)}
                         </span>
                       </div>
@@ -417,7 +418,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                   URL
                 </div>
                 <a
-                  href={app.url}
+                  href={sanitizeUrl(app.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-[var(--accent)] hover:underline break-all"
@@ -456,7 +457,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                   {app.repoUrls.map((url) => (
                     <a
                       key={url}
-                      href={url}
+                      href={sanitizeUrl(url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-sm text-[var(--accent)] hover:underline break-all"
@@ -508,7 +509,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
             {/* Linked Credentials */}
             {app.vaultCredentialIds && app.vaultCredentialIds.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Linked Credentials</h4>
+                <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">Linked Credentials</h4>
                 <Link to="/dashboard/vault" className="text-sm text-[var(--accent)] hover:underline">
                   {app.vaultCredentialIds.length} credential{app.vaultCredentialIds.length !== 1 ? 's' : ''} linked
                 </Link>
@@ -518,7 +519,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
             {/* GitHub section */}
             {app.githubRepo && (
               <div>
-                <h4 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">GitHub</h4>
+                <h4 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">GitHub</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--bg-input)] text-[var(--text-secondary)]">{app.githubRepo.defaultBranch}</span>
@@ -550,7 +551,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="inline-flex items-center gap-2 w-full justify-center py-2 px-4 rounded-xl text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 active:scale-[0.97] transition-all min-h-[40px]"
+                className="inline-flex items-center gap-2 w-full justify-center py-2 px-4 rounded-xl text-sm font-medium text-[var(--color-red)] hover:bg-[var(--color-red)]/10 active:scale-[0.97] transition-all min-h-[40px]"
               >
                 <IconTrash size={14} />
                 Delete App
@@ -573,7 +574,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="flex-1 py-2 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50 active:scale-[0.98] transition-all min-h-[36px]"
+                    className="flex-1 py-2 rounded-lg bg-[var(--color-red)] text-white text-xs font-semibold hover:brightness-90 disabled:opacity-50 active:scale-[0.98] transition-all min-h-[36px]"
                   >
                     {deleting ? 'Deleting...' : 'Delete'}
                   </button>

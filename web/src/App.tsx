@@ -83,6 +83,13 @@ function ContractorLayout() {
   );
   const notifCount = notifications.length;
 
+  // Apply accent color from settings to CSS variable
+  useEffect(() => {
+    if (settings.accentColor) {
+      document.documentElement.style.setProperty('--accent', settings.accentColor);
+    }
+  }, [settings.accentColor]);
+
   // Track viewport for mobile detection
   useEffect(() => {
     function check() { setIsMobileView(window.innerWidth < 768); }
@@ -288,7 +295,7 @@ function ContractorRoutes() {
       />
       <Route
         path="finance/invoices"
-        element={<Invoices workItems={workItems} clients={clients} />}
+        element={<Invoices workItems={workItems} clients={clients} hourlyRate={settings.hourlyRate} />}
       />
       <Route path="finance/transactions" element={<Transactions />} />
       <Route path="finance/expenses" element={<Expenses />} />
@@ -319,9 +326,9 @@ function ContractorRoutes() {
 }
 
 function PortalRoutes() {
-  const { user } = useAuth();
-  // Portal users have custom claims with clientId
-  const clientId = (user as any)?.clientId as string | undefined;
+  const { user, claims } = useAuth();
+  // Portal users have a clientId custom claim on their ID token
+  const clientId = typeof claims.clientId === 'string' ? claims.clientId : undefined;
   const { workItems } = useWorkItems(clientId);
   const clientName = (user?.displayName ?? user?.email ?? 'Client');
 

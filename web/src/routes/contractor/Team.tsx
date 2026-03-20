@@ -32,10 +32,10 @@ interface TeamProps {
 }
 
 const ROLE_COLORS: Record<TeamRole, string> = {
-  owner: '#4BA8A8',
-  admin: '#D4873E',
-  member: '#8C7E6A',
-  viewer: '#A89880',
+  owner: 'var(--accent)',
+  admin: 'var(--color-orange)',
+  member: 'var(--text-secondary)',
+  viewer: 'var(--text-secondary)',
 };
 
 export default function Team({ user, settings }: TeamProps) {
@@ -239,7 +239,7 @@ export default function Team({ user, settings }: TeamProps) {
   return (
     <div className="max-w-2xl animate-fade-in-up">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3 min-w-0">
           {editingName ? (
             <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export default function Team({ user, settings }: TeamProps) {
                     src={member.photoURL}
                     alt=""
                     className="w-11 h-11 rounded-full ring-2 object-cover flex-shrink-0"
-                    style={{ ringColor: ROLE_COLORS[member.role] }}
+                    style={{ outlineColor: ROLE_COLORS[member.role], outlineStyle: 'solid', outlineWidth: '2px', outlineOffset: '0px' }}
                     referrerPolicy="no-referrer"
                   />
                 ) : (
@@ -409,7 +409,7 @@ export default function Team({ user, settings }: TeamProps) {
                 {canManage && !(isOwner && member.id === user.uid) && member.role !== 'owner' && (
                   <button
                     onClick={() => handleRemoveMember(member.id!)}
-                    className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                    className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors flex-shrink-0"
                     aria-label="Remove member"
                   >
                     <IconClose size={14} />
@@ -472,7 +472,7 @@ export default function Team({ user, settings }: TeamProps) {
                 {canManage && (
                   <button
                     onClick={() => handleCancelInvite(invite.id!)}
-                    className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                    className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors flex-shrink-0"
                     aria-label="Cancel invite"
                   >
                     <IconClose size={14} />

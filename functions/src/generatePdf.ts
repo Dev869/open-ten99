@@ -76,6 +76,14 @@ export const generatePDF = onCall(
 
       const workItem = workItemSnap.data() as WorkItemData;
 
+      // --- Ownership check ---
+      if (workItem.ownerId && workItem.ownerId !== request.auth?.uid) {
+        throw new HttpsError(
+          "permission-denied",
+          "Not authorized to generate this PDF"
+        );
+      }
+
       // --- Fetch client ---
       const clientSnap = await db
         .collection("clients")

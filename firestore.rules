@@ -43,15 +43,13 @@ service cloud.firestore {
       // Create: contractor must set themselves as owner
       allow create: if isContractor() && claimsOwnership();
 
-      // Update: contractor must own the existing doc (or it's legacy), and cannot
-      // change ownerId to someone else
+      // Update: contractor must strictly own the existing doc; cannot reassign ownerId
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
-        && (!('ownerId' in request.resource.data)
-            || request.resource.data.ownerId == request.auth.uid);
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
 
-      // Delete: contractor must own the existing doc (or it's legacy)
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Delete: contractor must strictly own the existing doc
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
     }
 
     // ---------------------------------------------------------------------------
@@ -60,11 +58,12 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if isContractor() && isOwnerOrLegacy(resource.data);
       allow create: if isContractor() && claimsOwnership();
+      // Update: strict ownership only — no legacy fallback for mutations
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
-        && (!('ownerId' in request.resource.data)
-            || request.resource.data.ownerId == request.auth.uid);
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      // Delete: strict ownership only
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
     }
 
     // ---------------------------------------------------------------------------
@@ -88,14 +87,13 @@ service cloud.firestore {
       // Contractor create: must set themselves as owner
       allow create: if isContractor() && claimsOwnership();
 
-      // Contractor update: must own the existing item and cannot reassign ownership
+      // Contractor update: strict ownership only — no legacy fallback for mutations
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
-        && (!('ownerId' in request.resource.data)
-            || request.resource.data.ownerId == request.auth.uid);
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
 
-      // Contractor delete: must own the existing item
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Contractor delete: strict ownership only
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
     }
 
     // ---------------------------------------------------------------------------
@@ -105,11 +103,11 @@ service cloud.firestore {
     match /apps/{appId} {
       allow read: if isContractor() && isOwnerOrLegacy(resource.data);
       allow create: if isContractor() && claimsOwnership();
+      // Update/delete: strict ownership only — no legacy fallback for mutations
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
-        && (!('ownerId' in request.resource.data)
-            || request.resource.data.ownerId == request.auth.uid);
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
     }
 
     // ---------------------------------------------------------------------------
@@ -161,8 +159,10 @@ service cloud.firestore {
     // Team document: any authenticated member can read. Only owner can update/delete.
     // Create: any contractor can create a team (they become owner).
     match /teams/{teamId} {
-      // Anyone authenticated can read team info (needed to check membership)
-      allow read: if request.auth != null;
+      // Only the team owner or a member of the team can read team info
+      allow read: if request.auth != null
+        && (resource.data.ownerId == request.auth.uid
+            || exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)));
 
       // Create: contractor sets themselves as owner
       allow create: if request.auth != null
@@ -176,10 +176,11 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;
 
-      // Members subcollection: readable by any authed user,
-      // writable by team owner or admins (admin check requires reading member doc)
+      // Members subcollection: readable by the team owner or any team member
       match /members/{memberId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+          && (get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid
+              || exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)));
 
         // Owner can manage all members
         allow write: if request.auth != null
@@ -191,15 +192,20 @@ service cloud.firestore {
           && request.resource.data.role == resource.data.role;
       }
 
-      // Invites subcollection: readable by team members,
-      // writable by owner/admins
+      // Invites subcollection: readable by the team owner or any team member
       match /invites/{inviteId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+          && (get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid
+              || exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)));
 
         allow create: if request.auth != null
           && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
 
-        allow update: if request.auth != null;
+        // Owner can update any invite field; invitee can only update the status field
+        allow update: if request.auth != null
+          && (get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid
+              || (resource.data.email == request.auth.token.email
+                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])));
 
         allow delete: if request.auth != null
           && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;

@@ -33,7 +33,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     ['deriveKey'],
   );
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -65,9 +65,9 @@ export async function decrypt(
   iv: string,
 ): Promise<string> {
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: fromBase64(iv) },
+    { name: 'AES-GCM', iv: fromBase64(iv) as BufferSource },
     key,
-    fromBase64(ciphertext),
+    fromBase64(ciphertext) as BufferSource,
   );
   return new TextDecoder().decode(decrypted);
 }

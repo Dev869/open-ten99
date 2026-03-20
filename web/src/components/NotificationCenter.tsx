@@ -6,8 +6,8 @@ import {
   IconDocument,
   IconAlert,
   IconUser,
-  IconCheck,
   IconClose,
+  IconThumbsUp,
 } from './icons';
 
 /* ── Types ──────────────────────────────────────────── */
@@ -275,7 +275,7 @@ export function NotificationPanel({
       {/* Body */}
       {count === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <IconCheck size={40} color="var(--accent)" />
+          <IconThumbsUp size={40} color="var(--accent)" />
           <p className="text-sm text-[var(--text-secondary)] font-medium">All caught up!</p>
         </div>
       ) : (

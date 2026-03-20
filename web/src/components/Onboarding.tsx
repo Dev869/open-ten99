@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from 'firebase/auth';
-import type { Client, AppSettings } from '../lib/types';
+import type { AppSettings } from '../lib/types';
 import { createClient } from '../services/firestore';
 import { updateSettings } from '../services/firestore';
 import { IconUser, IconDollar, IconSun, IconPlus, IconCalendar, IconGear } from './icons';
@@ -9,14 +9,13 @@ import { BrandWordmark } from './Brand';
 
 interface OnboardingProps {
   user: User;
-  clients: Client[];
   settings: AppSettings;
   onComplete: () => void;
 }
 
 const TOTAL_STEPS = 4;
 
-export function Onboarding({ user, clients, settings, onComplete }: OnboardingProps) {
+export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [clientName, setClientName] = useState('');
@@ -25,7 +24,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
   const [clientSaving, setClientSaving] = useState(false);
   const [hourlyRate, setHourlyRate] = useState(settings.hourlyRate || 150);
   const [rateSaving, setRateSaving] = useState(false);
-  const [skippedClient, setSkippedClient] = useState(false);
+  const [, setSkippedClient] = useState(false);
 
   const firstName = user.displayName?.split(' ')[0] ?? 'there';
 
@@ -102,7 +101,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
             <div className="animate-fade-in-up text-center">
               {/* Brand */}
               <div className="flex justify-center mb-5">
-                <BrandWordmark size={40} />
+                <BrandWordmark size={32} />
               </div>
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
                 Welcome!
@@ -115,7 +114,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
               </p>
               <button
                 onClick={handleNext}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
                 Let's get you set up
@@ -176,7 +175,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                 <button
                   onClick={handleCreateClient}
                   disabled={clientSaving}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
                   style={{ backgroundColor: 'var(--accent)' }}
                 >
                   {clientSaving ? 'Saving...' : 'Add Client'}
@@ -234,7 +233,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                 <button
                   onClick={handleSaveRate}
                   disabled={rateSaving}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
                   style={{ backgroundColor: 'var(--accent)' }}
                 >
                   {rateSaving ? 'Saving...' : 'Save Rate'}
@@ -300,7 +299,7 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
 
               <button
                 onClick={handleFinish}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
                 Go to Dashboard

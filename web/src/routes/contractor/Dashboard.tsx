@@ -34,7 +34,6 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
     return (
       <Onboarding
         user={user}
-        clients={clients}
         settings={settings}
         onComplete={handleOnboardingComplete}
       />
@@ -90,7 +89,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
         {[
           <StatCard key="pending" label="Pending" value={String(pending.length)} />,
           <StatCard key="week" label="This Week" value={`${thisWeekHours.toFixed(1)}h`} color="var(--accent)" />,
-          <StatCard key="revenue" label="Revenue (Month)" value={formatCurrency(monthRevenue)} color="#D4873E" />,
+          <StatCard key="revenue" label="Revenue (Month)" value={formatCurrency(monthRevenue)} color="var(--color-orange)" />,
         ].map((card, i) => (
           <div key={i} className="animate-fade-in-up" style={{ animationDelay: `${i * 75}ms` }}>
             {card}

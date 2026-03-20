@@ -5,9 +5,11 @@ import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import { githubJson, getGitHubToken, markDisconnected } from "./utils/githubClient";
 import { syncAppActivity, GitHubRepo } from "./utils/syncActivity";
+import { encryptToken } from "./utils/crypto";
 
 const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
 const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
+const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
 
 const REDIRECT_URI = "https://openchanges.web.app/dashboard/github/callback";
 const OAUTH_SCOPE = "repo,read:org";
@@ -202,6 +204,7 @@ export const handleGitHubCallback = onCall(
       }
 
       const accessToken = tokenData.access_token;
+      const encryptedAccessToken = encryptToken(accessToken, encryptionKey.value());
 
       // --- Store token securely ---
       await db
@@ -210,7 +213,7 @@ export const handleGitHubCallback = onCall(
         .collection("github")
         .doc("token")
         .set({
-          accessToken,
+          accessToken: encryptedAccessToken,
           tokenType: tokenData.token_type ?? "bearer",
           scope: tokenData.scope ?? OAUTH_SCOPE,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),

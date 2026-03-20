@@ -3,7 +3,7 @@ import type { User } from 'firebase/auth';
 import type { UserProfile } from '../../lib/types';
 import { subscribeProfile, updateProfile } from '../../services/firestore';
 import { useWorkItems } from '../../hooks/useFirestore';
-import { formatCurrency, formatHours } from '../../lib/utils';
+import { formatCurrency, formatHours, sanitizeUrl } from '../../lib/utils';
 
 interface ProfileProps {
   user: User;
@@ -88,6 +88,8 @@ export default function Profile({ user, onLogout }: ProfileProps) {
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) return;
+      if (file.size > 5 * 1024 * 1024) return;
       const reader = new FileReader();
       reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -168,8 +170,8 @@ export default function Profile({ user, onLogout }: ProfileProps) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-xs text-[var(--text-secondary)]">
           <span>Member since {memberSince}</span>
           {resolvedPhone && <span>{resolvedPhone}</span>}
-          {resolvedWebsite && (
-            <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
+          {resolvedWebsite && sanitizeUrl(resolvedWebsite) && (
+            <a href={sanitizeUrl(resolvedWebsite)} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
               {resolvedWebsite.replace(/^https?:\/\//, '')}
             </a>
           )}
@@ -325,10 +327,10 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                   <span className="text-[var(--text-primary)]">{resolvedPhone}</span>
                 </div>
               )}
-              {resolvedWebsite && (
+              {resolvedWebsite && sanitizeUrl(resolvedWebsite) && (
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--text-secondary)]">Website</span>
-                  <a href={resolvedWebsite} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline truncate ml-2">
+                  <a href={sanitizeUrl(resolvedWebsite)} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline truncate ml-2">
                     {resolvedWebsite.replace(/^https?:\/\//, '')}
                   </a>
                 </div>
@@ -383,9 +385,9 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           Account
         </h2>
         <div className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-[var(--text-secondary)]">UID</span>
-            <span className="text-[var(--text-primary)] font-mono text-xs">{user.uid}</span>
+          <div className="flex justify-between text-sm gap-2">
+            <span className="text-[var(--text-secondary)] flex-shrink-0">UID</span>
+            <span className="text-[var(--text-primary)] font-mono text-xs truncate">{user.uid}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-[var(--text-secondary)]">Provider</span>
@@ -395,8 +397,8 @@ export default function Profile({ user, onLogout }: ProfileProps) {
                 : user.providerData[0]?.providerId ?? 'Unknown'}
             </span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-[var(--text-secondary)]">Last Sign-In</span>
+          <div className="flex flex-col sm:flex-row sm:justify-between text-sm gap-0.5 sm:gap-2">
+            <span className="text-[var(--text-secondary)] flex-shrink-0">Last Sign-In</span>
             <span className="text-[var(--text-primary)]">
               {user.metadata.lastSignInTime
                 ? new Date(user.metadata.lastSignInTime).toLocaleDateString('en-US', {
@@ -415,7 +417,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
       {/* Sign Out */}
       <button
         onClick={onLogout}
-        className="w-full py-2.5 rounded-xl border border-red-200 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+        className="w-full py-2.5 rounded-xl border border-[var(--color-red)]/30 text-sm font-medium text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors"
       >
         Sign Out
       </button>

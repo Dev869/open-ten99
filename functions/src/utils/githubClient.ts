@@ -1,7 +1,10 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import { defineString } from "firebase-functions/params";
+import { decryptToken } from "./crypto";
 
 const GITHUB_API = "https://api.github.com";
+const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
 
 export class GitHubTokenRevoked extends Error {
   constructor() {
@@ -22,7 +25,7 @@ export async function getGitHubToken(userId: string): Promise<string> {
     throw new Error("GitHub not connected");
   }
   const data = doc.data();
-  return data?.accessToken as string;
+  return decryptToken(data?.accessToken as string, encryptionKey.value());
 }
 
 export async function githubFetch(

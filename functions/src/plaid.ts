@@ -12,6 +12,7 @@ import {
 import { encryptToken, decryptToken } from './utils/crypto';
 import { categorizeTransaction, classifyTransactionType } from './utils/categorize';
 import * as logger from 'firebase-functions/logger';
+import * as crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -39,6 +40,109 @@ function getPlaidClient(clientId: string, secret: string, env: string): PlaidApi
     },
   });
   return new PlaidApi(configuration);
+}
+
+// ---------------------------------------------------------------------------
+// Webhook verification
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifies the Plaid webhook JWT signature using the EC public key fetched
+ * from Plaid's /webhook_verification_key/get endpoint.
+ *
+ * Plaid sends a JWT in the `plaid-verification` header. The JWT:
+ *   - Header contains `kid` identifying the signing key
+ *   - Body contains `request_body_sha256` — the SHA-256 of the raw request body
+ *   - Is signed with ES256 (ECDSA + P-256 + SHA-256)
+ *
+ * Returns true if the signature and body hash are both valid.
+ * Returns false if any step fails (caller should respond with 401).
+ */
+async function verifyPlaidWebhook(
+  rawBody: Buffer,
+  jwtToken: string,
+  plaidClient: PlaidApi,
+): Promise<boolean> {
+  // Split JWT into its three parts
+  const parts = jwtToken.split('.');
+  if (parts.length !== 3) return false;
+
+  const [headerB64, payloadB64, signatureB64] = parts;
+
+  // Decode header to extract kid
+  let kid: string;
+  try {
+    const headerJson = Buffer.from(headerB64, 'base64url').toString('utf8');
+    const header = JSON.parse(headerJson) as { kid?: string; alg?: string };
+    if (!header.kid) return false;
+    kid = header.kid;
+  } catch {
+    return false;
+  }
+
+  // Fetch the public key from Plaid
+  let jwk: {
+    kty: string; crv: string; x: string; y: string;
+    expired_at: number | null;
+  };
+  try {
+    const keyResponse = await plaidClient.webhookVerificationKeyGet({ key_id: kid });
+    jwk = keyResponse.data.key as typeof jwk;
+  } catch (err) {
+    logger.warn('Failed to fetch Plaid webhook verification key', {
+      kid,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
+
+  // Reject if the key has been rotated out
+  if (jwk.expired_at !== null && jwk.expired_at < Math.floor(Date.now() / 1000)) {
+    logger.warn('Plaid webhook verification key is expired', { kid });
+    return false;
+  }
+
+  // Import the JWK as a Node crypto KeyObject (EC P-256)
+  let publicKey: crypto.KeyObject;
+  try {
+    publicKey = crypto.createPublicKey({
+      key: { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y },
+      format: 'jwk',
+    });
+  } catch {
+    return false;
+  }
+
+  // Verify the ES256 signature over "headerB64.payloadB64"
+  const signingInput = `${headerB64}.${payloadB64}`;
+  let signatureValid: boolean;
+  try {
+    const derSignature = Buffer.from(signatureB64, 'base64url');
+    signatureValid = crypto.verify(
+      'SHA256',
+      Buffer.from(signingInput),
+      { key: publicKey, dsaEncoding: 'ieee-p1363' },
+      derSignature,
+    );
+  } catch {
+    return false;
+  }
+
+  if (!signatureValid) return false;
+
+  // Verify the body hash claim matches the actual request body
+  try {
+    const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+    const payload = JSON.parse(payloadJson) as { request_body_sha256?: string };
+    if (!payload.request_body_sha256) return false;
+    const actualHash = crypto.createHash('sha256').update(rawBody).digest('hex');
+    return crypto.timingSafeEqual(
+      Buffer.from(payload.request_body_sha256),
+      Buffer.from(actualHash),
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -337,6 +441,39 @@ export const onPlaidWebhook = onRequest(
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');
+      return;
+    }
+
+    // Verify the Plaid-Verification JWT before processing any payload
+    const jwtToken = req.headers['plaid-verification'];
+    if (!jwtToken || typeof jwtToken !== 'string') {
+      logger.warn('Plaid webhook rejected: missing plaid-verification header');
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    const webhookClient = getPlaidClient(
+      plaidClientId.value(),
+      plaidSecret.value(),
+      plaidEnv.value(),
+    );
+
+    const rawBody: Buffer = Buffer.isBuffer(req.rawBody)
+      ? req.rawBody
+      : Buffer.from(JSON.stringify(req.body));
+
+    try {
+      const verified = await verifyPlaidWebhook(rawBody, jwtToken, webhookClient);
+      if (!verified) {
+        logger.warn('Plaid webhook rejected: invalid signature');
+        res.status(401).send('Unauthorized');
+        return;
+      }
+    } catch (verifyError) {
+      logger.warn('Plaid webhook verification threw unexpectedly', {
+        error: verifyError instanceof Error ? verifyError.message : String(verifyError),
+      });
+      res.status(401).send('Unauthorized');
       return;
     }
 

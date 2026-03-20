@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { WorkItem } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, sanitizeUrl } from '../../lib/utils';
 import { updateWorkItemClientResponse } from '../../services/firestore';
 import { IconCheck, IconCheckSmall } from '../../components/icons';
 
@@ -15,13 +15,13 @@ function ApprovalBadge({ status }: { status?: 'pending' | 'approved' | 'rejected
   if (!status) return null;
   const config = {
     pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Pending Review' },
-    approved: { bg: 'bg-[#5A9A5A]/20', text: 'text-[#5A9A5A]', label: 'Approved' },
-    rejected: { bg: 'bg-[#D4873E]/20', text: 'text-[#D4873E]', label: 'Changes Requested' },
+    approved: { bg: 'bg-[var(--color-green)]/20', text: 'text-[var(--color-green)]', label: 'Approved' },
+    rejected: { bg: 'bg-[var(--color-orange)]/20', text: 'text-[var(--color-orange)]', label: 'Changes Requested' },
   };
   const c = config[status];
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${c.bg} ${c.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${status === 'approved' ? 'bg-[#5A9A5A]' : status === 'rejected' ? 'bg-[#D4873E]' : 'bg-gray-400'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${status === 'approved' ? 'bg-[var(--color-green)]' : status === 'rejected' ? 'bg-[var(--color-orange)]' : 'bg-gray-400'}`} />
       {c.label}
     </span>
   );
@@ -167,10 +167,10 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
 
         {/* Approval Status (when already responded) */}
         {item.clientApproval === 'approved' && !successMsg && (
-          <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
+          <div className="bg-[var(--color-green)]/10 border border-[var(--color-green)]/30 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2">
-              <IconCheck size={20} color="#5A9A5A" />
-              <span className="text-sm font-semibold text-[#5A9A5A]">You approved this work order</span>
+              <IconCheck size={20} color="var(--color-green)" />
+              <span className="text-sm font-semibold text-[var(--color-green)]">You approved this work order</span>
             </div>
             {item.clientApprovalDate && (
               <p className="text-xs text-[var(--text-secondary)] mt-1 ml-7">
@@ -184,12 +184,12 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
         )}
 
         {item.clientApproval === 'rejected' && !successMsg && (
-          <div className="bg-[#D4873E]/10 border border-[#D4873E]/30 rounded-xl p-4 mb-4">
+          <div className="bg-[var(--color-orange)]/10 border border-[var(--color-orange)]/30 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#D4873E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-[var(--color-orange)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <span className="text-sm font-semibold text-[#D4873E]">You requested changes</span>
+              <span className="text-sm font-semibold text-[var(--color-orange)]">You requested changes</span>
             </div>
             {item.clientApprovalDate && (
               <p className="text-xs text-[var(--text-secondary)] mt-1 ml-7">
@@ -204,10 +204,10 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
 
         {/* Success message */}
         {successMsg && (
-          <div className="bg-[#5A9A5A]/10 border border-[#5A9A5A]/30 rounded-xl p-4 mb-4">
+          <div className="bg-[var(--color-green)]/10 border border-[var(--color-green)]/30 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2">
-              <IconCheck size={20} color="#5A9A5A" />
-              <span className="text-sm font-semibold text-[#5A9A5A]">{successMsg}</span>
+              <IconCheck size={20} color="var(--color-green)" />
+              <span className="text-sm font-semibold text-[var(--color-green)]">{successMsg}</span>
             </div>
           </div>
         )}
@@ -235,7 +235,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
               <button
                 onClick={handleApprove}
                 disabled={submitting}
-                className="flex-1 flex items-center justify-center gap-2 bg-[#5A9A5A] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:bg-[#4e894e] transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-green)] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:brightness-110 transition-all disabled:opacity-50"
               >
                 <IconCheckSmall size={20} color="white" />
                 {submitting ? 'Submitting...' : 'Approve'}
@@ -243,7 +243,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
               <button
                 onClick={handleRequestChanges}
                 disabled={submitting}
-                className="flex-1 flex items-center justify-center gap-2 bg-[#D4873E] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:bg-[#c07835] transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-orange)] text-white rounded-xl py-3 min-h-[48px] font-semibold text-sm hover:brightness-110 transition-all disabled:opacity-50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -255,9 +255,9 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
         )}
 
         {/* PDF */}
-        {item.pdfUrl && (
+        {item.pdfUrl && sanitizeUrl(item.pdfUrl) && (
           <a
-            href={item.pdfUrl}
+            href={sanitizeUrl(item.pdfUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold text-center hover:bg-[var(--accent-dark)] transition-colors"

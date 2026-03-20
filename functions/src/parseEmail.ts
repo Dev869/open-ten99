@@ -2,6 +2,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
 
 const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
@@ -49,9 +50,23 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    // Validate webhook secret via query param or header
-    const secret = req.query.secret || req.headers["x-postmark-secret"];
-    if (secret !== webhookSecret.value()) {
+    // Validate webhook secret via header only (never accept via query param to
+    // avoid secrets appearing in server logs and URL history).
+    const providedSecret = req.headers["x-postmark-secret"];
+    const expectedSecret = webhookSecret.value();
+    let secretValid = false;
+    if (typeof providedSecret === "string" && expectedSecret.length > 0) {
+      try {
+        const provided = Buffer.from(providedSecret);
+        const expected = Buffer.from(expectedSecret);
+        secretValid =
+          provided.length === expected.length &&
+          crypto.timingSafeEqual(provided, expected);
+      } catch {
+        secretValid = false;
+      }
+    }
+    if (!secretValid) {
       logger.warn("Invalid webhook secret received");
       res.status(401).send("Unauthorized");
       return;
@@ -77,15 +92,34 @@ export const onEmailReceived = onRequest(
 
       const db = admin.firestore();
 
+      // --- Step 0: Resolve contractor uid ---
+      // Inbound emails don't carry a contractor identifier, so we identify the
+      // target contractor by finding Firebase Auth users whose sign-in provider
+      // is google.com (the only contractor auth method). If exactly one exists
+      // we proceed; otherwise we cannot safely scope the data.
+      const contractorUid = await resolveContractorUid();
+      if (!contractorUid) {
+        logger.warn(
+          "Could not resolve a single contractor uid — skipping email processing"
+        );
+        res.status(200).send("OK"); // return 200 so Postmark does not retry
+        return;
+      }
+
       // --- Step 1: Look up or create client ---
       const clientId = await findOrCreateClient(
         db,
         senderEmail,
-        senderName
+        senderName,
+        contractorUid
       );
 
-      // --- Step 2: Get user settings for hourly rate ---
-      const settingsSnap = await db.collection("settings").limit(1).get();
+      // --- Step 2: Get user settings for hourly rate (scoped to contractor) ---
+      const settingsSnap = await db
+        .collection("settings")
+        .where("ownerId", "==", contractorUid)
+        .limit(1)
+        .get();
       let hourlyRate = 150; // sensible default
       if (!settingsSnap.empty) {
         const settingsData = settingsSnap.docs[0].data();
@@ -110,8 +144,9 @@ export const onEmailReceived = onRequest(
       const workItemRef = await db.collection("workItems").add({
         type: "changeRequest",
         status: "draft",
+        ownerId: contractorUid,
         clientId,
-        sourceEmail: textBody,
+        sourceEmail: textBody.slice(0, 10_000), // truncate to prevent oversized docs
         subject,
         lineItems,
         totalHours,
@@ -147,16 +182,42 @@ export const onEmailReceived = onRequest(
 );
 
 /**
- * Looks up a client by email. If none exists, creates a draft client doc.
+ * Finds the single contractor uid by listing Firebase Auth users whose
+ * sign-in provider is google.com. Returns the uid when exactly one such user
+ * exists, otherwise returns null.
+ */
+async function resolveContractorUid(): Promise<string | null> {
+  const listResult = await admin.auth().listUsers(1000);
+  const contractors = listResult.users.filter((user) =>
+    user.providerData.some((p) => p.providerId === "google.com")
+  );
+  if (contractors.length === 1) {
+    return contractors[0].uid;
+  }
+  if (contractors.length === 0) {
+    logger.warn("resolveContractorUid: no google.com users found");
+  } else {
+    logger.warn("resolveContractorUid: multiple google.com users found", {
+      count: contractors.length,
+    });
+  }
+  return null;
+}
+
+/**
+ * Looks up a client by email scoped to the contractor. If none exists,
+ * creates a draft client doc with ownerId set.
  */
 async function findOrCreateClient(
   db: admin.firestore.Firestore,
   email: string,
-  name: string
+  name: string,
+  ownerId: string
 ): Promise<string> {
   const normalizedEmail = email.toLowerCase().trim();
   const clientsSnap = await db
     .collection("clients")
+    .where("ownerId", "==", ownerId)
     .where("email", "==", normalizedEmail)
     .limit(1)
     .get();
@@ -169,6 +230,7 @@ async function findOrCreateClient(
   const newClient = await db.collection("clients").add({
     name: name || normalizedEmail.split("@")[0],
     email: normalizedEmail,
+    ownerId,
     notes: "Auto-created from inbound email",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
