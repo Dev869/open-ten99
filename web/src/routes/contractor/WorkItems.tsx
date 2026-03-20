@@ -167,7 +167,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
       formatDate(item.updatedAt),
     ]);
     const date = new Date().toISOString().split('T')[0];
-    exportToCsv(`openchanges-work-items-${date}.csv`, headers, rows);
+    exportToCsv(`ten99-work-items-${date}.csv`, headers, rows);
   }
 
   async function handleBulkArchive() {

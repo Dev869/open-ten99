@@ -113,6 +113,24 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------------
+    // Integrations: owner can read, server writes only
+    // ---------------------------------------------------------------------------
+    match /integrations/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------------
+    // GitHub activity subcollection: owner can read, server writes only
+    // ---------------------------------------------------------------------------
+    match /apps/{appId}/github/{activityId} {
+      allow read: if isContractor() && isOwnerOrLegacy(
+        get(/databases/$(database)/documents/apps/$(appId)).data
+      );
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------------
     // Settings collection: user-scoped by document ID
     // ---------------------------------------------------------------------------
     match /settings/{userId} {

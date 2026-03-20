@@ -150,7 +150,7 @@ function ContractorLayout() {
 
   return (
     <ToastContext.Provider value={toastState}>
-      <div className="flex h-screen bg-[var(--bg-page)]">
+      <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden">
         <Sidebar
           pendingCount={pendingCount}
           isOpen={sidebarOpen}
@@ -179,7 +179,7 @@ function ContractorLayout() {
               <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
                 <IconLayers size={13} />
               </div>
-              <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">OpenChanges</span>
+              <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
             </div>
             <div className="flex items-center gap-1">
               <MobileNotificationBell
@@ -343,7 +343,7 @@ export default function App() {
           <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-4">
             <IconLayers size={28} />
           </div>
-          <span className="text-white font-bold text-xl tracking-tight">OpenChanges</span>
+          <span className="text-white font-bold text-xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
           <div className="text-sm text-white/40 mt-3">Loading...</div>
         </div>
       </div>

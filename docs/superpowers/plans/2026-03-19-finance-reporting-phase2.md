@@ -19,8 +19,8 @@
 ### New Files — Cloud Functions (`functions/`)
 | File | Responsibility |
 |------|---------------|
-| `functions/src/lib/crypto.ts` | AES-256-GCM encrypt/decrypt for access tokens |
-| `functions/src/lib/crypto.test.ts` | Unit tests for encryption utilities |
+| `functions/src/utils/crypto.ts` | AES-256-GCM encrypt/decrypt for access tokens |
+| `functions/src/utils/crypto.test.ts` | Unit tests for encryption utilities |
 | `functions/src/plaid.ts` | Plaid Cloud Functions: onPlaidLinkToken, onPlaidExchange, onPlaidSync, onPlaidWebhook |
 | `functions/src/stripe.ts` | Stripe Cloud Functions: onStripeConnect, onStripeSync, onStripeWebhook |
 | `functions/src/manualSync.ts` | onManualSync callable (shared sync logic) |
@@ -55,9 +55,11 @@
 - Modify: `functions/package.json`
 - Modify: `web/package.json`
 
-- [ ] **Step 1: Install Plaid and Stripe SDKs for Cloud Functions**
+- [ ] **Step 1: Install Plaid, Stripe SDKs, and vitest for Cloud Functions**
 
-Run: `cd /Users/devinwilson/Projects/personal/openchanges/functions && npm install plaid stripe`
+Run: `cd /Users/devinwilson/Projects/personal/openchanges/functions && npm install plaid stripe && npm install -D vitest`
+
+Add to `functions/package.json` scripts: `"test": "vitest run", "test:watch": "vitest"`
 
 - [ ] **Step 2: Install react-plaid-link for web**
 
@@ -79,12 +81,12 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/package
 ### Task 1: Server-Side Encryption Utilities (TDD)
 
 **Files:**
-- Create: `functions/src/lib/crypto.ts`
-- Create: `functions/src/lib/crypto.test.ts`
+- Create: `functions/src/utils/crypto.ts`
+- Create: `functions/src/utils/crypto.test.ts`
 
 - [ ] **Step 1: Write failing tests**
 
-Create `functions/src/lib/crypto.test.ts`:
+Create `functions/src/utils/crypto.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -134,7 +136,7 @@ Expected: FAIL — module not found
 
 - [ ] **Step 3: Implement crypto.ts**
 
-Create `functions/src/lib/crypto.ts`:
+Create `functions/src/utils/crypto.ts`:
 
 ```typescript
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
@@ -190,7 +192,7 @@ Expected: All 4 tests PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/lib/crypto.ts functions/src/lib/crypto.test.ts functions/package.json && git commit -m "feat(finance): add AES-256-GCM token encryption utilities with tests"
+cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/utils/crypto.ts functions/src/utils/crypto.test.ts functions/package.json && git commit -m "feat(finance): add AES-256-GCM token encryption utilities with tests"
 ```
 
 ---
@@ -227,16 +229,21 @@ Create `functions/src/plaid.ts` with these functions:
 - Trigger initial sync by calling the shared sync logic
 - Return `{ accountId }`
 
-**`onPlaidSync`** (Scheduled, every 6 hours):
-- Use `onSchedule` from `firebase-functions/v2/scheduler`
-- Query all `connectedAccounts` where `provider == 'plaid'` and `status == 'active'`
-- For each, load the corresponding `_secrets/connectedAccountTokens` doc
+**`syncPlaidAccount(accountId, ownerId)`** (Exported helper — used by both scheduled sync and manual sync):
+- Load the corresponding `_secrets/connectedAccountTokens` doc
 - Decrypt the access_token
 - Call `plaidClient.transactionsSync({ access_token, cursor })` in a loop until `has_more == false`
 - For each `added` transaction, write to `transactions` collection with normalized fields
+- **Negate Plaid amounts** (`amount: -plaidTransaction.amount`) to match our sign convention (positive = income)
 - Update the sync cursor in `_secrets`
 - Update `lastSyncedAt` on `connectedAccounts`
 - On Plaid API errors, set `status: 'error'` and `errorMessage` on the `connectedAccount`
+- Return `{ transactionCount }`
+
+**`onPlaidSync`** (Scheduled, every 6 hours):
+- Use `onSchedule` from `firebase-functions/v2/scheduler`
+- Query all `connectedAccounts` where `provider == 'plaid'` and `status == 'active'`
+- For each, call `syncPlaidAccount(accountId, ownerId)`
 
 **`onPlaidWebhook`** (HTTP):
 - Use `onRequest` from `firebase-functions/v2/https`
@@ -250,16 +257,22 @@ For the Plaid client configuration, define a helper at the top of the file:
 
 ```typescript
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-import { defineSecret } from 'firebase-functions/params';
+import { defineString } from 'firebase-functions/params';
 
-const plaidClientId = defineSecret('PLAID_CLIENT_ID');
-const plaidSecret = defineSecret('PLAID_SECRET');
-const plaidEnv = defineSecret('PLAID_ENV');
-const encryptionKey = defineSecret('PLAID_ENCRYPTION_KEY');
+// Use defineString to match existing codebase pattern (parseEmail.ts, github.ts)
+const plaidClientId = defineString('PLAID_CLIENT_ID');
+const plaidSecret = defineString('PLAID_SECRET');
+const plaidEnv = defineString('PLAID_ENV');
+const encryptionKey = defineString('TOKEN_ENCRYPTION_KEY');
 
 function getPlaidClient(clientId: string, secret: string, env: string): PlaidApi {
+  const envMap: Record<string, string> = {
+    production: PlaidEnvironments.production,
+    development: PlaidEnvironments.development,
+    sandbox: PlaidEnvironments.sandbox,
+  };
   const configuration = new Configuration({
-    basePath: env === 'production' ? PlaidEnvironments.production : PlaidEnvironments.sandbox,
+    basePath: envMap[env] ?? PlaidEnvironments.sandbox,
     baseOptions: {
       headers: { 'PLAID-CLIENT-ID': clientId, 'PLAID-SECRET': secret },
     },
@@ -268,7 +281,9 @@ function getPlaidClient(clientId: string, secret: string, env: string): PlaidApi
 }
 ```
 
-Each function should declare secrets it needs via `secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey]` in the function options.
+Use `maxInstances: 10` on all callable functions (matching existing `github.ts` pattern).
+
+**Important — Plaid amount sign convention:** Plaid returns amounts where positive = money leaving the account (debit). Our convention is positive = income, negative = expense. The sync logic must negate Plaid amounts: `amount: -plaidTransaction.amount`.
 
 - [ ] **Step 2: Export all functions from index.ts**
 
@@ -309,17 +324,22 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/pla
 - Trigger initial sync
 - Return `{ accountId }`
 
-**`onStripeSync`** (Scheduled, every 6 hours):
-- Query all `connectedAccounts` where `provider == 'stripe'` and `status == 'active'`
-- For each, decrypt the API key from `_secrets`
+**`syncStripeAccount(accountId, ownerId)`** (Exported helper — used by both scheduled sync and manual sync):
+- Decrypt the API key from `_secrets`
 - Create a Stripe client with the key
 - Fetch charges using `stripe.charges.list({ created: { gte: lastSyncTimestamp }, limit: 100 })` with auto-pagination
 - Normalize each charge into the `transactions` format: positive amount for succeeded charges, description from charge.description or charge.metadata
 - On 401/403, set `status: 'error'`, `errorMessage: 'API key revoked or invalid'`
 - Update `lastSyncedAt`
+- Return `{ transactionCount }`
+
+**`onStripeSync`** (Scheduled, every 6 hours):
+- Query all `connectedAccounts` where `provider == 'stripe'` and `status == 'active'`
+- For each, call `syncStripeAccount(accountId, ownerId)`
 
 **`onStripeWebhook`** (HTTP):
-- Validate webhook signature using `stripe.webhooks.constructEvent()` with `STRIPE_WEBHOOK_SECRET`
+- **Use `request.rawBody`** (not `request.body`) for signature validation — required by Stripe SDK
+- Validate webhook signature using `stripe.webhooks.constructEvent(request.rawBody, sig, webhookSecret)`
 - Handle event types:
   - `charge.succeeded` → write transaction to Firestore
   - `payment_intent.succeeded` → write transaction to Firestore
@@ -327,10 +347,10 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/pla
 
 ```typescript
 import Stripe from 'stripe';
-import { defineSecret } from 'firebase-functions/params';
+import { defineString } from 'firebase-functions/params';
 
-const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
-const encryptionKey = defineSecret('PLAID_ENCRYPTION_KEY'); // Reuse same key for all token encryption
+const stripeWebhookSecret = defineString('STRIPE_WEBHOOK_SECRET');
+const encryptionKey = defineString('TOKEN_ENCRYPTION_KEY'); // Reuse same key for all token encryption
 ```
 
 - [ ] **Step 2: Export from index.ts**
@@ -365,14 +385,10 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/str
 - Receives `{ accountId: string }`
 - Load the `connectedAccounts` doc, verify `ownerId == uid`
 - Throttle check: if `lastSyncedAt` is within 15 minutes, throw HttpsError('resource-exhausted', 'Please wait 15 minutes between manual syncs')
-- Based on `provider`, call the appropriate sync logic:
-  - `'plaid'` → reuse sync logic from `plaid.ts` (extract into a shared `syncPlaidAccount` function)
-  - `'stripe'` → reuse sync logic from `stripe.ts` (extract into a shared `syncStripeAccount` function)
+- Based on `provider`, call the appropriate exported sync helper:
+  - `'plaid'` → import and call `syncPlaidAccount(accountId, ownerId)` from `./plaid`
+  - `'stripe'` → import and call `syncStripeAccount(accountId, ownerId)` from `./stripe`
 - Return `{ success: true, transactionCount }`
-
-Note: The sync logic from Tasks 2 and 3 should be refactored into exported helper functions that both the scheduled functions and manual sync can call. Specifically:
-- `plaid.ts` exports `syncPlaidAccount(accountId: string, ownerId: string)`
-- `stripe.ts` exports `syncStripeAccount(accountId: string, ownerId: string)`
 
 - [ ] **Step 2: Export from index.ts**
 
@@ -451,15 +467,17 @@ Converters (follow existing `docToWorkItem`/`docToClient` patterns):
 - `docToConnectedAccount(id, data)` — converts Firestore doc to ConnectedAccount, handles Timestamp→Date for lastSyncedAt, createdAt, updatedAt
 - `docToTransaction(id, data)` — converts Firestore doc to Transaction, handles Timestamp→Date for date, createdAt, updatedAt
 
+**Important — add Firestore imports:** The existing `firestore.ts` imports need `limit`, `startAfter`, `getDocs`, `DocumentSnapshot` added from `firebase/firestore` for pagination support.
+
 Subscription functions:
-- `subscribeConnectedAccounts(callback)` — `onSnapshot` on `connectedAccounts` where `ownerId == currentUser.uid`, ordered by `createdAt desc`
+- `subscribeConnectedAccounts(callback)` — `onSnapshot` on `connectedAccounts` where `ownerId == currentUser.uid`, ordered by `createdAt desc`. Note: This MUST include `where('ownerId', '==', auth.currentUser!.uid)` because the Firestore security rules require `resource.data.ownerId == request.auth.uid` for reads — a collection-wide listener without this filter would be denied. Access `auth` from `../lib/firebase` (same pattern as other functions in this file).
 
 CRUD functions:
-- `deleteConnectedAccount(id)` — deletes from `connectedAccounts` (the `_secrets` cleanup happens in a Cloud Function)
+- `deleteConnectedAccount(id)` — deletes from `connectedAccounts`. Also call `onDeleteConnectedAccount` callable Cloud Function to clean up the corresponding `_secrets` document (client can't access `_secrets` directly).
 - `updateTransactionCategory(id, category)` — updates `category` and `updatedAt` on a transaction
 
 Paginated query (NOT `onSnapshot` — transactions can be thousands):
-- `fetchTransactions(options: { limit?: number, startAfter?: DocumentSnapshot, accountId?: string, type?: string, dateFrom?: Date, dateTo?: Date })` — returns `{ transactions: Transaction[], lastDoc: DocumentSnapshot | null, hasMore: boolean }`
+- `fetchTransactions(options: { limit?: number, startAfter?: DocumentSnapshot, accountId?: string, type?: string, dateFrom?: Date, dateTo?: Date })` — returns `{ transactions: Transaction[], lastDoc: DocumentSnapshot | null, hasMore: boolean }`. Wrap in try/catch for Firestore permission errors (unauthenticated, rules violations) and return empty results on error.
 
 - [ ] **Step 3: Add useConnectedAccounts hook**
 
@@ -731,7 +749,7 @@ cd /Users/devinwilson/Projects/personal/openchanges/web && npm run lint
 - [ ] **Step 5: Verify all finance files present**
 
 Check existence of all new files:
-- `functions/src/lib/crypto.ts` + `crypto.test.ts`
+- `functions/src/utils/crypto.ts` + `crypto.test.ts`
 - `functions/src/plaid.ts`
 - `functions/src/stripe.ts`
 - `functions/src/manualSync.ts`
@@ -758,7 +776,7 @@ Before deploying Phase 2, the following Firebase secrets must be set:
 firebase functions:secrets:set PLAID_CLIENT_ID
 firebase functions:secrets:set PLAID_SECRET
 firebase functions:secrets:set PLAID_ENV          # 'sandbox' for dev, 'production' for live
-firebase functions:secrets:set PLAID_ENCRYPTION_KEY  # 64-char hex string (32 bytes)
+firebase functions:secrets:set TOKEN_ENCRYPTION_KEY  # 64-char hex string (32 bytes)
 firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
 ```
 

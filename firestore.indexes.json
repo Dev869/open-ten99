@@ -43,6 +43,20 @@
         { "fieldPath": "appId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "apps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "githubRepo.fullName", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "integrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "connected", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

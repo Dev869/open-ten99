@@ -1,7 +1,7 @@
 {
-  "name": "openchanges-functions",
+  "name": "open-ten99-functions",
   "version": "1.0.0",
-  "description": "OpenChanges Cloud Functions",
+  "description": "Open Ten99 Cloud Functions",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",

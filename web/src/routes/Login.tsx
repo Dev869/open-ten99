@@ -14,7 +14,7 @@ export default function Login({ onSignIn, loading }: LoginProps) {
           <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5">
             <IconLayers size={28} />
           </div>
-          <h1 className="text-white font-bold text-2xl tracking-tight">OpenChanges</h1>
+          <h1 className="text-white font-bold text-2xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</h1>
           <p className="text-white/40 text-sm mt-2">Contractor work order management</p>
         </div>
 

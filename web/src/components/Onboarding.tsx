@@ -104,13 +104,13 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
                 <IconLayers size={28} />
               </div>
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
-                Welcome to OpenChanges!
+                Welcome to <span style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>!
               </h1>
               <p className="text-sm text-[var(--text-secondary)] mb-1">
                 Hey {firstName}, glad you're here.
               </p>
               <p className="text-sm text-[var(--text-secondary)] mb-8 leading-relaxed">
-                OpenChanges helps you track work orders, manage clients, and get paid faster. Let's get your workspace set up in a few quick steps.
+                TEN99 helps you track work orders, manage clients, and get paid faster. Let's get your workspace set up in a few quick steps.
               </p>
               <button
                 onClick={handleNext}

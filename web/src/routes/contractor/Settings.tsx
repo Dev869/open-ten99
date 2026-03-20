@@ -186,7 +186,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <IconLayers size={20} />
           </div>
           <div>
-            <p className="text-sm font-bold text-[var(--text-primary)]">OpenChanges v1.0</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
             <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>
           </div>
         </div>
@@ -198,14 +198,14 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </h3>
           <div className="divide-y divide-[var(--border)]">
             <a
-              href="mailto:support@dwtailored.com?subject=OpenChanges%20Support%20Request"
+              href="mailto:support@dwtailored.com?subject=Open%20TEN99%20Support%20Request"
               className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
             >
               <IconMail size={18} color="var(--text-secondary)" />
               <span className="text-sm text-[var(--text-primary)]">Report an Issue</span>
             </a>
             <a
-              href="mailto:support@dwtailored.com?subject=OpenChanges%20Feature%20Request"
+              href="mailto:support@dwtailored.com?subject=Open%20TEN99%20Feature%20Request"
               className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
             >
               <IconLightbulb size={18} color="var(--text-secondary)" />

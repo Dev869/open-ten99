@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OpenChanges is a work order management platform for independent contractors. It has three codebases in this repo:
+Open Ten99 (AKA Ten99) is a work order management platform for independent contractors. It has three codebases in this repo:
 
 - **`web/`** — React 19 + TypeScript + Vite + Tailwind CSS 4 (contractor dashboard + client portal)
 - **`functions/`** — Firebase Cloud Functions (email parsing via Gemini AI, PDF generation via pdf-lib)
-- **`OpenChanges/`** — SwiftUI iOS app (contractor mobile, iOS-only — no macOS)
+- **`OpenChanges/`** — SwiftUI iOS app (deprecated)
 
 Live at https://openchanges.web.app
 

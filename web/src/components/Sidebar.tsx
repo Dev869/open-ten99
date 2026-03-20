@@ -399,8 +399,8 @@ export function Sidebar({
             <span className={cn(
               'font-bold text-[var(--text-primary)] text-lg tracking-tight',
               expanded ? '' : 'md:hidden'
-            )}>
-              OpenChanges
+            )} style={{ fontFamily: "'Space Mono', monospace" }}>
+              TEN99
             </span>
           </Link>
         </div>
@@ -639,18 +639,33 @@ export function Sidebar({
             </button>
           )}
 
-          {/* Expand/Collapse toggle — desktop only */}
-          <button
-            onClick={onToggleExpanded}
-            className="hidden md:flex w-8 h-8 rounded-full border border-[var(--border)] items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all mx-auto mb-3 mt-2"
-            title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <span className={cn('transition-transform duration-200 inline-flex', expanded ? 'rotate-180' : '')}>
-              <IconChevronRight size={14} />
-            </span>
-          </button>
+          {/* Expand toggle — collapsed state, desktop only */}
+          {!expanded && (
+            <button
+              onClick={onToggleExpanded}
+              className="hidden md:flex w-11 h-11 items-center justify-center rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all duration-200 mt-1"
+              title="Expand sidebar"
+            >
+              <IconChevronRight size={16} />
+            </button>
+          )}
         </div>
+
       </aside>
+
+      {/* Collapse tab — fixed to sidebar edge, expanded state only, desktop only */}
+      {expanded && !isOpen && (
+        <button
+          onClick={onToggleExpanded}
+          className="fixed top-1/2 -translate-y-1/2 left-[210px] hidden md:flex items-center justify-center w-5 h-10 rounded-full bg-[var(--bg-sidebar)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:scale-110 shadow-sm transition-all duration-200 z-50"
+          title="Collapse sidebar"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <path d="M14 6l-6 6 6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 6l-6 6 6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
 
       {/* Customization panel */}
       {customizeOpen && onUpdateSidebar && (

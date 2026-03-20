@@ -134,14 +134,14 @@ async function newPage(ctx: DrawContext, title: string): Promise<DrawContext> {
   return drawPageHeader(newCtx, title);
 }
 
-/** Draw the "OpenChanges" banner and report title at the top of a page. */
+/** Draw the "Open TEN99" banner and report title at the top of a page. */
 async function drawPageHeader(
   ctx: DrawContext,
   title: string
 ): Promise<DrawContext> {
   let { page, y, bold } = ctx;
 
-  page.drawText("OpenChanges", {
+  page.drawText("Open TEN99", {
     x: MARGIN,
     y,
     size: 18,
@@ -290,7 +290,7 @@ function drawFooter(
     color: COLOR_GRAY,
   });
 
-  page.drawText(`Generated ${formatDate(generatedAt)} · OpenChanges`, {
+  page.drawText(`Generated ${formatDate(generatedAt)} · Open TEN99`, {
     x: PAGE_WIDTH - MARGIN - 160,
     y: footerY,
     size: 8,
