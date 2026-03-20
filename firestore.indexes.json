@@ -48,14 +48,8 @@
       "collectionGroup": "apps",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
         { "fieldPath": "githubRepo.fullName", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "integrations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "connected", "order": "ASCENDING" }
       ]
     }
   ],
