@@ -18,3 +18,5 @@ export {
 } from "./github";
 export { syncGitHub } from "./syncGitHub";
 export { onGitHubWebhook } from "./onGitHubWebhook";
+export { onPlaidLinkToken, onPlaidExchange, onPlaidSync, onPlaidWebhook } from "./plaid";
+export { onStripeConnect, onStripeSync, onStripeWebhook } from "./stripe";
