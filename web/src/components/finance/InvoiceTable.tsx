@@ -6,6 +6,7 @@ interface InvoiceTableProps {
   clients: Client[];
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
+  onRowClick?: (workItem: WorkItem) => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -15,7 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
   overdue: '#ef4444',
 };
 
-export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChange }: InvoiceTableProps) {
+export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChange, onRowClick }: InvoiceTableProps) {
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
 
   const allSelected = workItems.length > 0 && workItems.every(item => selectedIds.has(item.id ?? ''));
@@ -86,11 +87,12 @@ export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChang
               return (
                 <tr
                   key={id}
-                  className={`border-b border-[var(--border)] last:border-b-0 transition-colors ${
+                  className={`border-b border-[var(--border)] last:border-b-0 transition-colors cursor-pointer ${
                     isSelected ? 'bg-[var(--accent)]/5' : 'bg-[var(--bg-page)] hover:bg-[var(--bg-card)]'
                   }`}
+                  onClick={() => onRowClick?.(item)}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isSelected}

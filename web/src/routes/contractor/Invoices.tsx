@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../../lib/types';
 import { getInvoicesByStatus, getInvoiceStatusCounts, getAgingBuckets } from '../../lib/finance';
 import { AgingSummary } from '../../components/finance/AgingSummary';
 import { InvoiceTable } from '../../components/finance/InvoiceTable';
+import { InvoicePreview } from '../../components/finance/InvoicePreview';
 import { updateInvoiceStatus } from '../../services/firestore';
 import { formatCurrency, formatDate, exportToCsv } from '../../lib/utils';
 
@@ -22,9 +24,11 @@ const STATUS_TABS: { key: InvoiceStatusFilter; label: string }[] = [
 ];
 
 export default function Invoices({ workItems, clients }: InvoicesProps) {
+  const navigate = useNavigate();
   const [activeStatus, setActiveStatus] = useState<InvoiceStatusFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [previewItem, setPreviewItem] = useState<WorkItem | null>(null);
 
   const clientMap = useMemo(
     () => new Map(clients.map(c => [c.id, c.name])),
@@ -185,7 +189,21 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
         clients={clients}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
+        onRowClick={setPreviewItem}
       />
+
+      {/* Invoice preview slide-over */}
+      {previewItem && (
+        <InvoicePreview
+          workItem={previewItem}
+          client={clients.find(c => c.id === previewItem.clientId)}
+          onClose={() => setPreviewItem(null)}
+          onNavigate={(id) => {
+            setPreviewItem(null);
+            navigate(`/dashboard/work-items/${id}`);
+          }}
+        />
+      )}
     </div>
   );
 }
