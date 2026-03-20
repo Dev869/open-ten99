@@ -187,5 +187,40 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
       }
     }
+
+    // ---------------------------------------------------------------------------
+    // Finance Module (Phase 2-3)
+    // ---------------------------------------------------------------------------
+
+    // connectedAccounts — client can read/write display metadata (no secrets)
+    match /connectedAccounts/{docId} {
+      allow read: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    // _secrets — deny ALL client access, admin SDK only
+    match /_secrets/{document=**} {
+      allow read, write: if false;
+    }
+
+    // transactions — standard ownerId pattern
+    match /transactions/{docId} {
+      allow read: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+    }
   }
 }
