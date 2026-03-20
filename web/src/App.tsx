@@ -264,7 +264,7 @@ function ContractorRoutes() {
       />
       <Route
         path="clients/:id"
-        element={<ClientDetail workItems={workItems} clients={clients} />}
+        element={<ClientDetail workItems={workItems} clients={clients} apps={apps} />}
       />
       <Route
         path="apps"

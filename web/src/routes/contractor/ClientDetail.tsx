@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import type { WorkItem, Client } from '../../lib/types';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import type { WorkItem, Client, App } from '../../lib/types';
+import { APP_PLATFORM_LABELS, APP_STATUS_LABELS } from '../../lib/types';
 import { WorkItemCard } from '../../components/WorkItemCard';
+import { AppFormModal } from '../../components/AppFormModal';
 import { updateClient, deleteClient } from '../../services/firestore';
 import { formatDate, getRetainerPeriodStart } from '../../lib/utils';
+import { useToast } from '../../hooks/useToast';
 import { IconChevronLeft, IconEdit, IconClose, IconCheckSmall, IconTrash } from '../../components/icons';
 
 function ordinalSuffix(n: number): string {
@@ -15,16 +18,19 @@ function ordinalSuffix(n: number): string {
 interface ClientDetailProps {
   workItems: WorkItem[];
   clients: Client[];
+  apps: App[];
 }
 
-export default function ClientDetail({ workItems, clients }: ClientDetailProps) {
+export default function ClientDetail({ workItems, clients, apps }: ClientDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const source = clients.find((c) => c.id === id);
   const [client, setClient] = useState<Client | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNewApp, setShowNewApp] = useState(false);
 
   useEffect(() => {
     if (source) setClient({ ...source });
@@ -33,6 +39,11 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
   const clientItems = useMemo(
     () => workItems.filter((i) => i.clientId === id && i.status !== 'archived'),
     [workItems, id]
+  );
+
+  const clientApps = useMemo(
+    () => apps.filter(a => a.clientId === client?.id),
+    [apps, client?.id]
   );
 
   const retainerUsage = useMemo(() => {
@@ -78,6 +89,11 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
   }
 
   async function handleDelete() {
+    if (clientApps.length > 0) {
+      addToast(`This client has ${clientApps.length} app${clientApps.length !== 1 ? 's' : ''}. Remove or reassign apps before deleting.`, 'error');
+      setShowDeleteConfirm(false);
+      return;
+    }
     await deleteClient(client!.id!);
     navigate('/dashboard/clients');
   }
@@ -411,6 +427,75 @@ export default function ClientDetail({ workItems, clients }: ClientDetailProps) 
           </div>
         )}
       </div>
+
+      {/* Apps */}
+      <div className="animate-fade-in-up mt-6" style={{ animationDelay: '200ms' }}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+            Apps
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] text-[10px] font-bold">
+              {clientApps.length}
+            </span>
+          </h2>
+          <button
+            onClick={() => setShowNewApp(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 active:scale-[0.97] transition-all min-h-[36px]"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Add App
+          </button>
+        </div>
+
+        {clientApps.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {clientApps.map((app) => (
+              <Link
+                key={app.id}
+                to={`/dashboard/apps/${app.id}`}
+                className="flex items-center gap-3 p-4 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-sm active:scale-[0.98] transition-all"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-[var(--text-primary)] truncate">{app.name}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)]">
+                      {APP_PLATFORM_LABELS[app.platform]}
+                    </span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      app.status === 'active'
+                        ? 'bg-green-500/10 text-green-600'
+                        : app.status === 'development'
+                        ? 'bg-blue-500/10 text-blue-600'
+                        : app.status === 'maintenance'
+                        ? 'bg-yellow-500/10 text-yellow-600'
+                        : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'
+                    }`}>
+                      {APP_STATUS_LABELS[app.status]}
+                    </span>
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[var(--text-secondary)]/40 flex-shrink-0">
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-[var(--bg-card)] rounded-xl border border-[var(--border)]">
+            <div className="text-sm text-[var(--text-secondary)]">No apps yet</div>
+          </div>
+        )}
+      </div>
+
+      {/* New App Modal */}
+      {showNewApp && (
+        <AppFormModal
+          clients={clients}
+          clientId={client.id}
+          onClose={() => setShowNewApp(false)}
+        />
+      )}
     </div>
   );
 }
