@@ -35,14 +35,21 @@ function checkSpace(ctx: PdfContext, needed: number): void {
 }
 
 function drawHeader(ctx: PdfContext, title: string, dateLabel: string): void {
-  ctx.page.drawText('OpenChanges', { x: MARGIN, y: ctx.y, font: ctx.bold, size: 16, color: rgb(0.29, 0.66, 0.66) });
-  ctx.y -= 22;
-  ctx.page.drawText(title, { x: MARGIN, y: ctx.y, font: ctx.bold, size: 13 });
-  ctx.y -= 18;
-  ctx.page.drawText(dateLabel, { x: MARGIN, y: ctx.y, font: ctx.font, size: 9, color: rgb(0.5, 0.5, 0.5) });
-  ctx.y -= 8;
-  ctx.page.drawLine({ start: { x: MARGIN, y: ctx.y }, end: { x: PAGE_WIDTH - MARGIN, y: ctx.y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
+  // Report title — large, formal
+  ctx.page.drawText(title.toUpperCase(), { x: MARGIN, y: ctx.y, font: ctx.bold, size: 14, color: rgb(0.15, 0.15, 0.15) });
   ctx.y -= 20;
+  // Date range
+  ctx.page.drawText(dateLabel, { x: MARGIN, y: ctx.y, font: ctx.font, size: 9, color: rgb(0.45, 0.45, 0.45) });
+  // Prepared date on the right
+  const preparedText = `Prepared ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+  const preparedWidth = ctx.font.widthOfTextAtSize(preparedText, 8);
+  ctx.page.drawText(preparedText, { x: PAGE_WIDTH - MARGIN - preparedWidth, y: ctx.y, font: ctx.font, size: 8, color: rgb(0.55, 0.55, 0.55) });
+  ctx.y -= 12;
+  // Double rule
+  ctx.page.drawLine({ start: { x: MARGIN, y: ctx.y }, end: { x: PAGE_WIDTH - MARGIN, y: ctx.y }, thickness: 1, color: rgb(0.2, 0.2, 0.2) });
+  ctx.y -= 3;
+  ctx.page.drawLine({ start: { x: MARGIN, y: ctx.y }, end: { x: PAGE_WIDTH - MARGIN, y: ctx.y }, thickness: 0.3, color: rgb(0.2, 0.2, 0.2) });
+  ctx.y -= 18;
 }
 
 function drawRow(ctx: PdfContext, cols: { text: string; x: number; width: number; align?: 'left' | 'right'; bold?: boolean }[]): void {
@@ -61,8 +68,14 @@ function drawSeparator(ctx: PdfContext): void {
 }
 
 function drawFooter(ctx: PdfContext): void {
-  const text = `Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
-  ctx.page.drawText(text, { x: MARGIN, y: 30, font: ctx.font, size: 7, color: rgb(0.6, 0.6, 0.6) });
+  // Bottom rule
+  ctx.page.drawLine({ start: { x: MARGIN, y: 42 }, end: { x: PAGE_WIDTH - MARGIN, y: 42 }, thickness: 0.3, color: rgb(0.75, 0.75, 0.75) });
+  // ten99 credit — right-aligned, subtle
+  const credit = 'ten99';
+  const creditWidth = ctx.font.widthOfTextAtSize(credit, 7);
+  ctx.page.drawText(credit, { x: PAGE_WIDTH - MARGIN - creditWidth, y: 30, font: ctx.font, size: 7, color: rgb(0.7, 0.7, 0.7) });
+  // Page confidentiality note — left-aligned
+  ctx.page.drawText('Confidential', { x: MARGIN, y: 30, font: ctx.font, size: 7, color: rgb(0.7, 0.7, 0.7) });
 }
 
 function formatDateShort(d: Date): string {

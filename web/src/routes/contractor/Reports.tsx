@@ -91,7 +91,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     setCsvLoading('profit_loss');
     const monthly = getMonthlyRevenue(workItems, 12, now);
     exportToCsv(
-      `profit-loss-${preset}.csv`,
+      `Profit_and_Loss_${preset.toUpperCase()}.csv`,
       ['Month', 'Revenue'],
       monthly.map((m) => [m.month, m.revenue.toFixed(2)])
     );
@@ -102,7 +102,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     setCsvLoading('income_by_client');
     const byClient = getRevenueByClient(workItems, clients, range);
     exportToCsv(
-      `income-by-client-${preset}.csv`,
+      `Income_by_Client_${preset.toUpperCase()}.csv`,
       ['Client', 'Revenue', 'Work Orders'],
       byClient.map((c) => [c.clientName, c.revenue.toFixed(2), String(c.count)])
     );
@@ -114,7 +114,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     const byClient = getRevenueByClient(workItems, clients, range);
     const totalRevenue = byClient.reduce((sum, c) => sum + c.revenue, 0);
     exportToCsv(
-      `tax-summary-${preset}.csv`,
+      `Tax_Summary_${preset.toUpperCase()}.csv`,
       ['Client', 'Revenue'],
       [
         ...byClient.map((c) => [c.clientName, c.revenue.toFixed(2)]),
@@ -128,7 +128,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     setCsvLoading('hours_billing');
     const byType = getRevenueByType(workItems, range);
     exportToCsv(
-      `hours-billing-${preset}.csv`,
+      `Hours_and_Billing_${preset.toUpperCase()}.csv`,
       ['Type', 'Revenue', 'Work Orders'],
       byType.map((t) => [t.type, t.revenue.toFixed(2), String(t.count)])
     );
@@ -139,7 +139,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     setCsvLoading('aging');
     const buckets = getAgingBuckets(workItems, now);
     exportToCsv(
-      `aging-report-${preset}.csv`,
+      `Aging_Report_${preset.toUpperCase()}.csv`,
       ['Bucket', 'Amount'],
       [
         ['Current (not yet due)', buckets.current.toFixed(2)],
@@ -154,7 +154,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
   const handleCsvExpense = useCallback(() => {
     // Expense report is coming in Phase 3 — export empty template
     setCsvLoading('expense');
-    exportToCsv('expense-report.csv', ['Category', 'Amount', 'Date', 'Description'], []);
+    exportToCsv('Expense_Report.csv', ['Category', 'Amount', 'Date', 'Description'], []);
     setCsvLoading(null);
   }, []);
 

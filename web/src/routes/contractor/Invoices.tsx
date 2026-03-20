@@ -102,7 +102,7 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
       item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '',
       item.invoiceStatus ?? 'draft',
     ]);
-    exportToCsv('invoices.csv', headers, rows);
+    exportToCsv('Invoice_Register.csv', headers, rows);
   }
 
   return (
