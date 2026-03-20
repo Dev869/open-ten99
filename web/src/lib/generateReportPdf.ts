@@ -63,8 +63,14 @@ function drawRow(ctx: PdfContext, cols: { text: string; x: number; width: number
   ctx.y -= LINE_HEIGHT;
 }
 
-function drawSeparator(ctx: PdfContext): void {
-  ctx.page.drawLine({ start: { x: MARGIN, y: ctx.y + 6 }, end: { x: PAGE_WIDTH - MARGIN, y: ctx.y + 6 }, thickness: 0.3, color: rgb(0.85, 0.85, 0.85) });
+function drawSeparator(ctx: PdfContext, heavy = false): void {
+  const y = ctx.y + LINE_HEIGHT - 4;
+  ctx.page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: PAGE_WIDTH - MARGIN, y },
+    thickness: heavy ? 0.75 : 0.5,
+    color: heavy ? rgb(0.3, 0.3, 0.3) : rgb(0.65, 0.65, 0.65),
+  });
 }
 
 function drawFooter(ctx: PdfContext): void {
@@ -84,29 +90,32 @@ function formatDateShort(d: Date): string {
 
 // ---- Report Builders ----
 
+const COL_RIGHT = PAGE_WIDTH - MARGIN; // 562
+const COL_AMT_W = 100; // width for amount columns
+const COL_AMT_X = COL_RIGHT - COL_AMT_W; // 462
+
 function buildProfitLoss(ctx: PdfContext, workItems: WorkItem[], range: DateRange): void {
   drawHeader(ctx, 'Profit & Loss', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
 
   const monthly = getMonthlyRevenue(workItems, 12, range.end);
   drawRow(ctx, [
-    { text: 'Month', x: MARGIN, width: 200, bold: true },
-    { text: 'Revenue', x: 350, width: 160, align: 'right', bold: true },
+    { text: 'Month', x: MARGIN, width: 300, bold: true },
+    { text: 'Revenue', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawSeparator(ctx);
 
   let total = 0;
   for (const m of monthly) {
     drawRow(ctx, [
-      { text: m.month, x: MARGIN, width: 200 },
-      { text: formatCurrency(m.revenue), x: 350, width: 160, align: 'right' },
+      { text: m.month, x: MARGIN, width: 300 },
+      { text: formatCurrency(m.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
     total += m.revenue;
   }
-  ctx.y -= 4;
-  drawSeparator(ctx);
+  drawSeparator(ctx, true);
   drawRow(ctx, [
-    { text: 'Total', x: MARGIN, width: 200, bold: true },
-    { text: formatCurrency(total), x: 350, width: 160, align: 'right', bold: true },
+    { text: 'Total', x: MARGIN, width: 300, bold: true },
+    { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawFooter(ctx);
 }
@@ -115,28 +124,29 @@ function buildIncomeByClient(ctx: PdfContext, workItems: WorkItem[], clients: Cl
   drawHeader(ctx, 'Income by Client', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
 
   const byClient = getRevenueByClient(workItems, clients, range);
+  const COL_ORD_X = 360;
+  const COL_ORD_W = 60;
   drawRow(ctx, [
-    { text: 'Client', x: MARGIN, width: 200, bold: true },
-    { text: 'Orders', x: 280, width: 60, align: 'right', bold: true },
-    { text: 'Revenue', x: 370, width: 140, align: 'right', bold: true },
+    { text: 'Client', x: MARGIN, width: 300, bold: true },
+    { text: 'Orders', x: COL_ORD_X, width: COL_ORD_W, align: 'right', bold: true },
+    { text: 'Revenue', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawSeparator(ctx);
 
   let total = 0;
   for (const c of byClient) {
     drawRow(ctx, [
-      { text: c.clientName, x: MARGIN, width: 200 },
-      { text: String(c.count), x: 280, width: 60, align: 'right' },
-      { text: formatCurrency(c.revenue), x: 370, width: 140, align: 'right' },
+      { text: c.clientName, x: MARGIN, width: 300 },
+      { text: String(c.count), x: COL_ORD_X, width: COL_ORD_W, align: 'right' },
+      { text: formatCurrency(c.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
     total += c.revenue;
   }
-  ctx.y -= 4;
-  drawSeparator(ctx);
+  drawSeparator(ctx, true);
   drawRow(ctx, [
-    { text: 'Total', x: MARGIN, width: 200, bold: true },
-    { text: '', x: 280, width: 60 },
-    { text: formatCurrency(total), x: 370, width: 140, align: 'right', bold: true },
+    { text: 'Total', x: MARGIN, width: 300, bold: true },
+    { text: '', x: COL_ORD_X, width: COL_ORD_W },
+    { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawFooter(ctx);
 }
@@ -147,26 +157,27 @@ function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client
   const byClient = getRevenueByClient(workItems, clients, range);
   const total = byClient.reduce((s, c) => s + c.revenue, 0);
 
+  const COL_1099_X = 380;
+  const COL_1099_W = 80;
   drawRow(ctx, [
-    { text: 'Client', x: MARGIN, width: 200, bold: true },
-    { text: 'Revenue', x: 300, width: 120, align: 'right', bold: true },
-    { text: '1099 Threshold', x: 430, width: 80, align: 'right', bold: true },
+    { text: 'Client', x: MARGIN, width: 250, bold: true },
+    { text: 'Revenue', x: COL_1099_X, width: COL_1099_W, align: 'right', bold: true },
+    { text: '1099?', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawSeparator(ctx);
 
   for (const c of byClient) {
     drawRow(ctx, [
-      { text: c.clientName, x: MARGIN, width: 200 },
-      { text: formatCurrency(c.revenue), x: 300, width: 120, align: 'right' },
-      { text: c.revenue >= 600 ? 'Yes' : 'No', x: 430, width: 80, align: 'right' },
+      { text: c.clientName, x: MARGIN, width: 250 },
+      { text: formatCurrency(c.revenue), x: COL_1099_X, width: COL_1099_W, align: 'right' },
+      { text: c.revenue >= 600 ? 'Yes' : 'No', x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
   }
-  ctx.y -= 4;
-  drawSeparator(ctx);
+  drawSeparator(ctx, true);
   drawRow(ctx, [
-    { text: 'Total Income', x: MARGIN, width: 200, bold: true },
-    { text: formatCurrency(total), x: 300, width: 120, align: 'right', bold: true },
-    { text: '', x: 430, width: 80 },
+    { text: 'Total Income', x: MARGIN, width: 250, bold: true },
+    { text: formatCurrency(total), x: COL_1099_X, width: COL_1099_W, align: 'right', bold: true },
+    { text: '', x: COL_AMT_X, width: COL_AMT_W },
   ]);
 
   ctx.y -= 20;
@@ -192,10 +203,10 @@ function buildHoursBilling(ctx: PdfContext, workItems: WorkItem[], range: DateRa
   ctx.y -= 10;
 
   drawRow(ctx, [
-    { text: 'Type', x: MARGIN, width: 180, bold: true },
-    { text: 'Orders', x: 240, width: 60, align: 'right', bold: true },
-    { text: 'Hours', x: 320, width: 80, align: 'right', bold: true },
-    { text: 'Revenue', x: 420, width: 90, align: 'right', bold: true },
+    { text: 'Type', x: MARGIN, width: 200, bold: true },
+    { text: 'Orders', x: 280, width: 60, align: 'right', bold: true },
+    { text: 'Hours', x: 370, width: 60, align: 'right', bold: true },
+    { text: 'Revenue', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawSeparator(ctx);
 
@@ -207,10 +218,10 @@ function buildHoursBilling(ctx: PdfContext, workItems: WorkItem[], range: DateRa
 
   for (const t of byType) {
     drawRow(ctx, [
-      { text: typeLabels[t.type] ?? t.type, x: MARGIN, width: 180 },
-      { text: String(t.count), x: 240, width: 60, align: 'right' },
-      { text: t.hours.toFixed(1), x: 320, width: 80, align: 'right' },
-      { text: formatCurrency(t.revenue), x: 420, width: 90, align: 'right' },
+      { text: typeLabels[t.type] ?? t.type, x: MARGIN, width: 200 },
+      { text: String(t.count), x: 280, width: 60, align: 'right' },
+      { text: t.hours.toFixed(1), x: 370, width: 60, align: 'right' },
+      { text: formatCurrency(t.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
   }
   drawFooter(ctx);
@@ -223,31 +234,30 @@ function buildAging(ctx: PdfContext, workItems: WorkItem[]): void {
 
   // Summary buckets
   drawRow(ctx, [
-    { text: 'Bucket', x: MARGIN, width: 250, bold: true },
-    { text: 'Amount', x: 400, width: 110, align: 'right', bold: true },
+    { text: 'Bucket', x: MARGIN, width: 300, bold: true },
+    { text: 'Amount', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
   drawSeparator(ctx);
 
   const bucketRows = [
     ['Current (not yet due)', buckets.current],
-    ['1–30 days past due', buckets.days1to30],
-    ['31–60 days past due', buckets.days31to60],
+    ['1-30 days past due', buckets.days1to30],
+    ['31-60 days past due', buckets.days31to60],
     ['60+ days past due', buckets.days60plus],
   ] as const;
 
   for (const [label, amount] of bucketRows) {
     drawRow(ctx, [
-      { text: label, x: MARGIN, width: 250 },
-      { text: formatCurrency(amount), x: 400, width: 110, align: 'right' },
+      { text: label, x: MARGIN, width: 300 },
+      { text: formatCurrency(amount), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
   }
 
   const total = buckets.current + buckets.days1to30 + buckets.days31to60 + buckets.days60plus;
-  ctx.y -= 4;
-  drawSeparator(ctx);
+  drawSeparator(ctx, true);
   drawRow(ctx, [
-    { text: 'Total Outstanding', x: MARGIN, width: 250, bold: true },
-    { text: formatCurrency(total), x: 400, width: 110, align: 'right', bold: true },
+    { text: 'Total Outstanding', x: MARGIN, width: 300, bold: true },
+    { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
 
   // Detail: individual invoices
@@ -262,18 +272,19 @@ function buildAging(ctx: PdfContext, workItems: WorkItem[]): void {
     drawRow(ctx, [{ text: 'No outstanding invoices.', x: MARGIN, width: 400 }]);
   } else {
     drawRow(ctx, [
-      { text: 'Subject', x: MARGIN, width: 200, bold: true },
-      { text: 'Status', x: 270, width: 70, bold: true },
-      { text: 'Amount', x: 400, width: 110, align: 'right', bold: true },
+      { text: 'Subject', x: MARGIN, width: 250, bold: true },
+      { text: 'Status', x: 330, width: 80, bold: true },
+      { text: 'Amount', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
     ]);
     drawSeparator(ctx);
 
     for (const item of unpaid) {
-      const subject = (item.subject ?? '').slice(0, 40);
+      const subject = (item.subject ?? '').slice(0, 45);
+      const status = (item.invoiceStatus ?? 'draft');
       drawRow(ctx, [
-        { text: subject, x: MARGIN, width: 200 },
-        { text: (item.invoiceStatus ?? 'draft').charAt(0).toUpperCase() + (item.invoiceStatus ?? 'draft').slice(1), x: 270, width: 70 },
-        { text: formatCurrency(item.totalCost), x: 400, width: 110, align: 'right' },
+        { text: subject, x: MARGIN, width: 250 },
+        { text: status.charAt(0).toUpperCase() + status.slice(1), x: 330, width: 80 },
+        { text: formatCurrency(item.totalCost), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
       ]);
     }
   }
