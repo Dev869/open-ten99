@@ -17,3 +17,4 @@ export {
   triggerGitHubSync,
 } from "./github";
 export { syncGitHub } from "./syncGitHub";
+export { onGitHubWebhook } from "./onGitHubWebhook";
