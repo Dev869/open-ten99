@@ -9,12 +9,14 @@ interface NewWorkOrderModalProps {
   apps: App[];
   hourlyRate: number;
   onClose: () => void;
+  initialClientId?: string;
+  initialAppId?: string;
 }
 
-export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose }: NewWorkOrderModalProps) {
+export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialClientId, initialAppId }: NewWorkOrderModalProps) {
   const [type, setType] = useState<WorkItemType>('changeRequest');
-  const [clientId, setClientId] = useState('');
-  const [selectedAppId, setSelectedAppId] = useState('');
+  const [clientId, setClientId] = useState(initialClientId ?? '');
+  const [selectedAppId, setSelectedAppId] = useState(initialAppId ?? '');
   const [subject, setSubject] = useState('');
   const [notes, setNotes] = useState('');
   const [isBillable, setIsBillable] = useState(true);

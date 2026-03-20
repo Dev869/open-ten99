@@ -13,6 +13,7 @@ import {
   APP_ENVIRONMENT_LABELS,
 } from '../lib/types';
 import { createApp, updateApp } from '../services/firestore';
+import { useToast } from '../hooks/useToast';
 
 interface AppFormModalProps {
   app?: App;
@@ -23,6 +24,7 @@ interface AppFormModalProps {
 
 export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalProps) {
   const isEditMode = !!app;
+  const { addToast } = useToast();
 
   const [name, setName] = useState(app?.name ?? '');
   const [selectedClientId, setSelectedClientId] = useState(app?.clientId ?? clientId ?? '');
@@ -127,6 +129,7 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
       onClose();
     } catch (err) {
       console.error('Error saving app:', err);
+      addToast('Failed to save app. Please try again.', 'error');
     }
     setSaving(false);
   }

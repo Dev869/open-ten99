@@ -388,6 +388,18 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
           onClose={() => setShowEditModal(false)}
         />
       )}
+
+      {/* New Work Order Modal */}
+      {showNewWorkOrder && (
+        <NewWorkOrderModal
+          clients={clients}
+          apps={apps}
+          hourlyRate={hourlyRate}
+          initialClientId={app.clientId}
+          initialAppId={app.id}
+          onClose={() => setShowNewWorkOrder(false)}
+        />
+      )}
     </div>
   );
 }

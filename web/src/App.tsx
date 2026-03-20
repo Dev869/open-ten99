@@ -272,7 +272,7 @@ function ContractorRoutes() {
       />
       <Route
         path="apps/:id"
-        element={<AppDetail apps={apps} workItems={workItems} clients={clients} />}
+        element={<AppDetail apps={apps} workItems={workItems} clients={clients} hourlyRate={settings.hourlyRate} />}
       />
       <Route
         path="analytics"
