@@ -347,7 +347,7 @@ function PortalRoutes() {
 }
 
 export default function App() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, authError, signInWithGoogle } = useAuth();
 
   if (loading) {
     return (
@@ -417,7 +417,7 @@ export default function App() {
             ) : isPortalUser ? (
               <Navigate to="/portal" replace />
             ) : (
-              <Login onSignIn={signInWithGoogle} />
+              <Login onSignIn={signInWithGoogle} error={authError} />
             )
           }
         />

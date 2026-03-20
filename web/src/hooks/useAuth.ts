@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   GoogleAuthProvider,
   signInWithCustomToken,
@@ -59,12 +60,21 @@ export function useAuth() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: unknown) {
+      // Popup blocked or third-party cookies disabled — fall back to redirect
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+        console.warn('Popup sign-in failed, falling back to redirect:', code);
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr) {
+          console.error('Redirect sign-in error:', redirectErr);
+        }
+      }
       const message =
         err instanceof Error ? err.message : 'Google sign-in failed.';
-      // Don't expose raw Firebase error codes to the UI — log internally
       console.error('Google sign-in error:', err);
       setAuthError(message);
-      throw err;
     }
   };
 

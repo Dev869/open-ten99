@@ -1,11 +1,25 @@
+import { useState } from 'react';
 import { BrandWordmark } from '../components/Brand';
 
 interface LoginProps {
-  onSignIn: () => void;
-  loading?: boolean;
+  onSignIn: () => Promise<void> | void;
+  error?: string | null;
 }
 
-export default function Login({ onSignIn, loading }: LoginProps) {
+export default function Login({ onSignIn, error }: LoginProps) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleSignIn() {
+    setLoading(true);
+    try {
+      await onSignIn();
+    } catch {
+      // Error display handled via the error prop
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#2C2417] flex items-center justify-center p-4">
       <div className="w-full max-w-sm animate-fade-in-up">
@@ -23,8 +37,14 @@ export default function Login({ onSignIn, loading }: LoginProps) {
               Sign in to manage your work orders.
             </p>
 
+            {error && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
+                Sign-in failed. Please try again or check your popup blocker.
+              </div>
+            )}
+
             <button
-              onClick={onSignIn}
+              onClick={handleSignIn}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-semibold hover:bg-[var(--border)] disabled:opacity-50 transition-colors border border-[var(--border)]"
             >
