@@ -51,7 +51,7 @@
         { "fieldPath": "ownerId", "order": "ASCENDING" },
         { "fieldPath": "githubRepo.fullName", "order": "ASCENDING" }
       ]
-    }
+    },
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",
