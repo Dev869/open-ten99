@@ -19,7 +19,7 @@ interface PageState {
 const INITIAL_PAGE_STATE: PageState = {
   transactions: [],
   lastDoc: null,
-  hasMore: true,
+  hasMore: false,
   loading: true,
 };
 

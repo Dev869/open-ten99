@@ -24,24 +24,24 @@ export default function Accounts() {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
 
-  // Fetch Plaid link token on mount
-  useEffect(() => {
-    async function fetchLinkToken() {
-      setPlaidFetchError(null);
-      try {
-        const fn = httpsCallable<Record<string, never>, { linkToken: string }>(
-          functions,
-          'onPlaidLinkToken'
-        );
-        const result = await fn({});
-        setLinkToken(result.data.linkToken);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load Plaid';
-        setPlaidFetchError(message);
-        console.error('Failed to fetch Plaid link token:', err);
-      }
+  // Fetch Plaid link token on demand (not on mount — Cloud Functions may not be deployed)
+  const fetchLinkToken = useCallback(async () => {
+    setPlaidFetchError(null);
+    setPlaidLoading(true);
+    try {
+      const fn = httpsCallable<Record<string, never>, { linkToken: string }>(
+        functions,
+        'onPlaidLinkToken'
+      );
+      const result = await fn({});
+      setLinkToken(result.data.linkToken);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Cloud Functions not deployed yet. Run: firebase deploy --only functions';
+      setPlaidFetchError(message);
+      console.error('Failed to fetch Plaid link token:', err);
+    } finally {
+      setPlaidLoading(false);
     }
-    fetchLinkToken();
   }, []);
 
   const handlePlaidSuccess = useCallback(async (publicToken: string) => {
@@ -175,12 +175,22 @@ export default function Accounts() {
                 {plaidFetchError}
               </div>
             )}
-            <PlaidLinkButton
-              linkToken={linkToken}
-              onSuccess={handlePlaidSuccess}
-              onExit={handlePlaidExit}
-              loading={plaidLoading}
-            />
+            {linkToken ? (
+              <PlaidLinkButton
+                linkToken={linkToken}
+                onSuccess={handlePlaidSuccess}
+                onExit={handlePlaidExit}
+                loading={plaidLoading}
+              />
+            ) : (
+              <button
+                onClick={fetchLinkToken}
+                disabled={plaidLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {plaidLoading ? 'Loading...' : 'Connect Bank Account'}
+              </button>
+            )}
           </div>
 
           {/* Stripe subsection */}
