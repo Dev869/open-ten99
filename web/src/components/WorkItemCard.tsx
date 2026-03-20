@@ -8,6 +8,7 @@ import { typeColor } from '../lib/theme';
 interface WorkItemCardProps {
   item: WorkItem;
   clientName: string;
+  appName?: string;
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (id: string) => void;
@@ -16,6 +17,7 @@ interface WorkItemCardProps {
 export function WorkItemCard({
   item,
   clientName,
+  appName,
   selectable,
   selected,
   onSelect,
@@ -44,7 +46,14 @@ export function WorkItemCard({
             <div className="text-sm font-bold text-[var(--text-primary)] truncate">
               {item.subject}
             </div>
-            <div className="text-xs text-[var(--text-secondary)] mt-0.5">{clientName}</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs text-[var(--text-secondary)]">{clientName}</span>
+              {appName && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-[var(--text-secondary)]">
+                  {appName}
+                </span>
+              )}
+            </div>
           </div>
           <StatusBadge status={item.status} />
         </div>

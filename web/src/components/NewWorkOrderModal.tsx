@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import type { Client, WorkItemType, LineItem, RecurrenceFrequency } from '../lib/types';
+import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../lib/types';
 import { RECURRENCE_LABELS } from '../lib/types';
 import { formatCurrency, addBusinessDays, formatDate } from '../lib/utils';
 import { createWorkItem } from '../services/firestore';
 
 interface NewWorkOrderModalProps {
   clients: Client[];
+  apps: App[];
   hourlyRate: number;
   onClose: () => void;
 }
 
-export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrderModalProps) {
+export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose }: NewWorkOrderModalProps) {
   const [type, setType] = useState<WorkItemType>('changeRequest');
   const [clientId, setClientId] = useState('');
+  const [selectedAppId, setSelectedAppId] = useState('');
   const [subject, setSubject] = useState('');
   const [notes, setNotes] = useState('');
   const [isBillable, setIsBillable] = useState(true);
@@ -24,6 +26,8 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
   const [assigneeId, setAssigneeId] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const availableApps = apps.filter((a) => a.clientId === clientId);
 
   const totalHours = lineItems.reduce((s, li) => s + li.hours, 0);
   const totalCost = lineItems.reduce((s, li) => s + li.cost, 0);
@@ -65,6 +69,7 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
         type,
         status: 'draft',
         clientId,
+        appId: selectedAppId || undefined,
         sourceEmail: notes,
         subject: subject.trim(),
         lineItems: lineItems.filter((li) => li.description.trim()),
@@ -133,7 +138,7 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
             </label>
             <select
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              onChange={(e) => { setClientId(e.target.value); setSelectedAppId(''); }}
               className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             >
               <option value="">Select a client</option>
@@ -141,6 +146,23 @@ export function NewWorkOrderModal({ clients, hourlyRate, onClose }: NewWorkOrder
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
+              ))}
+            </select>
+          </div>
+
+          {/* App */}
+          <div>
+            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+              App
+            </label>
+            <select
+              value={selectedAppId}
+              onChange={(e) => setSelectedAppId(e.target.value)}
+              className="w-full mt-1.5 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm"
+            >
+              <option value="">No app</option>
+              {availableApps.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
           </div>

@@ -4,15 +4,16 @@ import { WorkItemCard } from '../../components/WorkItemCard';
 import { Onboarding } from '../../components/Onboarding';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useFirestore';
-import type { WorkItem, Client } from '../../lib/types';
+import type { WorkItem, Client, App } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
 
 interface DashboardProps {
   workItems: WorkItem[];
   clients: Client[];
+  apps: App[];
 }
 
-export default function Dashboard({ workItems, clients }: DashboardProps) {
+export default function Dashboard({ workItems, clients, apps }: DashboardProps) {
   const { user } = useAuth();
   const { settings } = useSettings(user?.uid);
   const [onboardingDismissed, setOnboardingDismissed] = useState(
@@ -44,6 +45,12 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
     clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
     return map;
   }, [clients]);
+
+  const appMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
+    return map;
+  }, [apps]);
 
   const pending = workItems.filter(
     (i) => i.status === 'draft' || i.status === 'inReview'
@@ -103,6 +110,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
                 <WorkItemCard
                   item={item}
                   clientName={clientMap[item.clientId] ?? 'Unknown'}
+                  appName={item.appId ? appMap[item.appId] : undefined}
                 />
               </div>
             ))}
@@ -122,6 +130,7 @@ export default function Dashboard({ workItems, clients }: DashboardProps) {
                 <WorkItemCard
                   item={item}
                   clientName={clientMap[item.clientId] ?? 'Unknown'}
+                  appName={item.appId ? appMap[item.appId] : undefined}
                 />
               </div>
             ))}

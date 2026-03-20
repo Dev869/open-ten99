@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { FilterTabs } from '../../components/FilterTabs';
 import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
-import type { WorkItem, Client, AppSettings } from '../../lib/types';
+import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
 import { formatDate, exportToCsv } from '../../lib/utils';
 import { bulkUpdateStatus } from '../../services/firestore';
@@ -10,13 +10,14 @@ import { bulkUpdateStatus } from '../../services/firestore';
 interface WorkItemsProps {
   workItems: WorkItem[];
   clients: Client[];
+  apps: App[];
   settings: AppSettings;
 }
 
 const typeTabs = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'];
 const statusTabs = ['All', 'Draft', 'In Review', 'Approved', 'Completed'];
 
-export default function WorkItems({ workItems, clients, settings }: WorkItemsProps) {
+export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
@@ -29,6 +30,12 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
     clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
     return map;
   }, [clients]);
+
+  const appMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
+    return map;
+  }, [apps]);
 
   const filtered = useMemo(() => {
     return workItems
@@ -182,6 +189,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
             <WorkItemCard
               item={item}
               clientName={clientMap[item.clientId] ?? 'Unknown'}
+              appName={item.appId ? appMap[item.appId] : undefined}
               selectable
               selected={selectedIds.has(item.id!)}
               onSelect={toggleSelect}
@@ -203,6 +211,7 @@ export default function WorkItems({ workItems, clients, settings }: WorkItemsPro
       {showNewOrder && (
         <NewWorkOrderModal
           clients={clients}
+          apps={apps}
           hourlyRate={settings.hourlyRate}
           onClose={() => setShowNewOrder(false)}
         />

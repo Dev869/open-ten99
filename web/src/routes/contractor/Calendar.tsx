@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { WorkItem, Client, RecurrenceFrequency } from '../../lib/types';
+import type { WorkItem, Client, RecurrenceFrequency, App } from '../../lib/types';
 import { typeColor } from '../../lib/theme';
 import { WORK_ITEM_TYPE_LABELS, RECURRENCE_LABELS } from '../../lib/types';
 import { formatCurrency, cn } from '../../lib/utils';
@@ -10,6 +10,7 @@ import { IconChevronLeft, IconChevronRight, IconCalendar as IconCalendarIcon, Ic
 interface CalendarProps {
   workItems: WorkItem[];
   clients: Client[];
+  apps: App[];
 }
 
 type View = 'month' | 'week' | 'list';
@@ -101,7 +102,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 /* ── Component ────────────────────────────────────── */
 
-export default function Calendar({ workItems, clients }: CalendarProps) {
+export default function Calendar({ workItems, clients, apps: _apps }: CalendarProps) {
   const [view, setView] = useState<View>('month');
   const [current, setCurrent] = useState(new Date());
   const navigate = useNavigate();

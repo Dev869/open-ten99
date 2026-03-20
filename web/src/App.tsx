@@ -238,11 +238,11 @@ function ContractorRoutes() {
     <Routes>
       <Route
         index
-        element={<Dashboard workItems={workItems} clients={clients} />}
+        element={<Dashboard workItems={workItems} clients={clients} apps={apps} />}
       />
       <Route
         path="work-items"
-        element={<WorkItems workItems={workItems} clients={clients} settings={settings} />}
+        element={<WorkItems workItems={workItems} clients={clients} apps={apps} settings={settings} />}
       />
       <Route
         path="work-items/:id"
@@ -256,7 +256,7 @@ function ContractorRoutes() {
       />
       <Route
         path="calendar"
-        element={<Calendar workItems={workItems} clients={clients} />}
+        element={<Calendar workItems={workItems} clients={clients} apps={apps} />}
       />
       <Route
         path="clients"
