@@ -37,6 +37,8 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
   const [hosting, setHosting] = useState(app?.hosting ?? '');
   const [environment, setEnvironment] = useState<AppEnvironment | ''>(app?.environment ?? '');
   const [deploymentNotes, setDeploymentNotes] = useState(app?.deploymentNotes ?? '');
+  const [vaultCredentialIds, setVaultCredentialIds] = useState<string[]>(app?.vaultCredentialIds ?? []);
+  const [vaultCredentialInput, setVaultCredentialInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   const isValid = name.trim() && selectedClientId;
@@ -79,6 +81,25 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
     setTechStack(techStack.filter((_, i) => i !== index));
   }
 
+  function addVaultCredential() {
+    const val = vaultCredentialInput.trim();
+    if (val && !vaultCredentialIds.includes(val)) {
+      setVaultCredentialIds([...vaultCredentialIds, val]);
+    }
+    setVaultCredentialInput('');
+  }
+
+  function handleVaultCredentialKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addVaultCredential();
+    }
+  }
+
+  function removeVaultCredential(index: number) {
+    setVaultCredentialIds(vaultCredentialIds.filter((_, i) => i !== index));
+  }
+
   async function handleSave() {
     if (!isValid) return;
     setSaving(true);
@@ -95,6 +116,7 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
         hosting: hosting.trim() || undefined,
         environment: (environment as AppEnvironment) || undefined,
         deploymentNotes: deploymentNotes.trim() || undefined,
+        vaultCredentialIds: vaultCredentialIds.length > 0 ? vaultCredentialIds : undefined,
       };
 
       if (isEditMode && app) {
@@ -324,6 +346,39 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
               placeholder="Deployment steps, environment variables, etc."
               rows={3}
               className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          {/* Linked Credentials */}
+          <div>
+            <label className={labelClass}>Linked Credentials</label>
+            {vaultCredentialIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
+                {vaultCredentialIds.map((credId, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
+                  >
+                    <span className="max-w-[180px] truncate">{credId}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeVaultCredential(i)}
+                      className="text-[var(--text-secondary)] hover:text-red-500 transition-colors ml-0.5 leading-none"
+                      aria-label="Remove credential"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <input
+              type="text"
+              value={vaultCredentialInput}
+              onChange={(e) => setVaultCredentialInput(e.target.value)}
+              onKeyDown={handleVaultCredentialKeyDown}
+              placeholder="Credential ID — press Enter to add"
+              className={vaultCredentialIds.length > 0 ? inputClass : `${inputClass} mt-1.5`}
             />
           </div>
         </div>

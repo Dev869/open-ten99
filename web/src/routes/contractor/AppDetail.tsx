@@ -10,6 +10,7 @@ import {
 import { StatCard } from '../../components/StatCard';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { AppFormModal } from '../../components/AppFormModal';
+import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
 import { FilterTabs } from '../../components/FilterTabs';
 import { deleteApp } from '../../services/firestore';
 import {
@@ -22,6 +23,7 @@ interface AppDetailProps {
   apps: App[];
   workItems: WorkItem[];
   clients: Client[];
+  hourlyRate: number;
 }
 
 const statusColors: Record<App['status'], string> = {
@@ -41,11 +43,12 @@ const typeTabToKey: Record<string, string> = {
   'Maintenance': 'maintenance',
 };
 
-export default function AppDetail({ apps, workItems, clients }: AppDetailProps) {
+export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showNewWorkOrder, setShowNewWorkOrder] = useState(false);
   const [selectedType, setSelectedType] = useState<string>('All');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -147,6 +150,9 @@ export default function AppDetail({ apps, workItems, clients }: AppDetailProps) 
             value={String(statusCounts.draft)}
             color={statusCounts.draft > 0 ? '#9ca3af' : undefined}
           />
+        </div>
+        <div className="animate-fade-in-up flex-1 min-w-[120px]" style={{ animationDelay: '200ms' }}>
+          <StatCard label="Credentials" value={String(app.vaultCredentialIds?.length ?? 0)} />
         </div>
       </div>
 
@@ -310,6 +316,16 @@ export default function AppDetail({ apps, workItems, clients }: AppDetailProps) 
                 <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
                   {app.deploymentNotes}
                 </p>
+              </div>
+            )}
+
+            {/* Linked Credentials */}
+            {app.vaultCredentialIds && app.vaultCredentialIds.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Linked Credentials</h4>
+                <Link to="/dashboard/vault" className="text-sm text-[var(--accent)] hover:underline">
+                  {app.vaultCredentialIds.length} credential{app.vaultCredentialIds.length !== 1 ? 's' : ''} linked
+                </Link>
               </div>
             )}
 
