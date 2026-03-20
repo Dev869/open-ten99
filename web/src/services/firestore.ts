@@ -348,13 +348,18 @@ export async function deleteApp(id: string) {
   const wiRef = collection(db, 'workItems');
   const q = query(wiRef, where('appId', '==', id));
   const snapshot = await getDocs(q);
-  if (snapshot.docs.length > 0) {
+
+  // Chunk into batches of 499 (leave room for the app delete)
+  const BATCH_LIMIT = 499;
+  for (let i = 0; i < snapshot.docs.length; i += BATCH_LIMIT) {
+    const chunk = snapshot.docs.slice(i, i + BATCH_LIMIT);
     const batch = writeBatch(db);
-    snapshot.docs.forEach((d) => {
+    chunk.forEach((d) => {
       batch.update(d.ref, { appId: null, updatedAt: Timestamp.now() });
     });
     await batch.commit();
   }
+
   // Delete the app
   const ref = doc(db, 'apps', id);
   await deleteDoc(ref);

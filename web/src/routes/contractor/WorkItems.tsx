@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { FilterTabs } from '../../components/FilterTabs';
@@ -30,24 +30,25 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [selectedApps, setSelectedApps] = useState<string[]>([]);
-  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  // Initialize state directly from URL params to avoid race condition
+  const [selectedClients, setSelectedClients] = useState<string[]>(() => {
+    const val = searchParams.get('clients');
+    return val ? val.split(',') : [];
+  });
+  const [selectedApps, setSelectedApps] = useState<string[]>(() => {
+    const val = searchParams.get('apps');
+    return val ? val.split(',') : [];
+  });
+  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState<string[]>(() => {
+    const val = searchParams.get('invoice');
+    return val ? val.split(',') : [];
+  });
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => ({
+    start: searchParams.get('start') || '',
+    end: searchParams.get('end') || '',
+  }));
 
-  // Initialize from URL on mount
-  useEffect(() => {
-    const clientsParam = searchParams.get('clients');
-    const appsParam = searchParams.get('apps');
-    const invoice = searchParams.get('invoice');
-    const start = searchParams.get('start');
-    const end = searchParams.get('end');
-    if (clientsParam) setSelectedClients(clientsParam.split(','));
-    if (appsParam) setSelectedApps(appsParam.split(','));
-    if (invoice) setSelectedInvoiceStatus(invoice.split(','));
-    if (start) setDateRange(prev => ({ ...prev, start }));
-    if (end) setDateRange(prev => ({ ...prev, end }));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const isInitialMount = useRef(true);
 
   // Sync filters to URL when filter state changes
   const updateUrlParams = useCallback(() => {
@@ -61,6 +62,10 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
   }, [selectedClients, selectedApps, selectedInvoiceStatus, dateRange, setSearchParams]);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     updateUrlParams();
   }, [updateUrlParams]);
 
