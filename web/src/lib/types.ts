@@ -162,6 +162,7 @@ export interface App {
   environment?: AppEnvironment;
   deploymentNotes?: string;
   vaultCredentialIds?: string[];
+  githubRepo?: GitHubRepoInfo;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -195,6 +196,46 @@ export const APP_ENVIRONMENT_LABELS: Record<AppEnvironment, string> = {
   development: 'Development',
   other: 'Other',
 };
+
+/* ── GitHub Integration ───────────────────────────── */
+
+export interface GitHubIntegration {
+  connected: boolean;
+  login: string;
+  avatarUrl?: string;
+  orgs: string[];
+  connectedAt: Date;
+  lastSyncAt?: Date;
+}
+
+export interface GitHubRepoInfo {
+  fullName: string;
+  defaultBranch: string;
+  language: string | null;
+  topics: string[];
+  stargazersCount: number;
+  openPrCount: number;
+  openIssuesCount: number;
+  archived: boolean;
+  pushedAt: Date;
+}
+
+export type GitHubActivityType = 'commit' | 'pull_request' | 'issue' | 'deployment';
+
+export interface GitHubActivity {
+  id?: string;
+  type: GitHubActivityType;
+  title: string;
+  url: string;
+  author: string;
+  authorAvatarUrl?: string;
+  status?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  number?: number;
+  sha?: string;
+  branch?: string;
+}
 
 /* ── Teams ─────────────────────────────────────────── */
 

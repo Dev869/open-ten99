@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity } from '../lib/types';
 
 // --- Converters ---
 
@@ -99,6 +99,19 @@ function docToApp(id: string, data: DocumentData): App {
     environment: data.environment ?? undefined,
     deploymentNotes: data.deploymentNotes ?? undefined,
     vaultCredentialIds: data.vaultCredentialIds ?? undefined,
+    githubRepo: data.githubRepo
+      ? {
+          fullName: data.githubRepo.fullName ?? '',
+          defaultBranch: data.githubRepo.defaultBranch ?? 'main',
+          language: data.githubRepo.language ?? null,
+          topics: data.githubRepo.topics ?? [],
+          stargazersCount: data.githubRepo.stargazersCount ?? 0,
+          openPrCount: data.githubRepo.openPrCount ?? 0,
+          openIssuesCount: data.githubRepo.openIssuesCount ?? 0,
+          archived: data.githubRepo.archived ?? false,
+          pushedAt: toDate(data.githubRepo.pushedAt),
+        }
+      : undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -339,6 +352,7 @@ export async function updateApp(app: App) {
     environment: app.environment ?? null,
     deploymentNotes: app.deploymentNotes ?? null,
     vaultCredentialIds: app.vaultCredentialIds ?? null,
+    githubRepo: app.githubRepo ?? null,
     updatedAt: Timestamp.now(),
   });
 }
@@ -609,6 +623,58 @@ export async function updateInviteStatus(
 export async function deleteTeamInvite(teamId: string, inviteId: string) {
   const ref = doc(db, 'teams', teamId, 'invites', inviteId);
   await deleteDoc(ref);
+}
+
+// --- GitHub Integration ---
+
+export function subscribeIntegration(
+  userId: string,
+  callback: (integration: GitHubIntegration | null) => void
+) {
+  const ref = doc(db, 'integrations', userId);
+  return onSnapshot(ref, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback(null);
+      return;
+    }
+    const data = snapshot.data();
+    callback({
+      connected: data.connected ?? false,
+      login: data.login ?? '',
+      avatarUrl: data.avatarUrl ?? undefined,
+      orgs: data.orgs ?? [],
+      connectedAt: toDate(data.connectedAt),
+      lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
+    });
+  });
+}
+
+export function subscribeGitHubActivity(
+  appId: string,
+  callback: (activities: GitHubActivity[]) => void
+) {
+  const ref = collection(db, 'apps', appId, 'github');
+  const q = query(ref, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const activities = snapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        type: data.type,
+        title: data.title ?? '',
+        url: data.url ?? '',
+        author: data.author ?? '',
+        authorAvatarUrl: data.authorAvatarUrl ?? undefined,
+        status: data.status ?? undefined,
+        createdAt: toDate(data.createdAt),
+        updatedAt: toDate(data.updatedAt),
+        number: data.number ?? undefined,
+        sha: data.sha ?? undefined,
+        branch: data.branch ?? undefined,
+      } as GitHubActivity;
+    });
+    callback(activities);
+  });
 }
 
 // --- Cloud Functions ---

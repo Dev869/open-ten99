@@ -7,8 +7,10 @@ import {
   subscribeTeam,
   subscribeTeamMembers,
   subscribeTeamInvites,
+  subscribeIntegration,
+  subscribeGitHubActivity,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity } from '../lib/types';
 
 export function useWorkItems(clientId?: string) {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -130,4 +132,38 @@ export function useTeamInvites(teamId: string | undefined) {
   }, [teamId]);
 
   return { invites, loading };
+}
+
+export function useIntegration(userId: string | undefined) {
+  const [integration, setIntegration] = useState<GitHubIntegration | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeIntegration(userId, (i) => {
+      setIntegration(i);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [userId]);
+
+  return { integration, loading };
+}
+
+export function useGitHubActivity(appId: string | undefined) {
+  const [activities, setActivities] = useState<GitHubActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!appId) { setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeGitHubActivity(appId, (a) => {
+      setActivities(a);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [appId]);
+
+  return { activities, loading };
 }
