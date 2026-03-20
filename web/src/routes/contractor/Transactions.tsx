@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getDoc, doc } from 'firebase/firestore';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
 import { useConnectedAccounts } from '../../hooks/useFirestore';
-import { fetchTransactions, updateTransactionCategory } from '../../services/firestore';
+import { fetchTransactions, updateTransactionCategory, confirmMatch, rejectMatch } from '../../services/firestore';
 import { TransactionRow } from '../../components/finance/TransactionRow';
+import { MatchSuggestion } from '../../components/finance/MatchSuggestion';
 import { formatDate } from '../../lib/utils';
+import { db } from '../../lib/firebase';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
 const PAGE_SIZE = 50;
@@ -59,6 +62,11 @@ export default function Transactions() {
   // Pagination state — combined into one object to allow atomic resets
   const [page, setPage] = useState<PageState>(INITIAL_PAGE_STATE);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Match suggestion state
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchedWorkItems, setMatchedWorkItems] = useState<Map<string, { subject: string; totalCost: number }>>(new Map());
 
   // Convenience aliases
   const { transactions, lastDoc, hasMore, loading } = page;
@@ -125,6 +133,78 @@ export default function Transactions() {
 
   function handleFilterTypeChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setFilterType(e.target.value);
+  }
+
+  async function handleRowClick(transactionId: string) {
+    // Toggle collapse
+    if (expandedMatch === transactionId) {
+      setExpandedMatch(null);
+      return;
+    }
+
+    setExpandedMatch(transactionId);
+
+    // Fetch work item info if not already cached
+    const transaction = page.transactions.find((t) => t.id === transactionId);
+    const workItemId = transaction?.matchedWorkItemId;
+    if (!workItemId || matchedWorkItems.has(workItemId)) return;
+
+    try {
+      const snap = await getDoc(doc(db, 'workItems', workItemId));
+      if (snap.exists()) {
+        const data = snap.data();
+        setMatchedWorkItems((prev) => {
+          const next = new Map(prev);
+          next.set(workItemId, {
+            subject: (data.subject as string) ?? 'Work Order',
+            totalCost: (data.totalCost as number) ?? 0,
+          });
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch work item for match suggestion:', err);
+    }
+  }
+
+  async function handleConfirmMatch(transactionId: string, workItemId: string) {
+    setMatchLoading(true);
+    try {
+      await confirmMatch(transactionId, workItemId);
+      setPage((prev) => ({
+        ...prev,
+        transactions: prev.transactions.map((t) =>
+          t.id === transactionId
+            ? { ...t, matchStatus: 'confirmed', matchedWorkItemId: workItemId }
+            : t,
+        ),
+      }));
+      setExpandedMatch(null);
+    } catch (err) {
+      console.error('Failed to confirm match:', err);
+    } finally {
+      setMatchLoading(false);
+    }
+  }
+
+  async function handleRejectMatch(transactionId: string) {
+    setMatchLoading(true);
+    try {
+      await rejectMatch(transactionId);
+      setPage((prev) => ({
+        ...prev,
+        transactions: prev.transactions.map((t) =>
+          t.id === transactionId
+            ? { ...t, matchStatus: 'rejected', matchedWorkItemId: undefined }
+            : t,
+        ),
+      }));
+      setExpandedMatch(null);
+    } catch (err) {
+      console.error('Failed to reject match:', err);
+    } finally {
+      setMatchLoading(false);
+    }
   }
 
   return (
@@ -232,14 +312,43 @@ export default function Transactions() {
                 </td>
               </tr>
             ) : (
-              transactions.map((transaction) => (
-                <TransactionRow
-                  key={transaction.id}
-                  transaction={transaction}
-                  accounts={accounts}
-                  onCategoryChange={handleCategoryChange}
-                />
-              ))
+              transactions.map((transaction) => {
+                const workItemId = transaction.matchedWorkItemId;
+                const cachedWorkItem = workItemId ? matchedWorkItems.get(workItemId) : undefined;
+                const showSuggestion =
+                  expandedMatch === transaction.id &&
+                  transaction.matchStatus === 'suggested' &&
+                  workItemId &&
+                  cachedWorkItem;
+
+                return (
+                  <>
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      accounts={accounts}
+                      onCategoryChange={handleCategoryChange}
+                      onRowClick={handleRowClick}
+                    />
+                    {showSuggestion && (
+                      <tr key={`${transaction.id}-match`}>
+                        <td colSpan={5} className="px-4 pb-3">
+                          <MatchSuggestion
+                            transactionId={transaction.id}
+                            workItemId={workItemId}
+                            workItemSubject={cachedWorkItem.subject}
+                            workItemAmount={cachedWorkItem.totalCost}
+                            confidence={transaction.matchConfidence ?? 0}
+                            onConfirm={handleConfirmMatch}
+                            onReject={handleRejectMatch}
+                            loading={matchLoading}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })
             )}
           </tbody>
         </table>

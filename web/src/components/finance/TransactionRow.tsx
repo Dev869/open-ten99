@@ -7,6 +7,7 @@ interface TransactionRowProps {
   transaction: Transaction;
   accounts: ConnectedAccount[];
   onCategoryChange: (id: string, category: string) => void;
+  onRowClick?: (id: string) => void;
 }
 
 function SourceBadge({ transaction, accounts }: { transaction: Transaction; accounts: ConnectedAccount[] }) {
@@ -36,7 +37,41 @@ function SourceBadge({ transaction, accounts }: { transaction: Transaction; acco
   );
 }
 
-export function TransactionRow({ transaction, accounts, onCategoryChange }: TransactionRowProps) {
+function MatchStatusBadge({ matchStatus }: { matchStatus: Transaction['matchStatus'] }) {
+  if (matchStatus === 'suggested') {
+    return (
+      <span className="inline-flex items-center gap-1 ml-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+        </span>
+        <span className="text-xs font-medium text-indigo-500 dark:text-indigo-400">Match</span>
+      </span>
+    );
+  }
+
+  if (matchStatus === 'confirmed') {
+    return (
+      <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30">
+        <svg
+          className="w-3 h-3 text-green-600 dark:text-green-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span className="text-xs font-medium text-green-600 dark:text-green-400">Matched</span>
+      </span>
+    );
+  }
+
+  return null;
+}
+
+export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick }: TransactionRowProps) {
   const [localCategory, setLocalCategory] = useState(transaction.category);
 
   const isIncome = transaction.amount > 0;
@@ -51,8 +86,20 @@ export function TransactionRow({ transaction, accounts, onCategoryChange }: Tran
     onCategoryChange(transaction.id, next);
   }
 
+  const isSuggested = transaction.matchStatus === 'suggested';
+  const rowCursor = isSuggested ? 'cursor-pointer' : '';
+
+  function handleRowClick() {
+    if (isSuggested && onRowClick) {
+      onRowClick(transaction.id);
+    }
+  }
+
   return (
-    <tr className="border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors">
+    <tr
+      className={`border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors ${rowCursor}`}
+      onClick={handleRowClick}
+    >
       {/* Date */}
       <td className="px-4 py-3 text-sm text-[var(--text-secondary)] whitespace-nowrap">
         {formatDate(transaction.date)}
@@ -60,8 +107,11 @@ export function TransactionRow({ transaction, accounts, onCategoryChange }: Tran
 
       {/* Description */}
       <td className="px-4 py-3 text-sm text-[var(--text-primary)] max-w-xs">
-        <span className="line-clamp-1" title={transaction.description}>
-          {transaction.description}
+        <span className="inline-flex items-center gap-0 max-w-full">
+          <span className="line-clamp-1 shrink min-w-0" title={transaction.description}>
+            {transaction.description}
+          </span>
+          <MatchStatusBadge matchStatus={transaction.matchStatus} />
         </span>
       </td>
 
