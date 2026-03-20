@@ -99,6 +99,20 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------------
+    // Apps collection
+    // ---------------------------------------------------------------------------
+    // Only contractors can manage apps. Scoped to the owning contractor.
+    match /apps/{appId} {
+      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+      allow create: if isContractor() && claimsOwnership();
+      allow update: if isContractor()
+        && isOwnerOrLegacy(resource.data)
+        && (!('ownerId' in request.resource.data)
+            || request.resource.data.ownerId == request.auth.uid);
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+    }
+
+    // ---------------------------------------------------------------------------
     // Settings collection: user-scoped by document ID
     // ---------------------------------------------------------------------------
     match /settings/{userId} {
