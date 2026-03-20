@@ -15,13 +15,13 @@ function ClientApprovalBadge({ approval }: { approval?: 'pending' | 'approved' |
   if (!approval) return null;
   const config = {
     pending: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Pending' },
-    approved: { bg: 'bg-[#5A9A5A]/20', text: 'text-[#5A9A5A]', label: 'Approved' },
-    rejected: { bg: 'bg-[#D4873E]/20', text: 'text-[#D4873E]', label: 'Changes Requested' },
+    approved: { bg: 'bg-[var(--color-green)]/20', text: 'text-[var(--color-green)]', label: 'Approved' },
+    rejected: { bg: 'bg-[var(--color-orange)]/20', text: 'text-[var(--color-orange)]', label: 'Changes Requested' },
   };
   const c = config[approval];
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${approval === 'approved' ? 'bg-[#5A9A5A]' : approval === 'rejected' ? 'bg-[#D4873E]' : 'bg-gray-400'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${approval === 'approved' ? 'bg-[var(--color-green)]' : approval === 'rejected' ? 'bg-[var(--color-orange)]' : 'bg-gray-400'}`} />
       {c.label}
     </span>
   );
@@ -59,7 +59,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
           <div className="flex-1 bg-[#4BA8A8]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <BrandWordmark size={14} variant="light" />
+          <BrandWordmark size={12} variant="light" />
           <h1 className="text-xl font-bold text-white mt-2">
             Welcome, {clientName}
           </h1>
@@ -151,7 +151,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
 
         {items.length === 0 && (
           <div className="text-center py-20">
-            <div className="text-5xl mb-4 opacity-40">✦</div>
+            <div className="text-5xl mb-4 opacity-40 text-[var(--text-primary)]">✦</div>
             <div className="text-lg font-bold text-[var(--text-primary)]">No work orders</div>
             <div className="text-sm text-[var(--text-secondary)] mt-1">
               There are no work orders to review at this time.

@@ -15,6 +15,11 @@
   --icon-highlight: #FFFDF9;
   --icon-accent: #D4873E;
   --icon-stroke: #2C2417;
+  /* Semantic status colors */
+  --color-green: #5A9A5A;
+  --color-orange: #D4873E;
+  --color-red: #ef4444;
+  --color-gray: #86868B;
 }
 
 .dark {
@@ -32,11 +37,16 @@
   --icon-highlight: #3D3426;
   --icon-accent: #D4873E;
   --icon-stroke: #F0E8D8;
+  /* Semantic status colors — brighter for dark backgrounds */
+  --color-green: #6ECE6E;
+  --color-orange: #E9A35C;
+  --color-red: #F87171;
+  --color-gray: #A0A0A8;
 }
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Space Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-page);
@@ -140,6 +150,15 @@ body {
 .stagger-6 { animation-delay: 250ms; }
 .stagger-7 { animation-delay: 300ms; }
 .stagger-8 { animation-delay: 350ms; }
+
+/* Hide scrollbar but keep scrolling functional */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 /* Active nav glow */
 .teal-glow {

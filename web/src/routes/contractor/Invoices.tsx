@@ -7,10 +7,12 @@ import { InvoiceTable } from '../../components/finance/InvoiceTable';
 import { InvoicePreview } from '../../components/finance/InvoicePreview';
 import { updateInvoiceStatus, archiveWorkItem } from '../../services/firestore';
 import { formatCurrency, formatDate, exportToCsv } from '../../lib/utils';
+import { NewInvoiceModal } from '../../components/finance/NewInvoiceModal';
 
 interface InvoicesProps {
   workItems: WorkItem[];
   clients: Client[];
+  hourlyRate: number;
 }
 
 type InvoiceStatusFilter = 'all' | 'draft' | 'sent' | 'overdue' | 'paid';
@@ -23,12 +25,13 @@ const STATUS_TABS: { key: InvoiceStatusFilter; label: string }[] = [
   { key: 'paid', label: 'Paid' },
 ];
 
-export default function Invoices({ workItems, clients }: InvoicesProps) {
+export default function Invoices({ workItems, clients, hourlyRate }: InvoicesProps) {
   const navigate = useNavigate();
   const [activeStatus, setActiveStatus] = useState<InvoiceStatusFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [previewItem, setPreviewItem] = useState<WorkItem | null>(null);
+  const [showNewInvoice, setShowNewInvoice] = useState(false);
 
   const clientMap = useMemo(
     () => new Map(clients.map(c => [c.id, c.name])),
@@ -127,85 +130,100 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Invoices</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             Manage and track billable work orders
           </p>
         </div>
-        <button
-          onClick={handleExportCsv}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setShowNewInvoice(true)}
+            className="flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            New Invoice
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Aging summary */}
       <AgingSummary buckets={agingBuckets} />
 
       {/* Status filter tabs */}
-      <div className="flex items-center gap-1 border-b border-[var(--border)]">
-        {STATUS_TABS.map(tab => {
-          const count = statusCounts[tab.key] ?? 0;
-          const isActive = activeStatus === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                isActive
-                  ? 'border-[var(--accent)] text-[var(--accent)]'
-                  : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-1 border-b border-[var(--border)] min-w-max sm:min-w-0">
+          {STATUS_TABS.map(tab => {
+            const count = statusCounts[tab.key] ?? 0;
+            const isActive = activeStatus === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
                   isActive
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'bg-[var(--bg-card)] text-[var(--text-secondary)]'
+                    ? 'border-[var(--accent)] text-[var(--accent)]'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                {tab.label}
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    isActive
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--bg-card)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
           <span className="text-sm text-[var(--text-secondary)]">
             {selectedIds.size} selected
           </span>
-          <div className="flex-1" />
-          <button
-            onClick={handleMarkAsSent}
-            disabled={bulkLoading}
-            className="px-3 py-1.5 text-sm rounded-lg border border-[#D4873E] text-[#D4873E] hover:bg-[#D4873E]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Mark as Sent
-          </button>
-          <button
-            onClick={handleMarkAsPaid}
-            disabled={bulkLoading}
-            className="px-3 py-1.5 text-sm rounded-lg border border-[#5A9A5A] text-[#5A9A5A] hover:bg-[#5A9A5A]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Mark as Paid
-          </button>
-          <button
-            onClick={handleBulkDelete}
-            disabled={bulkLoading}
-            className="px-3 py-1.5 text-sm rounded-lg border border-red-500 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Delete
-          </button>
+          <div className="flex-1 hidden sm:block" />
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleMarkAsSent}
+              disabled={bulkLoading}
+              className="px-3 py-1.5 min-h-[44px] text-sm rounded-lg border border-[var(--color-orange)] text-[var(--color-orange)] hover:bg-[var(--color-orange)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Mark as Sent
+            </button>
+            <button
+              onClick={handleMarkAsPaid}
+              disabled={bulkLoading}
+              className="px-3 py-1.5 min-h-[44px] text-sm rounded-lg border border-[var(--color-green)] text-[var(--color-green)] hover:bg-[var(--color-green)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Mark as Paid
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkLoading}
+              className="px-3 py-1.5 min-h-[44px] text-sm rounded-lg border border-[var(--color-red)]/50 text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       )}
 
@@ -229,6 +247,14 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
             navigate(`/dashboard/work-items/${id}`);
           }}
           onDelete={handleDelete}
+        />
+      )}
+
+      {showNewInvoice && (
+        <NewInvoiceModal
+          clients={clients}
+          hourlyRate={hourlyRate}
+          onClose={() => setShowNewInvoice(false)}
         />
       )}
     </div>

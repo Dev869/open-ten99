@@ -36,9 +36,9 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
   const isValid = subject.trim() && clientId;
 
   const typeOptions: { value: WorkItemType; label: string; color: string }[] = [
-    { value: 'changeRequest', label: 'Change Request', color: '#4BA8A8' },
-    { value: 'featureRequest', label: 'Feature Request', color: '#27AE60' },
-    { value: 'maintenance', label: 'Maintenance', color: '#E67E22' },
+    { value: 'changeRequest', label: 'Change Request', color: 'var(--accent)' },
+    { value: 'featureRequest', label: 'Feature Request', color: 'var(--color-green)' },
+    { value: 'maintenance', label: 'Maintenance', color: 'var(--color-orange)' },
   ];
 
   function addLineItem() {
@@ -98,7 +98,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div className="relative bg-[var(--bg-page)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in">
         {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-[var(--border)]">
@@ -226,7 +226,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                     value={estimatedBusinessDays ?? ''}
                     placeholder="e.g. 5"
                     onChange={(e) => setEstimatedBusinessDays(e.target.value ? Number(e.target.value) : undefined)}
-                    className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
+                    className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-orange)]"
                   />
                   {estimatedBusinessDays && (
                     <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -242,7 +242,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                     type="date"
                     value={scheduledDate}
                     onChange={(e) => setScheduledDate(e.target.value)}
-                    className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
+                    className="w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-orange)]"
                   />
                 </div>
               </div>
@@ -263,7 +263,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                       key={freq}
                       type="button"
                       onClick={() => setRecurrenceFrequency(freq)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${recurrenceFrequency === freq ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${recurrenceFrequency === freq ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                     >
                       {RECURRENCE_LABELS[freq]}
                     </button>
@@ -271,7 +271,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                   <button
                     type="button"
                     onClick={() => setRecurrenceFrequency('custom')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${recurrenceFrequency === 'custom' ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${recurrenceFrequency === 'custom' ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                   >
                     Custom
                   </button>
@@ -285,7 +285,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                       step="1"
                       value={customDays}
                       onChange={(e) => setCustomDays(Math.max(1, Number(e.target.value) || 1))}
-                      className="w-16 px-2 py-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
+                      className="w-16 px-2 py-1.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-orange)]"
                     />
                     <span className="text-xs text-[var(--text-secondary)]">days</span>
                   </div>
@@ -317,7 +317,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                 <button
                   type="button"
                   onClick={() => setDeductFromRetainer(true)}
-                  className={`px-3 py-1 rounded-md transition-colors ${deductFromRetainer ? 'bg-[#E67E22] text-white' : 'text-[var(--text-secondary)]'}`}
+                  className={`px-3 py-1 rounded-md transition-colors ${deductFromRetainer ? 'bg-[var(--color-orange)] text-white' : 'text-[var(--text-secondary)]'}`}
                 >
                   Retainer
                 </button>
@@ -354,7 +354,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                     />
                     <button
                       onClick={() => removeLineItem(i)}
-                      className="text-[var(--text-secondary)] hover:text-red-500 text-sm"
+                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] text-sm"
                     >
                       &times;
                     </button>

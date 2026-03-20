@@ -92,9 +92,9 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
   }, [billable, clients]);
 
   const typeColors: Record<string, string> = {
-    changeRequest: '#4BA8A8',
-    featureRequest: '#27AE60',
-    maintenance: '#E67E22',
+    changeRequest: 'var(--accent)',
+    featureRequest: 'var(--color-green)',
+    maintenance: 'var(--color-orange)',
   };
 
   return (
@@ -107,7 +107,7 @@ export default function Analytics({ workItems, clients }: AnalyticsProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="This Month" value={formatCurrency(stats.thisMonthRevenue)} color="var(--accent)" />
         <StatCard label="Last Month" value={formatCurrency(stats.lastMonthRevenue)} />
-        <StatCard label="All-Time Revenue" value={formatCurrency(stats.totalRevenue)} color="#D4873E" />
+        <StatCard label="All-Time Revenue" value={formatCurrency(stats.totalRevenue)} color="var(--color-orange)" />
         <StatCard label="Avg Order" value={formatCurrency(stats.avgOrderValue)} />
       </div>
 

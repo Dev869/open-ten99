@@ -173,7 +173,7 @@ export default function WorkItemDetail({
           </div>
           <StatusBadge status={item.status} />
         </div>
-        <div className="flex gap-4 mt-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
           <TypeTag type={item.type} />
           <span className="text-xs text-white/60">
             {formatDate(item.createdAt)}
@@ -186,7 +186,7 @@ export default function WorkItemDetail({
           {!item.isBillable && (
             <span className="text-xs text-white/60">Non-Billable</span>
           )}
-          <span className={`text-xs font-medium ${item.deductFromRetainer ? 'text-[#E67E22]' : 'text-[var(--accent)]'}`}>
+          <span className={`text-xs font-medium ${item.deductFromRetainer ? 'text-[var(--color-orange)]' : 'text-[var(--accent)]'}`}>
             {item.deductFromRetainer ? 'Retainer' : 'Hourly'}
           </span>
           {item.recurrence && (
@@ -247,7 +247,7 @@ export default function WorkItemDetail({
                   rows={1}
                   className="w-full px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <label className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
                     Hours:
                     <input
@@ -264,7 +264,7 @@ export default function WorkItemDetail({
                   </span>
                   <button
                     onClick={() => removeLineItem(i)}
-                    className="ml-auto text-xs text-red-400 hover:text-red-600"
+                    className="ml-auto text-xs text-[var(--color-red)]/70 hover:text-[var(--color-red)]"
                   >
                     Remove
                   </button>
@@ -344,7 +344,7 @@ export default function WorkItemDetail({
                     key={freq}
                     type="button"
                     onClick={() => setItem({ ...item!, recurrence: { frequency: freq } })}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === freq ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === freq ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                   >
                     {RECURRENCE_LABELS[freq]}
                   </button>
@@ -352,7 +352,7 @@ export default function WorkItemDetail({
                 <button
                   type="button"
                   onClick={() => setItem({ ...item!, recurrence: { frequency: 'custom', customDays: item.recurrence?.customDays ?? 3 } })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === 'custom' ? 'bg-[#E67E22] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === 'custom' ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
                 >
                   Custom
                 </button>
@@ -374,7 +374,7 @@ export default function WorkItemDetail({
                         },
                       })
                     }
-                    className="w-16 px-2 py-1.5 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[#E67E22]"
+                    className="w-16 px-2 py-1.5 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-orange)]"
                   />
                   <span className="text-xs text-[var(--text-secondary)]">days</span>
                 </div>
@@ -396,7 +396,7 @@ export default function WorkItemDetail({
               <button
                 type="button"
                 onClick={() => setItem({ ...item!, deductFromRetainer: true })}
-                className={`px-4 py-1.5 rounded-md transition-colors ${item.deductFromRetainer ? 'bg-[#E67E22] text-white' : 'text-[var(--text-secondary)]'}`}
+                className={`px-4 py-1.5 rounded-md transition-colors ${item.deductFromRetainer ? 'bg-[var(--color-orange)] text-white' : 'text-[var(--text-secondary)]'}`}
               >
                 Retainer
               </button>
@@ -432,8 +432,8 @@ export default function WorkItemDetail({
         <div className="flex justify-between items-center border-t border-[var(--border)] pt-2 mt-2">
           {item.deductFromRetainer ? (
             <>
-              <span className="text-sm text-[#E67E22] font-medium">Retainer Deduction</span>
-              <span className="text-sm font-semibold text-[#E67E22]">
+              <span className="text-sm text-[var(--color-orange)] font-medium">Retainer Deduction</span>
+              <span className="text-sm font-semibold text-[var(--color-orange)]">
                 -{item.totalHours.toFixed(1)} hrs
               </span>
             </>
@@ -456,7 +456,7 @@ export default function WorkItemDetail({
         {(!item.invoiceStatus || item.invoiceStatus === 'draft') && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#86868B]/20 text-[#86868B]">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-gray)]/20 text-[var(--color-gray)]">
                 {item.invoiceStatus === 'draft' ? 'Draft' : 'No Invoice'}
               </span>
             </div>
@@ -478,7 +478,7 @@ export default function WorkItemDetail({
                   invoiceDueDate: due,
                 });
               }}
-              className="min-h-[44px] px-5 rounded-xl bg-[#D4873E] text-white text-sm font-semibold hover:bg-[#C07835] transition-colors"
+              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-orange)] text-white text-sm font-semibold hover:brightness-110 transition-all"
             >
               Mark as Invoiced
             </button>
@@ -489,7 +489,7 @@ export default function WorkItemDetail({
         {item.invoiceStatus === 'sent' && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D4873E]/20 text-[#D4873E]">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-orange)]/20 text-[var(--color-orange)]">
                 Sent
               </span>
               <span className="text-sm text-[var(--text-secondary)]">
@@ -504,7 +504,7 @@ export default function WorkItemDetail({
                 </span>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={async () => {
                   if (!item.id) return;
@@ -515,7 +515,7 @@ export default function WorkItemDetail({
                   });
                   setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
                 }}
-                className="min-h-[44px] px-5 rounded-xl bg-[#5A9A5A] text-white text-sm font-semibold hover:bg-[#4E8A4E] transition-colors"
+                className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
               >
                 Mark as Paid
               </button>
@@ -525,7 +525,7 @@ export default function WorkItemDetail({
                   await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
                   setItem({ ...item, invoiceStatus: 'overdue' });
                 }}
-                className="min-h-[44px] px-5 rounded-xl border border-red-500 text-red-500 text-sm font-semibold hover:bg-red-500/5 transition-colors"
+                className="min-h-[44px] px-5 rounded-xl border border-[var(--color-red)] text-[var(--color-red)] text-sm font-semibold hover:bg-[var(--color-red)]/5 transition-colors"
               >
                 Mark Overdue
               </button>
@@ -537,14 +537,14 @@ export default function WorkItemDetail({
         {item.invoiceStatus === 'paid' && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#5A9A5A]/20 text-[#5A9A5A]">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-green)]/20 text-[var(--color-green)]">
                 Paid
               </span>
               <span className="text-sm text-[var(--text-secondary)]">
                 Paid: {item.invoicePaidDate ? formatDate(item.invoicePaidDate) : '—'}
               </span>
             </div>
-            <span className="text-xl font-extrabold text-[#5A9A5A]">
+            <span className="text-xl font-extrabold text-[var(--color-green)]">
               {formatCurrency(item.totalCost)}
             </span>
           </div>
@@ -579,7 +579,7 @@ export default function WorkItemDetail({
                 });
                 setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
               }}
-              className="min-h-[44px] px-5 rounded-xl bg-[#5A9A5A] text-white text-sm font-semibold hover:bg-[#4E8A4E] transition-colors"
+              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
             >
               Mark as Paid
             </button>
@@ -588,24 +588,24 @@ export default function WorkItemDetail({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleDiscard}
-          className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+          className="sm:flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
         >
           Discard
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="py-3 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors"
+          className="py-3 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors min-h-[44px]"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
         <button
           onClick={handleApproveAndGenerate}
           disabled={generatingPdf}
-          className="flex-1 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+          className="sm:flex-1 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors min-h-[44px]"
         >
           {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
         </button>
@@ -641,8 +641,8 @@ export default function WorkItemDetail({
 
       {/* PDF Preview Modal */}
       {showPdfPreview && previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-3xl h-[85vh] flex flex-col mx-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-[var(--bg-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col sm:mx-4">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">Change Order Preview</h3>
               <div className="flex items-center gap-2">

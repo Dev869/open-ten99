@@ -18,7 +18,7 @@ export function PlaidLinkButton({ linkToken, onSuccess, onExit, loading }: Plaid
     <button
       onClick={() => open()}
       disabled={!ready || loading || !linkToken}
-      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? 'Connecting...' : 'Connect Bank Account'}
     </button>

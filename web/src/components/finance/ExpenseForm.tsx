@@ -252,7 +252,7 @@ export function ExpenseForm({ onSubmit, loading = false }: ExpenseFormProps) {
       <button
         type="submit"
         disabled={isDisabled || !isValid}
-        className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {uploading ? 'Uploading receipt...' : loading ? 'Saving...' : 'Add Expense'}
       </button>

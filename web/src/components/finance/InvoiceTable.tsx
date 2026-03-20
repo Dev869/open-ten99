@@ -10,10 +10,10 @@ interface InvoiceTableProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: '#86868B',
-  sent: '#D4873E',
-  paid: '#5A9A5A',
-  overdue: '#ef4444',
+  draft: 'var(--color-gray)',
+  sent: 'var(--color-orange)',
+  paid: 'var(--color-green)',
+  overdue: 'var(--color-red)',
 };
 
 export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChange, onRowClick }: InvoiceTableProps) {

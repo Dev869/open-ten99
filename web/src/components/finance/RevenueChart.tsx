@@ -8,7 +8,7 @@ interface RevenueChartProps {
 export function RevenueChart({ data }: RevenueChartProps) {
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
-      <h3 className="text-sm font-semibold mb-4">Revenue (Last 6 Months)</h3>
+      <h3 className="text-sm font-semibold mb-4 text-[var(--text-primary)]">Revenue (Last 6 Months)</h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data}>
           <XAxis dataKey="month" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />

@@ -14,7 +14,7 @@ export function FilterTabs({ tabs, selected, onSelect }: FilterTabsProps) {
           key={tab}
           onClick={() => onSelect(tab)}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-medium transition-colors',
+            'px-3 py-2 min-h-[36px] rounded-full text-xs font-medium transition-colors',
             selected === tab
               ? 'bg-[var(--accent)] text-white'
               : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)]'

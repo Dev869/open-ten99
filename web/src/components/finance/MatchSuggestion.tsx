@@ -43,7 +43,7 @@ export function MatchSuggestion({
           <button
             onClick={() => onConfirm(transactionId, workItemId)}
             disabled={loading}
-            className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs font-medium rounded bg-[var(--color-green)] text-white hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm
           </button>

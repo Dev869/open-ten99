@@ -54,7 +54,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
       <button
         onClick={() => setIsExpanded(true)}
         className={cn(
-          'fixed bottom-6 right-6 z-30',
+          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-30',
           'flex items-center gap-2 min-h-[48px] px-5 rounded-full shadow-lg',
           'bg-[var(--accent)] text-white font-semibold text-sm',
           'hover-lift cursor-pointer transition-all duration-200',
@@ -80,7 +80,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
   return (
     <div
       className={cn(
-        'fixed bottom-6 right-6 z-30 w-80',
+        'fixed bottom-4 right-4 left-4 sm:left-auto sm:right-6 sm:bottom-6 z-30 sm:w-80',
         'bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-2xl',
         'animate-scale-in'
       )}
@@ -123,7 +123,7 @@ export function TimeTracker({ clients }: TimeTrackerProps) {
           className={cn(
             'w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md',
             isRunning
-              ? 'bg-[#E84855] hover:bg-[#D43D4A] text-white'
+              ? 'bg-[var(--color-red)] hover:brightness-110 text-white'
               : 'bg-[var(--accent)] hover:bg-[var(--accent-dark)] text-white'
           )}
         >

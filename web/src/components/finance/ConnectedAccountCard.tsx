@@ -113,7 +113,7 @@ export function ConnectedAccountCard({
         </button>
         <button
           onClick={handleDisconnect}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors"
         >
           Disconnect
         </button>

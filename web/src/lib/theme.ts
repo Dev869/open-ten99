@@ -21,19 +21,19 @@ export const theme = {
 
 export function statusColor(status: string): string {
   switch (status) {
-    case 'draft': return theme.statusDraft;
-    case 'inReview': return theme.statusReview;
-    case 'approved': return theme.statusApproved;
-    case 'completed': return theme.statusCompleted;
-    default: return theme.textSecondary;
+    case 'draft': return 'var(--color-orange)';
+    case 'inReview': return 'var(--accent)';
+    case 'approved': return 'var(--color-green)';
+    case 'completed': return 'var(--color-gray)';
+    default: return 'var(--text-secondary)';
   }
 }
 
 export function typeColor(type: string): string {
   switch (type) {
-    case 'changeRequest': return theme.typeChange;
-    case 'featureRequest': return theme.typeFeature;
-    case 'maintenance': return theme.typeMaintenance;
-    default: return theme.textSecondary;
+    case 'changeRequest': return 'var(--accent)';
+    case 'featureRequest': return 'var(--color-green)';
+    case 'maintenance': return 'var(--color-orange)';
+    default: return 'var(--text-secondary)';
   }
 }

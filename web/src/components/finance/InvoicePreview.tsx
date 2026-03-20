@@ -9,16 +9,16 @@ interface InvoicePreviewProps {
   onDelete: (id: string) => void;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  draft: { bg: 'rgba(134, 134, 139, 0.15)', text: '#86868B' },
-  sent: { bg: 'rgba(212, 135, 62, 0.15)', text: '#D4873E' },
-  paid: { bg: 'rgba(90, 154, 90, 0.15)', text: '#5A9A5A' },
-  overdue: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
+const STATUS_COLORS: Record<string, { color: string }> = {
+  draft: { color: 'var(--color-gray)' },
+  sent: { color: 'var(--color-orange)' },
+  paid: { color: 'var(--color-green)' },
+  overdue: { color: 'var(--color-red)' },
 };
 
 export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete }: InvoicePreviewProps) {
   const status = workItem.invoiceStatus ?? 'draft';
-  const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
+  const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.draft!;
   const now = new Date().getTime();
 
   const daysInfo = (() => {
@@ -45,14 +45,14 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
       />
 
       {/* Slide-over panel */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-md z-50 flex flex-col bg-[var(--bg-page)] border-l border-[var(--border)] shadow-2xl animate-slide-in-right">
+      <div className="fixed inset-y-0 right-0 w-full sm:max-w-md z-50 flex flex-col bg-[var(--bg-page)] border-l border-[var(--border)] shadow-2xl animate-slide-in-right">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-bold text-[var(--text-primary)]">Invoice Preview</h2>
             <span
               className="px-2.5 py-0.5 rounded-full text-xs font-medium"
-              style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
+              style={{ backgroundColor: `color-mix(in srgb, ${statusColor.color} 15%, transparent)`, color: statusColor.color }}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
@@ -79,7 +79,7 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
               {client?.name ?? 'Unknown Client'}
             </div>
             {daysInfo && (
-              <div className="text-xs mt-2" style={{ color: statusColor.text }}>
+              <div className="text-xs mt-2" style={{ color: statusColor.color }}>
                 {daysInfo}
               </div>
             )}
@@ -140,7 +140,7 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
             </div>
             <div className="flex justify-between text-sm pt-2 border-t border-[var(--border)]">
               <span className="font-semibold text-[var(--text-primary)]">Total</span>
-              <span className="font-bold text-lg" style={{ color: statusColor.text }}>
+              <span className="font-bold text-lg" style={{ color: statusColor.color }}>
                 {formatCurrency(workItem.totalCost)}
               </span>
             </div>
@@ -155,16 +155,16 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
         </div>
 
         {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3">
+        <div className="px-4 sm:px-6 py-4 border-t border-[var(--border)] flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={() => onNavigate(workItem.id ?? '')}
-            className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            className="flex-1 min-w-0 px-4 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all"
           >
             Open Full Detail
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+            className="px-4 py-2.5 min-h-[44px] rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
           >
             Close
           </button>
@@ -174,7 +174,7 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
                 onDelete(workItem.id ?? '');
               }
             }}
-            className="px-4 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+            className="px-3 py-2.5 min-h-[44px] min-w-[44px] rounded-lg text-sm text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors flex items-center justify-center"
             aria-label="Delete invoice"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

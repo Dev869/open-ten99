@@ -187,8 +187,8 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
   }
 
   return (
-    <div className="animate-fade-in-up">
-      <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in-up pt-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Work Items
         </h1>
@@ -202,11 +202,11 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Export
+            <span className="hidden sm:inline">Export</span>
           </button>
           <button
             onClick={() => setShowNewOrder(true)}
-            className="px-4 py-2 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-full hover:bg-[var(--accent-dark)] transition-colors"
+            className="px-4 py-2 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-full hover:bg-[var(--accent-dark)] transition-colors whitespace-nowrap"
           >
             + New Work Order
           </button>
@@ -245,7 +245,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                     setSelectedClients(next);
                     setSelectedApps(prev => prev.filter(appId => apps.some(a => a.id === appId && next.includes(a.clientId))));
                   }}
-                  className="hover:text-red-500 leading-none"
+                  className="hover:text-[var(--color-red)] leading-none"
                 >
                   &times;
                 </button>
@@ -275,7 +275,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 {appMap[id] ?? id}
                 <button
                   onClick={() => setSelectedApps(prev => prev.filter(a => a !== id))}
-                  className="hover:text-red-500 leading-none"
+                  className="hover:text-[var(--color-red)] leading-none"
                 >
                   &times;
                 </button>
@@ -307,7 +307,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 {invoiceStatusLabels[status] ?? status}
                 <button
                   onClick={() => setSelectedInvoiceStatus(prev => prev.filter(s => s !== status))}
-                  className="hover:text-red-500 leading-none"
+                  className="hover:text-[var(--color-red)] leading-none"
                 >
                   &times;
                 </button>
@@ -340,7 +340,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
               className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
             />
-            <span className="text-xs text-[var(--text-tertiary)]">to</span>
+            <span className="text-xs text-[var(--text-secondary)]">to</span>
             <input
               type="date"
               value={dateRange.end}
@@ -360,7 +360,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
               Clear all
             </button>
           )}
-          <span className="text-xs text-[var(--text-tertiary)] ml-auto">
+          <span className="text-xs text-[var(--text-secondary)] ml-auto">
             Showing {filtered.length} of {totalNonArchived} work orders
           </span>
         </div>
@@ -375,14 +375,14 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
           <button
             onClick={handleBulkApprove}
             disabled={bulkLoading}
-            className="px-3 py-1.5 min-h-[44px] bg-[#27AE60] text-white text-xs font-semibold rounded-full hover:bg-[#219A52] disabled:opacity-50"
+            className="px-3 py-1.5 min-h-[44px] bg-[var(--color-green)] text-white text-xs font-semibold rounded-full hover:brightness-110 transition-all disabled:opacity-50"
           >
             Approve Selected
           </button>
           <button
             onClick={handleBulkArchive}
             disabled={bulkLoading}
-            className="px-3 py-1.5 min-h-[44px] bg-[#888] text-white text-xs font-semibold rounded-full hover:bg-[#666] disabled:opacity-50"
+            className="px-3 py-1.5 min-h-[44px] bg-[var(--color-gray)] text-white text-xs font-semibold rounded-full hover:brightness-110 transition-all disabled:opacity-50"
           >
             Archive Selected
           </button>
@@ -413,7 +413,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
 
       {filtered.length === 0 && (
         <div className="text-center py-20">
-          <div className="text-5xl mb-4 opacity-40">✦</div>
+          <div className="text-5xl mb-4 opacity-40 text-[var(--text-primary)]">✦</div>
           <div className="text-lg font-bold text-[var(--text-primary)]">Nothing here yet</div>
           <div className="text-sm text-[var(--text-secondary)] mt-1">
             Try adjusting your filters or create a new work order.

@@ -19,7 +19,7 @@ export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
         <button
           key={preset.value}
           onClick={() => onChange(preset.value)}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+          className={`px-3 py-1.5 min-h-[36px] rounded-md text-xs font-medium transition-colors ${
             value === preset.value
               ? 'bg-[var(--accent)] text-white'
               : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'

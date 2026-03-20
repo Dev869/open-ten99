@@ -59,7 +59,7 @@ function ReportCard({
         <button
           onClick={onExportPdf}
           disabled={pdfLoading || comingSoon || pdfDisabled}
-          className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)] text-white hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {pdfLoading ? 'Generating…' : 'PDF'}
         </button>
@@ -208,12 +208,12 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
             Export financial data for accounting and tax purposes
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <DateRangeSelector value={preset} onChange={setPreset} />
           <button
             onClick={handleExportAll}
             disabled={combinedLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--text-primary)] text-[var(--bg-page)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            className="px-4 py-2 min-h-[44px] text-sm font-medium rounded-lg bg-[var(--text-primary)] text-[var(--bg-page)] hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {combinedLoading ? 'Generating...' : 'Export All (PDF)'}
           </button>

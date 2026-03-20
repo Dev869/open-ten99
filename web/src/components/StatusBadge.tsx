@@ -6,11 +6,11 @@ interface StatusBadgeProps {
 }
 
 const statusBgMap: Record<WorkItemStatus, string> = {
-  draft: 'bg-[#FFF3E0]',
-  inReview: 'bg-[#E8F5F5]',
-  approved: 'bg-[#E8F5E9]',
-  completed: 'bg-[#EDE9E2]',
-  archived: 'bg-[#EDE9E2]',
+  draft: 'bg-[var(--color-orange)]/15',
+  inReview: 'bg-[var(--accent)]/15',
+  approved: 'bg-[var(--color-green)]/15',
+  completed: 'bg-[var(--bg-input)]',
+  archived: 'bg-[var(--bg-input)]',
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

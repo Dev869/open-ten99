@@ -259,7 +259,7 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
                     <button
                       type="button"
                       onClick={() => removeRepoUrl(i)}
-                      className="text-[var(--text-secondary)] hover:text-red-500 transition-colors ml-0.5 leading-none"
+                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
                       aria-label="Remove repo URL"
                     >
                       &times;
@@ -292,7 +292,7 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
                     <button
                       type="button"
                       onClick={() => removeTechStack(i)}
-                      className="text-[var(--text-secondary)] hover:text-red-500 transition-colors ml-0.5 leading-none"
+                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
                       aria-label="Remove tech"
                     >
                       &times;
@@ -366,7 +366,7 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
                     <button
                       type="button"
                       onClick={() => removeVaultCredential(i)}
-                      className="text-[var(--text-secondary)] hover:text-red-500 transition-colors ml-0.5 leading-none"
+                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
                       aria-label="Remove credential"
                     >
                       &times;

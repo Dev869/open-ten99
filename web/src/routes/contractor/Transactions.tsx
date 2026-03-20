@@ -252,7 +252,7 @@ export default function Transactions() {
         <button
           onClick={handleSmartSort}
           disabled={smartSorting || transactions.length === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {smartSorting ? (
             <>

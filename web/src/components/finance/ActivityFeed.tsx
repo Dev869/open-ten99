@@ -32,7 +32,7 @@ function buildActivityItems(workItems: readonly WorkItem[], clients: readonly Cl
         clientName,
         amount: item.totalCost,
         date: item.invoicePaidDate,
-        color: '#5A9A5A',
+        color: 'var(--color-green)',
         status: 'paid',
       });
     } else if (item.invoiceStatus === 'overdue' && item.invoiceDueDate) {
@@ -42,7 +42,7 @@ function buildActivityItems(workItems: readonly WorkItem[], clients: readonly Cl
         clientName,
         amount: item.totalCost,
         date: item.invoiceDueDate,
-        color: '#ef4444',
+        color: 'var(--color-red)',
         status: 'overdue',
       });
     } else if (item.invoiceStatus === 'sent' && item.invoiceSentDate) {
@@ -52,7 +52,7 @@ function buildActivityItems(workItems: readonly WorkItem[], clients: readonly Cl
         clientName,
         amount: item.totalCost,
         date: item.invoiceSentDate,
-        color: '#D4873E',
+        color: 'var(--color-orange)',
         status: 'sent',
       });
     }
@@ -66,7 +66,7 @@ export function ActivityFeed({ workItems, clients, maxItems = 10 }: ActivityFeed
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
-      <h3 className="text-sm font-semibold mb-4">Recent Invoice Activity</h3>
+      <h3 className="text-sm font-semibold mb-4 text-[var(--text-primary)]">Recent Invoice Activity</h3>
       {activities.length === 0 ? (
         <p className="text-xs text-[var(--text-secondary)]">No invoice activity yet</p>
       ) : (

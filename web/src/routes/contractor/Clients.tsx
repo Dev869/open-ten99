@@ -109,7 +109,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
             </div>
             <div className="text-right flex-shrink-0 flex items-center gap-3">
               {client.retainerHours && (
-                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${client.retainerPaused ? 'bg-[var(--bg-input)] text-[var(--text-secondary)]' : 'bg-[#E67E22]/10 text-[#E67E22]'}`}>
+                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${client.retainerPaused ? 'bg-[var(--bg-input)] text-[var(--text-secondary)]' : 'bg-[var(--color-orange)]/10 text-[var(--color-orange)]'}`}>
                   {client.retainerPaused ? 'Paused' : `${client.retainerHours}h retainer`}
                 </span>
               )}

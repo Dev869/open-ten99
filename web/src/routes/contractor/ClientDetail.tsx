@@ -145,7 +145,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
             )}
           </button>
         </div>
-        <div className="flex gap-4 mt-3 text-xs text-white/50">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-white/50">
           <span>{clientItems.length} work items</span>
           <span>Client since {formatDate(client.createdAt)}</span>
           {client.phone && <span>{client.phone}</span>}
@@ -161,7 +161,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
             </h2>
             <div className="flex items-center gap-2">
               {retainerUsage.paused && (
-                <span className="text-xs font-semibold text-[#E67E22] bg-[#E67E22]/10 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-[var(--color-orange)] bg-[var(--color-orange)]/10 px-2.5 py-1 rounded-full">
                   Paused
                 </span>
               )}
@@ -173,7 +173,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                   className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.97] min-h-[44px] ${
                     client.retainerPaused
                       ? 'bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20'
-                      : 'bg-[#E67E22]/10 text-[#E67E22] hover:bg-[#E67E22]/20'
+                      : 'bg-[var(--color-orange)]/10 text-[var(--color-orange)] hover:bg-[var(--color-orange)]/20'
                   }`}
                 >
                   {client.retainerPaused ? (
@@ -196,7 +196,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
               )}
             </div>
           </div>
-          <div className="flex items-end gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6">
             <div>
               <div className="text-2xl font-extrabold text-[var(--text-primary)]">
                 {retainerUsage.remaining.toFixed(1)}
@@ -206,7 +206,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                 {retainerUsage.used.toFixed(1)} of {retainerUsage.total} hrs used
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="h-2 bg-[var(--bg-input)] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
@@ -325,7 +325,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                   type="checkbox"
                   checked={client.retainerPaused ?? false}
                   onChange={(e) => setClient({ ...client, retainerPaused: e.target.checked })}
-                  className="accent-[#E67E22] w-4 h-4"
+                  className="accent-[var(--color-orange)] w-4 h-4"
                 />
                 Pause renewal (retainer not active)
               </label>
@@ -358,7 +358,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
           <div className="border-t border-[var(--border)] pt-4">
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium text-red-500 border border-red-200 hover:bg-red-50 hover:border-red-300 active:scale-[0.97] transition-all min-h-[44px]"
+              className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium text-[var(--color-red)] border border-[var(--color-red)]/30 hover:bg-[var(--color-red)]/10 active:scale-[0.97] transition-all min-h-[44px]"
             >
               <IconTrash size={16} />
               Delete Client
@@ -391,7 +391,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 active:scale-[0.98] transition-all min-h-[44px]"
+                className="flex-1 py-3 rounded-xl bg-[var(--color-red)] text-white text-sm font-semibold hover:brightness-90 active:scale-[0.98] transition-all min-h-[44px]"
               >
                 Delete
               </button>

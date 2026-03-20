@@ -62,7 +62,7 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
   return (
     <div className="animate-fade-in-up">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Apps</h1>
           {apps.length > 0 && (
@@ -75,14 +75,15 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
           {integration?.connected && (
             <button
               onClick={() => setShowImport(true)}
-              className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+              className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--bg-input)] transition-colors min-h-[44px] whitespace-nowrap"
             >
-              Import from GitHub
+              <span className="hidden sm:inline">Import from GitHub</span>
+              <span className="sm:hidden">Import</span>
             </button>
           )}
           <button
             onClick={() => setShowNewApp(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px] whitespace-nowrap"
           >
             <IconPlus size={16} className="flex-shrink-0" />
             New App

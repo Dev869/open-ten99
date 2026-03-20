@@ -280,8 +280,20 @@ export function Sidebar({
   const location = useLocation();
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [flyoutTop, setFlyoutTop] = useState(0);
+  const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
+  const flyoutTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Track which nav groups are expanded
+  const openFlyout = useCallback((key: string) => {
+    if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current);
+    setFlyoutKey(key);
+  }, []);
+
+  const closeFlyout = useCallback(() => {
+    flyoutTimeout.current = setTimeout(() => setFlyoutKey(null), 300);
+  }, []);
+
+  // Track which nav groups are expanded (mobile only)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     const expanded = new Set<string>();
     for (const item of defaultNavItems) {
@@ -416,55 +428,62 @@ export function Sidebar({
               );
 
               return (
-                <div key={item.key}>
-                  {/* Group header — collapsed sidebar navigates to first child */}
-                  {!expanded ? (
-                    <NavLink
-                      to={item.children[0].to}
-                      onClick={onClose}
-                      className={cn(
-                        'relative flex items-center rounded-xl transition-all duration-200',
-                        'w-full px-4 py-3 gap-3',
-                        'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
-                        isGroupActive
-                          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                <div
+                  key={item.key}
+                  className="relative"
+                  onMouseEnter={(e) => {
+                    if (isMobileView) return;
+                    const btn = e.currentTarget.querySelector('button');
+                    if (btn) {
+                      const rect = btn.getBoundingClientRect();
+                      setFlyoutTop(rect.top);
+                    }
+                    openFlyout(item.key);
+                  }}
+                  onMouseLeave={() => {
+                    if (!isMobileView) closeFlyout();
+                  }}
+                >
+                  {/* Group header */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      if (isMobileView) {
+                        toggleGroup(item.key);
+                      } else {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setFlyoutTop(rect.top);
+                        if (flyoutKey === item.key) closeFlyout(); else openFlyout(item.key);
+                      }
+                    }}
+                    className={cn(
+                      'relative flex items-center rounded-xl transition-all duration-200',
+                      'w-full px-4 py-3 gap-3',
+                      !expanded && 'md:w-11 md:h-11 md:justify-center md:px-0 md:py-0 md:gap-0',
+                      expanded && 'md:px-3 md:py-2.5',
+                      isGroupActive
+                        ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    <div className="flex-shrink-0">
+                      <item.Icon />
+                    </div>
+                    <span className={cn('text-sm font-medium flex-1 text-left', !expanded && 'md:hidden')}>
+                      {item.label}
+                    </span>
+                    <span className={cn('flex-shrink-0 transition-transform duration-200 inline-flex', !expanded && 'md:hidden')}>
+                      {isGroupExpanded ? (
+                        <IconChevronDown size={14} />
+                      ) : (
+                        <IconChevronRight size={14} />
                       )}
-                    >
-                      <div className="flex-shrink-0">
-                        <item.Icon />
-                      </div>
-                      <span className="text-sm font-medium md:hidden">{item.label}</span>
-                    </NavLink>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(item.key)}
-                      className={cn(
-                        'relative flex items-center rounded-xl transition-all duration-200',
-                        'w-full px-4 py-3 gap-3 md:px-3 md:py-2.5',
-                        isGroupActive
-                          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
-                      )}
-                    >
-                      <div className="flex-shrink-0">
-                        <item.Icon />
-                      </div>
-                      <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-                      <span className="flex-shrink-0 transition-transform duration-200 inline-flex">
-                        {isGroupExpanded ? (
-                          <IconChevronDown size={14} />
-                        ) : (
-                          <IconChevronRight size={14} />
-                        )}
-                      </span>
-                    </button>
-                  )}
+                    </span>
+                  </button>
 
-                  {/* Children — only shown when sidebar is expanded and group is open */}
-                  {expanded && isGroupExpanded && (
-                    <div className="flex flex-col gap-0.5 mt-0.5">
+                  {/* Mobile: inline expand */}
+                  {isGroupExpanded && (
+                    <div className="flex flex-col gap-0.5 mt-0.5 md:hidden">
                       {item.children.map((child) => (
                         <NavLink
                           key={child.to}
@@ -487,6 +506,47 @@ export function Sidebar({
                           <span className="text-sm font-medium">{child.label}</span>
                         </NavLink>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Desktop: flyout panel to the right */}
+                  {flyoutKey === item.key && (
+                    <div
+                      className={cn(
+                        'hidden md:block fixed z-[60] animate-fade-in',
+                        expanded ? 'left-[220px]' : 'left-[72px]'
+                      )}
+                      style={{ top: flyoutTop }}
+                      onMouseEnter={() => openFlyout(item.key)}
+                      onMouseLeave={() => closeFlyout()}
+                    >
+                      {/* Bridge gap + visible panel */}
+                      <div className="pl-2">
+                        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl py-2 w-[200px]">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
+                            {item.label}
+                          </div>
+                          {item.children.map((child) => (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              end={child.to === '/dashboard/finance'}
+                              onClick={() => { if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current); setFlyoutKey(null); }}
+                              className={({ isActive }) =>
+                                cn(
+                                  'flex items-center gap-3 px-3 py-2.5 mx-1 rounded-lg transition-colors duration-150',
+                                  isActive
+                                    ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                                    : 'text-[var(--text-primary)] hover:bg-[var(--bg-input)]'
+                                )
+                              }
+                            >
+                              <child.Icon size={16} />
+                              <span className="text-sm font-medium">{child.label}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -536,7 +596,7 @@ export function Sidebar({
         </nav>
 
         {/* Bottom section */}
-        <div className={cn('flex flex-col gap-1 px-3 pb-5', !expanded && 'md:items-center')}>
+        <div className={cn('flex flex-col gap-1 px-3 pb-5 flex-shrink-0', !expanded && 'md:items-center')}>
           <NavLink
             to="/dashboard/settings"
             onClick={onClose}

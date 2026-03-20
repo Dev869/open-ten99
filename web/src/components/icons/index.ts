@@ -2,11 +2,13 @@ export {
   type IconProps,
   // Navigation
   IconDashboard,
+  IconWrench,
   IconDocument,
   IconCalendar,
   IconClients,
   IconTeam,
   IconAnalytics,
+  IconFinanceOverview,
   IconApps,
   IconSettings,
   IconUser,
@@ -28,6 +30,7 @@ export {
   IconClose,
   IconCheck,
   IconEdit,
+  IconPaintBrush,
   IconTrash,
   IconRefresh,
   IconSend,
@@ -49,11 +52,11 @@ export {
   // Info
   IconLightbulb,
   IconBook,
-  IconLayers,
   IconDollar,
   IconRepeat,
   // Toast / Inline
   IconCheckSmall,
   IconAlertCircle,
   IconInfo,
+  IconThumbsUp,
 } from './Icons';

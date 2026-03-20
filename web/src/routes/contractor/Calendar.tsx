@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { WorkItem, Client, RecurrenceFrequency, App } from '../../lib/types';
 import { typeColor } from '../../lib/theme';
 import { WORK_ITEM_TYPE_LABELS, RECURRENCE_LABELS } from '../../lib/types';
@@ -95,17 +95,209 @@ function generateRecurrences(
 
 /* ── Work item type colors (semantic) ─────────────── */
 const TYPE_COLORS: Record<string, string> = {
-  changeRequest: '#4BA8A8',
-  featureRequest: '#5A9A5A',
-  maintenance: '#D4873E',
+  changeRequest: 'var(--accent)',
+  featureRequest: 'var(--color-green)',
+  maintenance: 'var(--color-orange)',
 };
 
 /* ── Component ────────────────────────────────────── */
 
+/* ── Mobile Month Agenda ─────────────────────────── */
+
+interface MobileMonthAgendaProps {
+  monthGrid: (Date | null)[];
+  currentMonth: number;
+  today: Date;
+  itemsForDay: (day: Date) => CalendarItem[];
+  calendarItemKey: (ci: CalendarItem) => string;
+  clientMap: Record<string, string>;
+  appMap: Record<string, string>;
+  navigate: (path: string) => void;
+}
+
+/**
+ * A compact month view for mobile: mini calendar header with dot indicators,
+ * followed by a scrollable agenda list of the current month's items.
+ */
+function MobileMonthAgenda({
+  monthGrid,
+  currentMonth,
+  today,
+  itemsForDay,
+  calendarItemKey,
+  clientMap,
+  appMap,
+  navigate,
+}: MobileMonthAgendaProps) {
+  const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  // Collect days in the current month that have items
+  const daysWithItems = useMemo(() => {
+    const result: { day: Date; items: CalendarItem[] }[] = [];
+    for (const day of monthGrid) {
+      if (!day || day.getMonth() !== currentMonth) continue;
+      const items = itemsForDay(day);
+      if (items.length > 0) {
+        result.push({ day, items });
+      }
+    }
+    return result;
+  }, [monthGrid, currentMonth, itemsForDay]);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Mini calendar grid with dot indicators */}
+      <div className="flex-shrink-0 border-b border-[var(--border)] px-2 pt-2 pb-1">
+        {/* Day-of-week headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {dayLetters.map((letter, i) => (
+            <div
+              key={`mhdr-${i}`}
+              className="text-center text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider"
+            >
+              {letter}
+            </div>
+          ))}
+        </div>
+        {/* Compact day grid */}
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {monthGrid.map((day, idx) => {
+            if (!day) return <div key={`empty-${idx}`} />;
+            const isCurrentMonth = day.getMonth() === currentMonth;
+            const isToday = sameDay(day, today);
+            const hasItems = itemsForDay(day).length > 0;
+            return (
+              <div
+                key={day.toISOString()}
+                className="flex flex-col items-center py-0.5"
+              >
+                <span
+                  className={cn(
+                    'inline-flex items-center justify-center w-7 h-7 text-[11px] font-semibold rounded-full',
+                    !isCurrentMonth && 'opacity-30',
+                    isToday
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'text-[var(--text-primary)]'
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+                {/* Dot indicator for days with items */}
+                <div className="h-1 mt-px">
+                  {hasItems && isCurrentMonth && (
+                    <span className="block w-1 h-1 rounded-full bg-[var(--accent)]" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Agenda list */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {daysWithItems.length === 0 && (
+          <div className="flex-1 flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="mx-auto mb-2"><IconCalendarIcon size={32} color="var(--border)" /></div>
+              <p className="text-xs text-[var(--text-secondary)] font-medium">No items this month</p>
+            </div>
+          </div>
+        )}
+        {daysWithItems.map(({ day, items }) => {
+          const isToday = sameDay(day, today);
+          return (
+            <div key={day.toISOString()}>
+              {/* Date header */}
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b border-[var(--border)]',
+                  isToday
+                    ? 'text-[var(--accent)] bg-[var(--accent)]/5'
+                    : 'text-[var(--text-secondary)] bg-[var(--bg-input)]/40'
+                )}
+              >
+                <span>{day.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                <span>{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                {isToday && <span className="text-[8px] bg-[var(--accent)]/15 px-1.5 py-px rounded-full">Today</span>}
+              </div>
+              {/* Items for this day */}
+              {items.map((ci) => (
+                <button
+                  key={calendarItemKey(ci)}
+                  onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 text-left border-b border-[var(--border)] hover:bg-[var(--bg-input)]/40 transition-colors min-h-[44px]',
+                    ci.isRecurring && 'opacity-75'
+                  )}
+                >
+                  {/* Color stripe */}
+                  <div
+                    className="w-0.5 self-stretch rounded-full flex-shrink-0"
+                    style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                  />
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[var(--text-primary)] truncate">
+                      {ci.item.subject}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-[10px] text-[var(--text-secondary)]">
+                        {clientMap[ci.item.clientId] ?? 'Unknown'}
+                        {ci.item.appId && appMap[ci.item.appId] && (
+                          <> · {appMap[ci.item.appId]}</>
+                        )}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-secondary)] font-semibold">
+                        {ci.item.totalHours.toFixed(1)}h
+                      </span>
+                      <span className="text-[10px] text-[var(--text-secondary)]">
+                        {formatCurrency(ci.item.totalCost)}
+                      </span>
+                      <span
+                        className="text-[8px] font-bold px-1.5 py-px rounded-full text-white"
+                        style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
+                      >
+                        {WORK_ITEM_TYPE_LABELS[ci.item.type]}
+                      </span>
+                      {ci.item.recurrence && (
+                        <span className="text-[8px] text-[var(--accent)] font-medium flex items-center gap-0.5">
+                          <IconRepeat size={8} color="currentColor" />
+                          {ci.item.recurrence.frequency === 'custom'
+                            ? `${ci.item.recurrence.customDays}d`
+                            : RECURRENCE_LABELS[ci.item.recurrence.frequency]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Status badge */}
+                  <StatusBadge status={ci.item.status} />
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Number of days to show in mobile week view. */
+const MOBILE_WEEK_DAYS = 3;
+
 export default function Calendar({ workItems, clients, apps }: CalendarProps) {
   const [view, setView] = useState<View>('month');
   const [current, setCurrent] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const navigate = useNavigate();
+
+  // Track viewport for mobile detection
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768); }
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -123,6 +315,17 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
 
   const visibleRange = useMemo<{ start: Date; end: Date }>(() => {
     if (view === 'week') {
+      if (isMobile) {
+        // Mobile week: centered around current day
+        const offset = Math.floor(MOBILE_WEEK_DAYS / 2);
+        const start = new Date(current);
+        start.setDate(start.getDate() - offset);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(current);
+        end.setDate(end.getDate() + (MOBILE_WEEK_DAYS - 1 - offset));
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+      }
       const start = startOfWeek(current);
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
@@ -134,7 +337,7 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
     const start = new Date(year, month, 1);
     const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
     return { start, end };
-  }, [current, view]);
+  }, [current, view, isMobile]);
 
   const calendarItems = useMemo<CalendarItem[]>(() => {
     const originals: CalendarItem[] = active.map((item) => ({
@@ -146,19 +349,21 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
     return [...originals, ...recurrences];
   }, [active, visibleRange]);
 
-  function prev() {
+  const prev = useCallback(() => {
     const d = new Date(current);
     if (view === 'month') d.setMonth(d.getMonth() - 1);
+    else if (view === 'week' && isMobile) d.setDate(d.getDate() - MOBILE_WEEK_DAYS);
     else d.setDate(d.getDate() - 7);
     setCurrent(d);
-  }
+  }, [current, view, isMobile]);
 
-  function next() {
+  const next = useCallback(() => {
     const d = new Date(current);
     if (view === 'month') d.setMonth(d.getMonth() + 1);
+    else if (view === 'week' && isMobile) d.setDate(d.getDate() + MOBILE_WEEK_DAYS);
     else d.setDate(d.getDate() + 7);
     setCurrent(d);
-  }
+  }, [current, view, isMobile]);
 
   const monthLabel = current.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
@@ -192,6 +397,20 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
       return d;
     });
   }, [current]);
+
+  /** On mobile, show MOBILE_WEEK_DAYS centered around `current`. */
+  const mobileWeekDays = useMemo(() => {
+    const offset = Math.floor(MOBILE_WEEK_DAYS / 2);
+    return Array.from({ length: MOBILE_WEEK_DAYS }, (_, i) => {
+      const d = new Date(current);
+      d.setDate(d.getDate() - offset + i);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    });
+  }, [current]);
+
+  /** The days to actually render in week view (responsive). */
+  const visibleWeekDays = isMobile ? mobileWeekDays : weekDays;
 
   const listItems = useMemo(() => {
     const year = current.getFullYear();
@@ -239,19 +458,19 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
 
       {/* ══ Header Bar ══════════════════════════════════ */}
       <div className="cal-root flex flex-col" style={{ height: 'inherit' }}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-2 pb-3">
+        <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 pb-3">
           {/* Left: nav + month label */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={prev}
-              className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
+              className="w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
               aria-label="Previous"
             >
               <IconChevronLeft size={14} />
             </button>
             <button
               onClick={next}
-              className="w-9 h-9 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
+              className="w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-all"
               aria-label="Next"
             >
               <IconChevronRight size={14} />
@@ -262,7 +481,7 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
             >
               Today
             </button>
-            <h1 className="text-lg font-bold text-[var(--text-primary)] ml-2 tracking-tight">
+            <h1 className="text-base sm:text-lg font-bold text-[var(--text-primary)] ml-2 tracking-tight">
               {monthLabel}
             </h1>
           </div>
@@ -290,7 +509,7 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
         <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
 
           {/* ── Month View ──────────────────────────────── */}
-          {view === 'month' && (
+          {view === 'month' && !isMobile && (
             <div className="flex flex-col h-full">
               {/* Day-of-week headers */}
               <div className="flex-shrink-0 grid grid-cols-7 border-b border-[var(--border)]">
@@ -367,8 +586,8 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
                               className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
                               style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
                             />
-                            {/* Title — hidden on small screens, shown as truncated pill on md+ */}
-                            <span className="hidden md:block text-[9px] leading-tight font-medium text-[var(--text-primary)] truncate">
+                            {/* Title — truncated pill */}
+                            <span className="text-[9px] leading-tight font-medium text-[var(--text-primary)] truncate">
                               {ci.item.subject}
                             </span>
                           </button>
@@ -386,28 +605,48 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
             </div>
           )}
 
+          {/* ── Month View (Mobile Agenda) ───────────────── */}
+          {view === 'month' && isMobile && (
+            <MobileMonthAgenda
+              monthGrid={monthGrid}
+              currentMonth={currentMonth}
+              today={today}
+              itemsForDay={itemsForDay}
+              calendarItemKey={calendarItemKey}
+              clientMap={clientMap}
+              appMap={appMap}
+              navigate={navigate}
+            />
+          )}
+
           {/* ── Week View ───────────────────────────────── */}
           {view === 'week' && (
             <div className="flex flex-col h-full">
               {/* Day headers */}
-              <div className="flex-shrink-0 grid grid-cols-7 border-b border-[var(--border)]">
-                {weekDays.map((day, i) => {
+              <div
+                className="flex-shrink-0 grid border-b border-[var(--border)]"
+                style={{ gridTemplateColumns: `repeat(${visibleWeekDays.length}, 1fr)` }}
+              >
+                {visibleWeekDays.map((day, i) => {
                   const isToday = sameDay(day, today);
                   return (
                     <div
                       key={day.toISOString()}
                       className={cn(
                         'text-center py-2 transition-colors',
-                        i < 6 && 'border-r border-[var(--border)]',
+                        i < visibleWeekDays.length - 1 && 'border-r border-[var(--border)]',
                         isToday && 'bg-[var(--accent)]/10'
                       )}
                     >
-                      <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wide font-semibold">
-                        {dayLetters[day.getDay()]}
+                      <div className="text-[9px] md:text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-semibold">
+                        {isMobile
+                          ? day.toLocaleDateString('en-US', { weekday: 'short' })
+                          : dayLetters[day.getDay()]
+                        }
                       </div>
                       <span
                         className={cn(
-                          'inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full mt-0.5',
+                          'inline-flex items-center justify-center w-7 h-7 md:w-6 md:h-6 text-xs font-bold rounded-full mt-0.5',
                           isToday
                             ? 'bg-[var(--accent)] text-white'
                             : 'text-[var(--text-primary)]'
@@ -421,16 +660,19 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
               </div>
 
               {/* Day columns — fill remaining height */}
-              <div className="flex-1 min-h-0 grid grid-cols-7">
-                {weekDays.map((day, i) => {
+              <div
+                className="flex-1 min-h-0 grid"
+                style={{ gridTemplateColumns: `repeat(${visibleWeekDays.length}, 1fr)` }}
+              >
+                {visibleWeekDays.map((day, i) => {
                   const isToday = sameDay(day, today);
                   const items = itemsForDay(day);
                   return (
                     <div
                       key={day.toISOString()}
                       className={cn(
-                        'flex flex-col gap-1.5 p-1.5 overflow-y-auto',
-                        i < 6 && 'border-r border-[var(--border)]',
+                        'flex flex-col gap-1.5 p-1.5 md:p-1.5 overflow-y-auto',
+                        i < visibleWeekDays.length - 1 && 'border-r border-[var(--border)]',
                         isToday && 'bg-[var(--accent)]/5'
                       )}
                     >
@@ -439,25 +681,25 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
                           key={calendarItemKey(ci)}
                           onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
                           className={cn(
-                            'block w-full text-left p-1.5 md:p-2 rounded-lg text-white transition-all hover:brightness-110 flex-shrink-0',
+                            'block w-full text-left p-2 md:p-2 rounded-lg text-white transition-all hover:brightness-110 flex-shrink-0 min-h-[44px]',
                             ci.isRecurring && 'opacity-70 border border-dashed border-white/50'
                           )}
                           style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
                         >
-                          <div className="text-[10px] md:text-[11px] font-bold leading-snug truncate">
+                          <div className="text-[11px] md:text-[11px] font-bold leading-snug truncate">
                             {ci.item.subject}
                           </div>
-                          <div className="text-[9px] text-white/75 font-medium truncate mt-0.5">
+                          <div className="text-[10px] md:text-[9px] text-white/75 font-medium truncate mt-0.5">
                             {clientMap[ci.item.clientId] ?? 'Unknown'}
                             {ci.item.appId && appMap[ci.item.appId] && (
                               <> · {appMap[ci.item.appId]}</>
                             )}
                           </div>
-                          <div className="hidden md:flex items-center gap-1 mt-1 flex-wrap">
-                            <span className="text-[8px] bg-black/15 px-1 py-px rounded font-semibold">
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            <span className="text-[9px] md:text-[8px] bg-black/15 px-1 py-px rounded font-semibold">
                               {ci.item.totalHours.toFixed(1)}h
                             </span>
-                            <span className="text-[8px] bg-black/10 px-1 py-px rounded">
+                            <span className="hidden md:inline text-[8px] bg-black/10 px-1 py-px rounded">
                               {WORK_ITEM_TYPE_LABELS[ci.item.type]}
                             </span>
                           </div>
@@ -520,7 +762,7 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
                     <button
                       onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2 text-left border-b border-[var(--border)] hover:bg-[var(--bg-input)]/40 transition-colors group',
+                        'w-full flex items-center gap-3 px-3 py-2.5 md:py-2 text-left border-b border-[var(--border)] hover:bg-[var(--bg-input)]/40 transition-colors group min-h-[44px]',
                         ci.isRecurring && 'opacity-75'
                       )}
                     >
