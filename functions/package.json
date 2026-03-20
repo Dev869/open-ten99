@@ -9,7 +9,9 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "engines": {
     "node": "20"
@@ -19,13 +21,16 @@
     "@google/generative-ai": "^0.24.0",
     "firebase-admin": "^13.0.0",
     "firebase-functions": "^6.3.0",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "plaid": "^41.4.0",
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
   },
   "private": true
 }

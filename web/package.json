@@ -17,6 +17,7 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-plaid-link": "^4.1.1",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.0",
     "tailwindcss": "^4.2.2"
