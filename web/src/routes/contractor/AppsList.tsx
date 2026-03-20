@@ -3,7 +3,10 @@ import type { App, WorkItem, Client } from '../../lib/types';
 import { APP_PLATFORM_LABELS, APP_STATUS_LABELS } from '../../lib/types';
 import { AppCard } from '../../components/AppCard';
 import { AppFormModal } from '../../components/AppFormModal';
+import { GitHubImportModal } from '../../components/GitHubImportModal';
 import { IconPlus, IconSearch } from '../../components/icons';
+import { useIntegration } from '../../hooks/useFirestore';
+import { useAuth } from '../../hooks/useAuth';
 
 interface AppsListProps {
   apps: App[];
@@ -17,6 +20,10 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
   const [filterPlatform, setFilterPlatform] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showNewApp, setShowNewApp] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+
+  const { user } = useAuth();
+  const { integration } = useIntegration(user?.uid);
 
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -64,13 +71,23 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setShowNewApp(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
-        >
-          <IconPlus size={16} className="flex-shrink-0" />
-          New App
-        </button>
+        <div className="flex items-center gap-2">
+          {integration?.connected && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+            >
+              Import from GitHub
+            </button>
+          )}
+          <button
+            onClick={() => setShowNewApp(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
+          >
+            <IconPlus size={16} className="flex-shrink-0" />
+            New App
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -191,6 +208,15 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
         <AppFormModal
           clients={clients}
           onClose={() => setShowNewApp(false)}
+        />
+      )}
+
+      {/* GitHub Import Modal */}
+      {showImport && (
+        <GitHubImportModal
+          clients={clients}
+          apps={apps}
+          onClose={() => setShowImport(false)}
         />
       )}
     </div>
