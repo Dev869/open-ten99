@@ -21,3 +21,4 @@ export { onGitHubWebhook } from "./onGitHubWebhook";
 export { onPlaidLinkToken, onPlaidExchange, onPlaidSync, onPlaidWebhook } from "./plaid";
 export { onStripeConnect, onStripeSync, onStripeWebhook } from "./stripe";
 export { onManualSync, onDeleteConnectedAccount, onPlaidUpdateLinkToken } from "./manualSync";
+export { onTransactionCreated } from './matchTransaction';
