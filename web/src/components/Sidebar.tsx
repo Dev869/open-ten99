@@ -4,9 +4,9 @@ import { cn } from '../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
-  IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconApps,
-  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat,
-  IconChevronUp, IconChevronDown, IconChevronRight, IconClose,
+  IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps,
+  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook,
+  IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconPaintBrush,
 } from './icons';
 import { BrandIcon, BrandWordmark } from './Brand';
 
@@ -22,7 +22,7 @@ interface NavItem {
 
 const defaultNavItems: NavItem[] = [
   { to: '/dashboard', key: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
-  { to: '/dashboard/work-items', key: 'work-items', label: 'Work Items', Icon: IconDocument },
+  { to: '/dashboard/work-items', key: 'work-items', label: 'Work Items', Icon: IconWrench },
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
   { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },
@@ -32,9 +32,10 @@ const defaultNavItems: NavItem[] = [
     label: 'Finance',
     Icon: IconAnalytics,
     children: [
-      { to: '/dashboard/finance', key: 'finance-overview', label: 'Overview', Icon: IconDashboard },
+      { to: '/dashboard/finance', key: 'finance-overview', label: 'Overview', Icon: IconFinanceOverview },
       { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
+      { to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconBook },
       { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
       { to: '/dashboard/finance/accounts', key: 'finance-accounts', label: 'Accounts', Icon: IconGear },
     ],
@@ -397,10 +398,10 @@ export function Sidebar({
         <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
           <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
             <span className={cn('flex-shrink-0', expanded ? 'hidden' : 'hidden md:block')}>
-              <BrandIcon size={28} />
+              <BrandIcon size={24} />
             </span>
             <span className={cn(expanded ? '' : 'md:hidden')}>
-              <BrandWordmark size={22} />
+              <BrandWordmark size={18} />
             </span>
           </Link>
         </div>
@@ -634,7 +635,7 @@ export function Sidebar({
               )}
               title="Customize sidebar"
             >
-              <IconGear />
+              <IconPaintBrush />
               {expanded && <span className="text-sm font-medium">Customize</span>}
             </button>
           )}

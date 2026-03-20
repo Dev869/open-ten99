@@ -24,6 +24,7 @@ const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
 const FinanceOverview = lazy(() => import('./routes/contractor/FinanceOverview'));
 const Invoices = lazy(() => import('./routes/contractor/Invoices'));
 const Transactions = lazy(() => import('./routes/contractor/Transactions'));
+const Expenses = lazy(() => import('./routes/contractor/Expenses'));
 const Reports = lazy(() => import('./routes/contractor/Reports'));
 const Accounts = lazy(() => import('./routes/contractor/Accounts'));
 const Team = lazy(() => import('./routes/contractor/Team'));
@@ -180,7 +181,7 @@ function ContractorLayout() {
               <IconMenu size={22} />
             </button>
             <div className="flex-1 flex items-center justify-center">
-              <BrandWordmark size={20} />
+              <BrandWordmark size={16} />
             </div>
             <div className="flex items-center gap-1">
               <MobileNotificationBell
@@ -290,6 +291,7 @@ function ContractorRoutes() {
         element={<Invoices workItems={workItems} clients={clients} />}
       />
       <Route path="finance/transactions" element={<Transactions />} />
+      <Route path="finance/expenses" element={<Expenses />} />
       <Route
         path="finance/reports"
         element={<Reports workItems={workItems} clients={clients} />}
@@ -345,7 +347,7 @@ export default function App() {
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
           <div className="mb-5">
-            <BrandWordmark size={48} variant="light" />
+            <BrandWordmark size={36} variant="light" />
           </div>
           <div className="text-sm text-white/40 mt-3">Loading...</div>
         </div>
