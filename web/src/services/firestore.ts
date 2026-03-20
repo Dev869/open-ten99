@@ -9,11 +9,13 @@ import {
   orderBy,
   where,
   Timestamp,
+  getDocs,
+  writeBatch,
   type DocumentData,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App } from '../lib/types';
 
 // --- Converters ---
 
@@ -30,6 +32,7 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     status: data.status,
     clientId: data.clientId,
     projectId: data.projectId ?? undefined,
+    appId: data.appId ?? undefined,
     sourceEmail: data.sourceEmail ?? '',
     subject: data.subject ?? '',
     lineItems: (data.lineItems ?? []).map((li: DocumentData) => ({
@@ -80,6 +83,27 @@ function docToClient(id: string, data: DocumentData): Client {
   };
 }
 
+function docToApp(id: string, data: DocumentData): App {
+  return {
+    id,
+    clientId: data.clientId,
+    projectId: data.projectId ?? undefined,
+    name: data.name ?? '',
+    description: data.description ?? undefined,
+    platform: data.platform ?? 'other',
+    status: data.status ?? 'active',
+    url: data.url ?? undefined,
+    repoUrls: data.repoUrls ?? [],
+    techStack: data.techStack ?? undefined,
+    hosting: data.hosting ?? undefined,
+    environment: data.environment ?? undefined,
+    deploymentNotes: data.deploymentNotes ?? undefined,
+    vaultCredentialIds: data.vaultCredentialIds ?? undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
 // --- Realtime Listeners ---
 
 export function subscribeWorkItems(
@@ -104,6 +128,15 @@ export function subscribeClients(callback: (clients: Client[]) => void) {
   return onSnapshot(q, (snapshot) => {
     const clients = snapshot.docs.map((doc) => docToClient(doc.id, doc.data()));
     callback(clients);
+  });
+}
+
+export function subscribeApps(callback: (apps: App[]) => void) {
+  const ref = collection(db, 'apps');
+  const q = query(ref, orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const apps = snapshot.docs.map((doc) => docToApp(doc.id, doc.data()));
+    callback(apps);
   });
 }
 
@@ -160,6 +193,16 @@ export async function updateWorkItem(item: WorkItem) {
     status: item.status,
     clientId: item.clientId,
     projectId: item.projectId ?? null,
+    appId: item.appId ?? null,
+    assigneeId: item.assigneeId ?? null,
+    teamId: item.teamId ?? null,
+    clientNotes: item.clientNotes ?? null,
+    clientApproval: item.clientApproval ?? null,
+    clientApprovalDate: item.clientApprovalDate ? Timestamp.fromDate(item.clientApprovalDate) : null,
+    invoiceStatus: item.invoiceStatus ?? null,
+    invoiceSentDate: item.invoiceSentDate ? Timestamp.fromDate(item.invoiceSentDate) : null,
+    invoicePaidDate: item.invoicePaidDate ? Timestamp.fromDate(item.invoicePaidDate) : null,
+    invoiceDueDate: item.invoiceDueDate ? Timestamp.fromDate(item.invoiceDueDate) : null,
     sourceEmail: item.sourceEmail,
     subject: item.subject,
     lineItems: item.lineItems.map(lineItemToData),
@@ -259,6 +302,61 @@ export async function updateClient(client: Client) {
 
 export async function deleteClient(id: string) {
   const ref = doc(db, 'clients', id);
+  await deleteDoc(ref);
+}
+
+// --- Apps CRUD ---
+
+export async function createApp(app: Omit<App, 'id' | 'createdAt' | 'updatedAt'>) {
+  const ref = collection(db, 'apps');
+  const now = Timestamp.now();
+  const clean: Record<string, unknown> = {
+    createdAt: now,
+    updatedAt: now,
+  };
+  for (const [k, v] of Object.entries(app)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  if (auth.currentUser) clean.ownerId = auth.currentUser.uid;
+  const docRef = await addDoc(ref, clean);
+  return docRef.id;
+}
+
+export async function updateApp(app: App) {
+  if (!app.id) throw new Error('App has no ID');
+  const ref = doc(db, 'apps', app.id);
+  await updateDoc(ref, {
+    clientId: app.clientId,
+    projectId: app.projectId ?? null,
+    name: app.name,
+    description: app.description ?? null,
+    platform: app.platform,
+    status: app.status,
+    url: app.url ?? null,
+    repoUrls: app.repoUrls,
+    techStack: app.techStack ?? null,
+    hosting: app.hosting ?? null,
+    environment: app.environment ?? null,
+    deploymentNotes: app.deploymentNotes ?? null,
+    vaultCredentialIds: app.vaultCredentialIds ?? null,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function deleteApp(id: string) {
+  // Clear appId on all work orders referencing this app
+  const wiRef = collection(db, 'workItems');
+  const q = query(wiRef, where('appId', '==', id));
+  const snapshot = await getDocs(q);
+  if (snapshot.docs.length > 0) {
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((d) => {
+      batch.update(d.ref, { appId: null, updatedAt: Timestamp.now() });
+    });
+    await batch.commit();
+  }
+  // Delete the app
+  const ref = doc(db, 'apps', id);
   await deleteDoc(ref);
 }
 
