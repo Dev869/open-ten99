@@ -736,18 +736,19 @@ export function subscribeConnectedAccounts(
   const user = auth.currentUser;
   if (!user) return () => {};
 
+  // Simple query without orderBy — avoids needing a composite index.
+  // Sort client-side instead.
   const q = query(
     collection(db, 'connectedAccounts'),
-    where('ownerId', '==', user.uid),
-    orderBy('createdAt', 'desc')
+    where('ownerId', '==', user.uid)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      const accounts = snapshot.docs.map((doc) =>
-        docToConnectedAccount(doc.id, doc.data())
-      );
+      const accounts = snapshot.docs
+        .map((doc) => docToConnectedAccount(doc.id, doc.data()))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       callback(accounts);
     },
     (error) => {
@@ -788,32 +789,41 @@ export async function fetchTransactions(options: {
   if (!user) return { transactions: [], lastDoc: null, hasMore: false };
 
   const pageSize = options.pageSize ?? 50;
+
+  // Use a simple ownerId-only query to avoid needing composite indexes.
+  // Filter and sort client-side. When transaction volume grows, deploy
+  // composite indexes and switch back to server-side ordering.
   const constraints: QueryConstraint[] = [
     where('ownerId', '==', user.uid),
-    orderBy('date', 'desc'),
-    limit(pageSize + 1), // Fetch one extra to check hasMore
   ];
-
-  if (options.accountId) {
-    constraints.push(where('accountId', '==', options.accountId));
-  }
-  if (options.type) {
-    constraints.push(where('type', '==', options.type));
-  }
-  if (options.afterDoc) {
-    constraints.push(startAfter(options.afterDoc));
-  }
 
   try {
     const q = query(collection(db, 'transactions'), ...constraints);
     const snapshot = await getDocs(q);
-    const docs = snapshot.docs;
-    const hasMore = docs.length > pageSize;
-    const resultDocs = hasMore ? docs.slice(0, pageSize) : docs;
+
+    let results = snapshot.docs.map((d) => docToTransaction(d.id, d.data()));
+
+    // Client-side filtering
+    if (options.accountId) {
+      results = results.filter((t) => t.accountId === options.accountId);
+    }
+    if (options.type) {
+      results = results.filter((t) => t.type === options.type);
+    }
+
+    // Client-side sort by date descending
+    results.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    // Client-side pagination
+    const startIdx = options.afterDoc
+      ? results.findIndex((t) => t.id === options.afterDoc!.id) + 1
+      : 0;
+    const paged = results.slice(startIdx, startIdx + pageSize);
+    const hasMore = startIdx + pageSize < results.length;
 
     return {
-      transactions: resultDocs.map((d) => docToTransaction(d.id, d.data())),
-      lastDoc: resultDocs.length > 0 ? resultDocs[resultDocs.length - 1] : null,
+      transactions: paged,
+      lastDoc: paged.length > 0 ? snapshot.docs.find((d) => d.id === paged[paged.length - 1].id) ?? null : null,
       hasMore,
     };
   } catch (error) {
