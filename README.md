@@ -7,9 +7,9 @@ A full-stack work order management platform for independent contractors. Track c
 ## Architecture
 
 ```
-OpenChanges/          SwiftUI iOS app (contractor mobile)
 web/                  React web app (contractor dashboard + client portal)
-functions/            Firebase Cloud Functions (email parsing, PDF generation)
+functions/            Firebase Cloud Functions (email parsing, PDF generation, GitHub sync)
+OpenChanges/          SwiftUI iOS app (deprecated)
 ```
 
 ### Web App
@@ -25,9 +25,9 @@ React 19 with TypeScript, Vite, and Tailwind CSS 4. Icon-based sidebar navigatio
 - **`onEmailReceived`** — Postmark inbound webhook. Receives forwarded client emails, uses Gemini AI to parse them into structured work orders (type, line items, hours), and writes to Firestore as drafts.
 - **`generatePDF`** — Callable function. Builds a branded PDF work order from Firestore data using pdf-lib and uploads to Cloud Storage.
 
-### iOS App
+### iOS App (Deprecated)
 
-SwiftUI app targeting iOS. Google Sign-In authentication, real-time Firestore sync, and native UI for managing work orders on the go.
+The SwiftUI iOS app in `OpenChanges/` is no longer maintained. The web app is the primary platform.
 
 ## Setup
 
