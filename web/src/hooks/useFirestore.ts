@@ -3,11 +3,12 @@ import {
   subscribeWorkItems,
   subscribeClients,
   subscribeSettings,
+  subscribeApps,
   subscribeTeam,
   subscribeTeamMembers,
   subscribeTeamInvites,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, Team, TeamMember, TeamInvite } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite } from '../lib/types';
 
 export function useWorkItems(clientId?: string) {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -39,6 +40,22 @@ export function useClients() {
   }, []);
 
   return { clients, loading };
+}
+
+export function useApps() {
+  const [apps, setApps] = useState<App[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeApps((a) => {
+      setApps(a);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  return { apps, loading };
 }
 
 export function useSettings(userId: string | undefined) {
