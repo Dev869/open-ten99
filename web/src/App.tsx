@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, isContractorUser } from './hooks/useAuth';
-import { useWorkItems, useClients, useSettings } from './hooks/useFirestore';
+import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
 import { updateSettings } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
 import { TimeTracker } from './components/TimeTracker';
@@ -25,6 +25,8 @@ const Team = lazy(() => import('./routes/contractor/Team'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
 const Vault = lazy(() => import('./routes/contractor/Vault'));
+const AppsList = lazy(() => import('./routes/contractor/AppsList'));
+const AppDetail = lazy(() => import('./routes/contractor/AppDetail'));
 
 // Lazy-loaded portal routes
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
@@ -229,6 +231,7 @@ function ContractorRoutes() {
   const { workItems } = useWorkItems();
   const { clients } = useClients();
   const { settings } = useSettings(user?.uid);
+  const { apps } = useApps();
   const navigate = useNavigate();
 
   return (
@@ -262,6 +265,14 @@ function ContractorRoutes() {
       <Route
         path="clients/:id"
         element={<ClientDetail workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="apps"
+        element={<AppsList apps={apps} workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="apps/:id"
+        element={<AppDetail apps={apps} workItems={workItems} clients={clients} />}
       />
       <Route
         path="analytics"
