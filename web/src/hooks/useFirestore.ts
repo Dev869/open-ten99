@@ -9,8 +9,9 @@ import {
   subscribeTeamInvites,
   subscribeIntegration,
   subscribeGitHubActivity,
+  subscribeConnectedAccounts,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount } from '../lib/types';
 
 export function useWorkItems(clientId?: string) {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -166,4 +167,20 @@ export function useGitHubActivity(appId: string | undefined) {
   }, [appId]);
 
   return { activities, loading };
+}
+
+export function useConnectedAccounts() {
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = subscribeConnectedAccounts((items) => {
+      setAccounts(items);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  return { accounts, loading };
 }

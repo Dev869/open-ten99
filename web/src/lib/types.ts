@@ -318,3 +318,46 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+
+// === Phase 2: Bank & Payment Integration ===
+
+export type AccountProvider = 'plaid' | 'stripe';
+export type AccountStatus = 'active' | 'error' | 'disconnected';
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'uncategorized';
+export type TransactionProvider = 'plaid' | 'stripe' | 'manual';
+export type MatchStatus = 'unmatched' | 'suggested' | 'confirmed' | 'rejected';
+
+export interface ConnectedAccount {
+  id: string;
+  ownerId: string;
+  provider: AccountProvider;
+  accountName: string;
+  institutionName: string;
+  accountMask: string;
+  status: AccountStatus;
+  errorMessage?: string;
+  lastSyncedAt?: Date;  // Optional — null until first sync completes
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Transaction {
+  id: string;
+  ownerId: string;
+  accountId?: string;
+  provider: TransactionProvider;
+  externalId?: string;
+  date: Date;
+  amount: number;
+  description: string;
+  category: string;
+  type: TransactionType;
+  matchedWorkItemId?: string;
+  matchConfidence?: number;
+  matchStatus: MatchStatus;
+  isManual: boolean;
+  receiptUrl?: string;
+  taxDeductible?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

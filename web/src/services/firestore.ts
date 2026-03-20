@@ -11,11 +11,15 @@ import {
   Timestamp,
   getDocs,
   writeBatch,
+  limit,
+  startAfter,
   type DocumentData,
+  type DocumentSnapshot,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus } from '../lib/types';
 
 // --- Converters ---
 
@@ -683,5 +687,131 @@ export async function generatePDF(workItemId: string) {
   const fn = httpsCallable<{ workItemId: string }, { pdfUrl: string }>(functions, 'generatePDF');
   const result = await fn({ workItemId });
   return result.data.pdfUrl;
+}
+
+// --- Bank & Payment Integration ---
+
+function docToConnectedAccount(id: string, data: Record<string, unknown>): ConnectedAccount {
+  return {
+    id,
+    ownerId: data.ownerId as string,
+    provider: data.provider as AccountProvider,
+    accountName: data.accountName as string ?? '',
+    institutionName: data.institutionName as string ?? '',
+    accountMask: data.accountMask as string ?? '',
+    status: data.status as AccountStatus ?? 'active',
+    errorMessage: data.errorMessage as string | undefined,
+    lastSyncedAt: data.lastSyncedAt ? toDate(data.lastSyncedAt) : undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+function docToTransaction(id: string, data: Record<string, unknown>): Transaction {
+  return {
+    id,
+    ownerId: data.ownerId as string,
+    accountId: data.accountId as string | undefined,
+    provider: data.provider as TransactionProvider ?? 'manual',
+    externalId: data.externalId as string | undefined,
+    date: toDate(data.date),
+    amount: data.amount as number ?? 0,
+    description: data.description as string ?? '',
+    category: data.category as string ?? 'Uncategorized',
+    type: data.type as TransactionType ?? 'uncategorized',
+    matchedWorkItemId: data.matchedWorkItemId as string | undefined,
+    matchConfidence: data.matchConfidence as number | undefined,
+    matchStatus: data.matchStatus as MatchStatus ?? 'unmatched',
+    isManual: data.isManual as boolean ?? false,
+    receiptUrl: data.receiptUrl as string | undefined,
+    taxDeductible: data.taxDeductible as boolean | undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+export function subscribeConnectedAccounts(
+  callback: (accounts: ConnectedAccount[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const q = query(
+    collection(db, 'connectedAccounts'),
+    where('ownerId', '==', user.uid),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const accounts = snapshot.docs.map((doc) =>
+      docToConnectedAccount(doc.id, doc.data())
+    );
+    callback(accounts);
+  });
+}
+
+export async function deleteConnectedAccount(accountId: string): Promise<void> {
+  // Delete the display document. _secrets cleanup via Cloud Function.
+  await deleteDoc(doc(db, 'connectedAccounts', accountId));
+}
+
+export async function updateTransactionCategory(
+  transactionId: string,
+  category: string
+): Promise<void> {
+  await updateDoc(doc(db, 'transactions', transactionId), {
+    category,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function fetchTransactions(options: {
+  pageSize?: number;
+  afterDoc?: DocumentSnapshot;
+  accountId?: string;
+  type?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}): Promise<{
+  transactions: Transaction[];
+  lastDoc: DocumentSnapshot | null;
+  hasMore: boolean;
+}> {
+  const user = auth.currentUser;
+  if (!user) return { transactions: [], lastDoc: null, hasMore: false };
+
+  const pageSize = options.pageSize ?? 50;
+  const constraints: QueryConstraint[] = [
+    where('ownerId', '==', user.uid),
+    orderBy('date', 'desc'),
+    limit(pageSize + 1), // Fetch one extra to check hasMore
+  ];
+
+  if (options.accountId) {
+    constraints.push(where('accountId', '==', options.accountId));
+  }
+  if (options.type) {
+    constraints.push(where('type', '==', options.type));
+  }
+  if (options.afterDoc) {
+    constraints.push(startAfter(options.afterDoc));
+  }
+
+  try {
+    const q = query(collection(db, 'transactions'), ...constraints);
+    const snapshot = await getDocs(q);
+    const docs = snapshot.docs;
+    const hasMore = docs.length > pageSize;
+    const resultDocs = hasMore ? docs.slice(0, pageSize) : docs;
+
+    return {
+      transactions: resultDocs.map((d) => docToTransaction(d.id, d.data())),
+      lastDoc: resultDocs.length > 0 ? resultDocs[resultDocs.length - 1] : null,
+      hasMore,
+    };
+  } catch (error) {
+    console.error('Failed to fetch transactions:', error);
+    return { transactions: [], lastDoc: null, hasMore: false };
+  }
 }
 
