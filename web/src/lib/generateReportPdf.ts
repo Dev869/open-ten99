@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import type { WorkItem, Client } from './types';
+import type { WorkItem, Client, Transaction } from './types';
 import {
   getMonthlyRevenue,
   getRevenueByClient,
@@ -94,29 +94,83 @@ const COL_RIGHT = PAGE_WIDTH - MARGIN; // 562
 const COL_AMT_W = 100; // width for amount columns
 const COL_AMT_X = COL_RIGHT - COL_AMT_W; // 462
 
-function buildProfitLoss(ctx: PdfContext, workItems: WorkItem[], range: DateRange): void {
+function buildProfitLoss(ctx: PdfContext, workItems: WorkItem[], range: DateRange, transactions?: Transaction[]): void {
   drawHeader(ctx, 'Profit & Loss', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
 
   const monthly = getMonthlyRevenue(workItems, 12, range.end);
-  drawRow(ctx, [
-    { text: 'Month', x: MARGIN, width: 300, bold: true },
-    { text: 'Revenue', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
-  ]);
-  drawSeparator(ctx);
 
-  let total = 0;
-  for (const m of monthly) {
+  if (transactions !== undefined) {
+    // 4-column layout: Month | Revenue | Expenses | Net
+    const COL_REV_X = MARGIN + 160;
+    const COL_REV_W = 110;
+    const COL_EXP_X = COL_REV_X + COL_REV_W;
+    const COL_EXP_W = 110;
+    const COL_NET_X = COL_EXP_X + COL_EXP_W;
+    const COL_NET_W = COL_RIGHT - COL_NET_X;
+
     drawRow(ctx, [
-      { text: m.month, x: MARGIN, width: 300 },
-      { text: formatCurrency(m.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
+      { text: 'Month', x: MARGIN, width: 160, bold: true },
+      { text: 'Revenue', x: COL_REV_X, width: COL_REV_W, align: 'right', bold: true },
+      { text: 'Expenses', x: COL_EXP_X, width: COL_EXP_W, align: 'right', bold: true },
+      { text: 'Net', x: COL_NET_X, width: COL_NET_W, align: 'right', bold: true },
     ]);
-    total += m.revenue;
+    drawSeparator(ctx);
+
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+
+    for (const m of monthly) {
+      // Parse the month label (e.g. "Jan 2025") to determine start/end of month
+      const monthDate = new Date(m.month + ' 01');
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const monthExpenses = transactions
+        .filter((t) => t.type === 'expense' && t.date >= monthStart && t.date <= monthEnd)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+      const net = m.revenue - monthExpenses;
+      totalRevenue += m.revenue;
+      totalExpenses += monthExpenses;
+
+      drawRow(ctx, [
+        { text: m.month, x: MARGIN, width: 160 },
+        { text: formatCurrency(m.revenue), x: COL_REV_X, width: COL_REV_W, align: 'right' },
+        { text: formatCurrency(monthExpenses), x: COL_EXP_X, width: COL_EXP_W, align: 'right' },
+        { text: formatCurrency(net), x: COL_NET_X, width: COL_NET_W, align: 'right' },
+      ]);
+    }
+
+    drawSeparator(ctx, true);
+    drawRow(ctx, [
+      { text: 'Total', x: MARGIN, width: 160, bold: true },
+      { text: formatCurrency(totalRevenue), x: COL_REV_X, width: COL_REV_W, align: 'right', bold: true },
+      { text: formatCurrency(totalExpenses), x: COL_EXP_X, width: COL_EXP_W, align: 'right', bold: true },
+      { text: formatCurrency(totalRevenue - totalExpenses), x: COL_NET_X, width: COL_NET_W, align: 'right', bold: true },
+    ]);
+  } else {
+    // Revenue-only (graceful degradation)
+    drawRow(ctx, [
+      { text: 'Month', x: MARGIN, width: 300, bold: true },
+      { text: 'Revenue', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+    ]);
+    drawSeparator(ctx);
+
+    let total = 0;
+    for (const m of monthly) {
+      drawRow(ctx, [
+        { text: m.month, x: MARGIN, width: 300 },
+        { text: formatCurrency(m.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
+      ]);
+      total += m.revenue;
+    }
+    drawSeparator(ctx, true);
+    drawRow(ctx, [
+      { text: 'Total', x: MARGIN, width: 300, bold: true },
+      { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+    ]);
   }
-  drawSeparator(ctx, true);
-  drawRow(ctx, [
-    { text: 'Total', x: MARGIN, width: 300, bold: true },
-    { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
-  ]);
+
   drawFooter(ctx);
 }
 
@@ -151,11 +205,11 @@ function buildIncomeByClient(ctx: PdfContext, workItems: WorkItem[], clients: Cl
   drawFooter(ctx);
 }
 
-function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client[], range: DateRange): void {
+function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client[], range: DateRange, transactions?: Transaction[]): void {
   drawHeader(ctx, 'Tax Summary — 1099 Report', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
 
   const byClient = getRevenueByClient(workItems, clients, range);
-  const total = byClient.reduce((s, c) => s + c.revenue, 0);
+  const totalIncome = byClient.reduce((s, c) => s + c.revenue, 0);
 
   const COL_1099_X = 380;
   const COL_1099_W = 80;
@@ -176,7 +230,7 @@ function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client
   drawSeparator(ctx, true);
   drawRow(ctx, [
     { text: 'Total Income', x: MARGIN, width: 250, bold: true },
-    { text: formatCurrency(total), x: COL_1099_X, width: COL_1099_W, align: 'right', bold: true },
+    { text: formatCurrency(totalIncome), x: COL_1099_X, width: COL_1099_W, align: 'right', bold: true },
     { text: '', x: COL_AMT_X, width: COL_AMT_W },
   ]);
 
@@ -185,6 +239,54 @@ function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client
   ctx.page.drawText('Note: Clients with $600+ in payments require a 1099-NEC form.', {
     x: MARGIN, y: ctx.y, font: ctx.font, size: 8, color: rgb(0.5, 0.5, 0.5),
   });
+
+  if (transactions !== undefined) {
+    ctx.y -= 30;
+    checkSpace(ctx, 60);
+    ctx.page.drawText('DEDUCTIBLE EXPENSES BY CATEGORY', { x: MARGIN, y: ctx.y, font: ctx.bold, size: 11 });
+    ctx.y -= 20;
+
+    // Group expense transactions by category
+    const expenseMap = new Map<string, number>();
+    for (const t of transactions) {
+      if (t.type === 'expense') {
+        const cat = t.category || 'Uncategorized';
+        expenseMap.set(cat, (expenseMap.get(cat) ?? 0) + Math.abs(t.amount));
+      }
+    }
+
+    const categories = Array.from(expenseMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+    if (categories.length === 0) {
+      drawRow(ctx, [{ text: 'No expenses recorded.', x: MARGIN, width: 400 }]);
+    } else {
+      drawRow(ctx, [
+        { text: 'Category', x: MARGIN, width: 300, bold: true },
+        { text: 'Total', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+      ]);
+      drawSeparator(ctx);
+
+      let totalExpenses = 0;
+      for (const [cat, amount] of categories) {
+        drawRow(ctx, [
+          { text: cat, x: MARGIN, width: 300 },
+          { text: formatCurrency(amount), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
+        ]);
+        totalExpenses += amount;
+      }
+
+      drawSeparator(ctx, true);
+      drawRow(ctx, [
+        { text: 'Total Expenses', x: MARGIN, width: 300, bold: true },
+        { text: formatCurrency(totalExpenses), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+      ]);
+      drawRow(ctx, [
+        { text: 'Net Income (Revenue - Expenses)', x: MARGIN, width: 300, bold: true },
+        { text: formatCurrency(totalIncome - totalExpenses), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+      ]);
+    }
+  }
+
   drawFooter(ctx);
 }
 
@@ -292,6 +394,85 @@ function buildAging(ctx: PdfContext, workItems: WorkItem[]): void {
   drawFooter(ctx);
 }
 
+function buildExpenseReport(ctx: PdfContext, range: DateRange, transactions?: Transaction[]): void {
+  drawHeader(ctx, 'Expense Report', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
+
+  const expenses = transactions
+    ? transactions.filter((t) => t.type === 'expense').sort((a, b) => b.date.getTime() - a.date.getTime())
+    : [];
+
+  if (expenses.length === 0) {
+    drawRow(ctx, [{ text: 'No expenses recorded.', x: MARGIN, width: 400 }]);
+    drawFooter(ctx);
+    return;
+  }
+
+  // Column layout: Date | Description | Category | Amount
+  const COL_DATE_W = 80;
+  const COL_DESC_X = MARGIN + COL_DATE_W + 10;
+  const COL_DESC_W = 200;
+  const COL_CAT_X = COL_DESC_X + COL_DESC_W + 10;
+  const COL_CAT_W = 110;
+  const COL_EXP_AMT_X = COL_CAT_X + COL_CAT_W + 10;
+  const COL_EXP_AMT_W = COL_RIGHT - COL_EXP_AMT_X;
+
+  drawRow(ctx, [
+    { text: 'Date', x: MARGIN, width: COL_DATE_W, bold: true },
+    { text: 'Description', x: COL_DESC_X, width: COL_DESC_W, bold: true },
+    { text: 'Category', x: COL_CAT_X, width: COL_CAT_W, bold: true },
+    { text: 'Amount', x: COL_EXP_AMT_X, width: COL_EXP_AMT_W, align: 'right', bold: true },
+  ]);
+  drawSeparator(ctx);
+
+  let grandTotal = 0;
+  for (const t of expenses) {
+    const desc = (t.description ?? '').slice(0, 35);
+    const cat = (t.category ?? 'Uncategorized').slice(0, 20);
+    drawRow(ctx, [
+      { text: formatDateShort(t.date), x: MARGIN, width: COL_DATE_W },
+      { text: desc, x: COL_DESC_X, width: COL_DESC_W },
+      { text: cat, x: COL_CAT_X, width: COL_CAT_W },
+      { text: formatCurrency(Math.abs(t.amount)), x: COL_EXP_AMT_X, width: COL_EXP_AMT_W, align: 'right' },
+    ]);
+    grandTotal += Math.abs(t.amount);
+  }
+
+  // Category subtotals
+  ctx.y -= 20;
+  checkSpace(ctx, 60);
+  ctx.page.drawText('Subtotals by Category', { x: MARGIN, y: ctx.y, font: ctx.bold, size: 11 });
+  ctx.y -= 20;
+
+  const categoryMap = new Map<string, number>();
+  for (const t of expenses) {
+    const cat = t.category || 'Uncategorized';
+    categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + Math.abs(t.amount));
+  }
+
+  const sortedCategories = Array.from(categoryMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+  drawRow(ctx, [
+    { text: 'Category', x: MARGIN, width: 300, bold: true },
+    { text: 'Total', x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+  ]);
+  drawSeparator(ctx);
+
+  for (const [cat, amount] of sortedCategories) {
+    drawRow(ctx, [
+      { text: cat, x: MARGIN, width: 300 },
+      { text: formatCurrency(amount), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
+    ]);
+  }
+
+  drawSeparator(ctx, true);
+  drawRow(ctx, [
+    { text: 'Grand Total', x: MARGIN, width: 300, bold: true },
+    { text: formatCurrency(grandTotal), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
+  ]);
+
+  drawFooter(ctx);
+}
+
 // ---- Public API ----
 
 export type ReportType = 'profit_loss' | 'income_by_client' | 'tax_summary' | 'hours_billing' | 'aging' | 'expense';
@@ -300,7 +481,8 @@ export async function generateReportPdf(
   reportType: ReportType,
   workItems: WorkItem[],
   clients: Client[],
-  range: DateRange
+  range: DateRange,
+  transactions?: Transaction[]
 ): Promise<void> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -311,13 +493,13 @@ export async function generateReportPdf(
 
   switch (reportType) {
     case 'profit_loss':
-      buildProfitLoss(ctx, workItems, range);
+      buildProfitLoss(ctx, workItems, range, transactions);
       break;
     case 'income_by_client':
       buildIncomeByClient(ctx, workItems, clients, range);
       break;
     case 'tax_summary':
-      buildTaxSummary(ctx, workItems, clients, range);
+      buildTaxSummary(ctx, workItems, clients, range, transactions);
       break;
     case 'hours_billing':
       buildHoursBilling(ctx, workItems, range);
@@ -326,9 +508,7 @@ export async function generateReportPdf(
       buildAging(ctx, workItems);
       break;
     case 'expense':
-      drawHeader(ctx, 'Expense Report', 'Coming in Phase 3');
-      drawRow(ctx, [{ text: 'Expense tracking will be available after bank account integration.', x: MARGIN, width: 400 }]);
-      drawFooter(ctx);
+      buildExpenseReport(ctx, range, transactions);
       break;
   }
 
@@ -342,7 +522,8 @@ export async function generateReportPdf(
 export async function generateCombinedReportPdf(
   workItems: WorkItem[],
   clients: Client[],
-  range: DateRange
+  range: DateRange,
+  transactions?: Transaction[]
 ): Promise<void> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -352,7 +533,7 @@ export async function generateCombinedReportPdf(
   const ctx: PdfContext = { doc, page, font, bold, y: PAGE_HEIGHT - MARGIN };
 
   // 1. Profit & Loss
-  buildProfitLoss(ctx, workItems, range);
+  buildProfitLoss(ctx, workItems, range, transactions);
 
   // 2. Income by Client — new page
   newPage(ctx);
@@ -360,7 +541,7 @@ export async function generateCombinedReportPdf(
 
   // 3. Tax Summary — new page
   newPage(ctx);
-  buildTaxSummary(ctx, workItems, clients, range);
+  buildTaxSummary(ctx, workItems, clients, range, transactions);
 
   // 4. Hours & Billing — new page
   newPage(ctx);
@@ -369,6 +550,10 @@ export async function generateCombinedReportPdf(
   // 5. Aging Report — new page
   newPage(ctx);
   buildAging(ctx, workItems);
+
+  // 6. Expense Report — new page
+  newPage(ctx);
+  buildExpenseReport(ctx, range, transactions);
 
   const pdfBytes = await doc.save();
   const blob = new Blob([pdfBytes], { type: 'application/pdf' });

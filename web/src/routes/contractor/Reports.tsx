@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import type { WorkItem, Client } from '../../lib/types';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import type { WorkItem, Client, Transaction } from '../../lib/types';
 import {
   getDateRange,
   getMonthlyRevenue,
@@ -9,9 +9,10 @@ import {
 } from '../../lib/finance';
 import type { DateRangePreset } from '../../lib/finance';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
-import { exportToCsv } from '../../lib/utils';
+import { exportToCsv, formatDate, formatCurrency } from '../../lib/utils';
 import { generateReportPdf, generateCombinedReportPdf } from '../../lib/generateReportPdf';
 import type { ReportType } from '../../lib/generateReportPdf';
+import { fetchTransactions } from '../../services/firestore';
 
 interface ReportCardProps {
   title: string;
@@ -21,6 +22,7 @@ interface ReportCardProps {
   onExportPdf: () => void;
   csvLoading?: boolean;
   pdfLoading?: boolean;
+  pdfDisabled?: boolean;
 }
 
 function ReportCard({
@@ -31,6 +33,7 @@ function ReportCard({
   onExportPdf,
   csvLoading,
   pdfLoading,
+  pdfDisabled,
 }: ReportCardProps) {
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4">
@@ -55,7 +58,7 @@ function ReportCard({
         </button>
         <button
           onClick={onExportPdf}
-          disabled={pdfLoading || comingSoon}
+          disabled={pdfLoading || comingSoon || pdfDisabled}
           className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {pdfLoading ? 'Generating…' : 'PDF'}
@@ -74,29 +77,45 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
   const [csvLoading, setCsvLoading] = useState<ReportType | null>(null);
   const [combinedLoading, setCombinedLoading] = useState(false);
 
+  const [expenseTransactions, setExpenseTransactions] = useState<Transaction[]>([]);
+  const [expensesLoading, setExpensesLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setExpensesLoading(true);
+    fetchTransactions({ type: 'expense', dateFrom: range.start, dateTo: range.end })
+      .then((result) => {
+        if (!cancelled) {
+          setExpenseTransactions(result.transactions);
+          setExpensesLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [range]);
+
   const handleExportAll = useCallback(async () => {
     setCombinedLoading(true);
     try {
-      await generateCombinedReportPdf(workItems, clients, range);
+      await generateCombinedReportPdf(workItems, clients, range, expenseTransactions);
     } catch (err) {
       console.error('Combined PDF generation failed:', err);
     } finally {
       setCombinedLoading(false);
     }
-  }, [workItems, clients, range]);
+  }, [workItems, clients, range, expenseTransactions]);
 
   const generateReport = useCallback(
     async (reportType: ReportType) => {
       setPdfLoading(reportType);
       try {
-        await generateReportPdf(reportType, workItems, clients, range);
+        await generateReportPdf(reportType, workItems, clients, range, expenseTransactions);
       } catch (err) {
         console.error('PDF generation failed:', err);
       } finally {
         setPdfLoading(null);
       }
     },
-    [workItems, clients, range]
+    [workItems, clients, range, expenseTransactions]
   );
 
   const handleCsvProfitLoss = useCallback(() => {
@@ -164,11 +183,20 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
   }, [workItems, now, preset]);
 
   const handleCsvExpense = useCallback(() => {
-    // Expense report is coming in Phase 3 — export empty template
     setCsvLoading('expense');
-    exportToCsv('Expense_Report.csv', ['Category', 'Amount', 'Date', 'Description'], []);
+    exportToCsv(
+      'Expense_Report.csv',
+      ['Date', 'Description', 'Category', 'Amount', 'Tax Deductible'],
+      expenseTransactions.map((t) => [
+        formatDate(t.date),
+        t.description,
+        t.category,
+        formatCurrency(Math.abs(t.amount)),
+        t.taxDeductible ? 'Yes' : 'No',
+      ])
+    );
     setCsvLoading(null);
-  }, []);
+  }, [expenseTransactions]);
 
   return (
     <div className="space-y-6">
@@ -201,6 +229,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
           onExportPdf={() => generateReport('profit_loss')}
           csvLoading={csvLoading === 'profit_loss'}
           pdfLoading={pdfLoading === 'profit_loss'}
+          pdfDisabled={expensesLoading}
         />
         <ReportCard
           title="Income by Client"
@@ -217,6 +246,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
           onExportPdf={() => generateReport('tax_summary')}
           csvLoading={csvLoading === 'tax_summary'}
           pdfLoading={pdfLoading === 'tax_summary'}
+          pdfDisabled={expensesLoading}
         />
         <ReportCard
           title="Hours & Billing"
@@ -237,11 +267,11 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
         <ReportCard
           title="Expense Report"
           description="All expenses organized by category for reimbursement and tax deductions."
-          comingSoon
           onExportCsv={handleCsvExpense}
-          onExportPdf={() => {}}
+          onExportPdf={() => generateReport('expense')}
           csvLoading={csvLoading === 'expense'}
-          pdfLoading={false}
+          pdfLoading={pdfLoading === 'expense'}
+          pdfDisabled={expensesLoading}
         />
       </div>
     </div>
