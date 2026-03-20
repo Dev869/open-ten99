@@ -337,3 +337,41 @@ export async function generateReportPdf(
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
 }
+
+/** Generate a single PDF with all reports combined, each on its own page. */
+export async function generateCombinedReportPdf(
+  workItems: WorkItem[],
+  clients: Client[],
+  range: DateRange
+): Promise<void> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+
+  const ctx: PdfContext = { doc, page, font, bold, y: PAGE_HEIGHT - MARGIN };
+
+  // 1. Profit & Loss
+  buildProfitLoss(ctx, workItems, range);
+
+  // 2. Income by Client — new page
+  newPage(ctx);
+  buildIncomeByClient(ctx, workItems, clients, range);
+
+  // 3. Tax Summary — new page
+  newPage(ctx);
+  buildTaxSummary(ctx, workItems, clients, range);
+
+  // 4. Hours & Billing — new page
+  newPage(ctx);
+  buildHoursBilling(ctx, workItems, range);
+
+  // 5. Aging Report — new page
+  newPage(ctx);
+  buildAging(ctx, workItems);
+
+  const pdfBytes = await doc.save();
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}

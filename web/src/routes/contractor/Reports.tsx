@@ -10,7 +10,7 @@ import {
 import type { DateRangePreset } from '../../lib/finance';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
 import { exportToCsv } from '../../lib/utils';
-import { generateReportPdf } from '../../lib/generateReportPdf';
+import { generateReportPdf, generateCombinedReportPdf } from '../../lib/generateReportPdf';
 import type { ReportType } from '../../lib/generateReportPdf';
 
 interface ReportCardProps {
@@ -72,6 +72,18 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
 
   const [pdfLoading, setPdfLoading] = useState<ReportType | null>(null);
   const [csvLoading, setCsvLoading] = useState<ReportType | null>(null);
+  const [combinedLoading, setCombinedLoading] = useState(false);
+
+  const handleExportAll = useCallback(async () => {
+    setCombinedLoading(true);
+    try {
+      await generateCombinedReportPdf(workItems, clients, range);
+    } catch (err) {
+      console.error('Combined PDF generation failed:', err);
+    } finally {
+      setCombinedLoading(false);
+    }
+  }, [workItems, clients, range]);
 
   const generateReport = useCallback(
     async (reportType: ReportType) => {
@@ -168,7 +180,16 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
             Export financial data for accounting and tax purposes
           </p>
         </div>
-        <DateRangeSelector value={preset} onChange={setPreset} />
+        <div className="flex items-center gap-3">
+          <DateRangeSelector value={preset} onChange={setPreset} />
+          <button
+            onClick={handleExportAll}
+            disabled={combinedLoading}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--text-primary)] text-[var(--bg-page)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {combinedLoading ? 'Generating...' : 'Export All (PDF)'}
+          </button>
+        </div>
       </div>
 
       {/* Report cards grid */}
