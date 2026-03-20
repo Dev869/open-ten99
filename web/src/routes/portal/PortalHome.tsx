@@ -4,6 +4,7 @@ import type { WorkItem } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { BrandWordmark } from '../../components/Brand';
 
 interface PortalHomeProps {
   workItems: WorkItem[];
@@ -58,9 +59,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
           <div className="flex-1 bg-[#4BA8A8]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <span className="font-bold text-[10px] text-[var(--accent)] tracking-widest uppercase" style={{ fontFamily: "'Space Mono', monospace" }}>
-            TEN99
-          </span>
+          <BrandWordmark size={14} variant="light" />
           <h1 className="text-xl font-bold text-white mt-2">
             Welcome, {clientName}
           </h1>

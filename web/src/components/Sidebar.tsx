@@ -6,8 +6,9 @@ import {
   IconSun, IconMoon,
   IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconApps,
   IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat,
-  IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconLayers,
+  IconChevronUp, IconChevronDown, IconChevronRight, IconClose,
 } from './icons';
+import { BrandIcon, BrandWordmark } from './Brand';
 
 /* ── Nav Config ────────────────────────────────────── */
 
@@ -395,14 +396,11 @@ export function Sidebar({
         {/* Brand mark */}
         <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
           <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
-            <div className="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 shadow-md shadow-[var(--accent)]/20">
-              <IconLayers size={24} />
-            </div>
-            <span className={cn(
-              'font-bold text-[var(--text-primary)] text-xl tracking-tight',
-              expanded ? '' : 'md:hidden'
-            )} style={{ fontFamily: "'Space Mono', monospace" }}>
-              TEN99
+            <span className={cn('flex-shrink-0', expanded ? 'hidden' : 'hidden md:block')}>
+              <BrandIcon size={28} />
+            </span>
+            <span className={cn(expanded ? '' : 'md:hidden')}>
+              <BrandWordmark size={22} />
             </span>
           </Link>
         </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
-import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconLayers } from '../../components/icons';
+import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock } from '../../components/icons';
+import { BrandIcon } from '../../components/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -354,9 +355,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
         {/* App Info */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 shadow-md shadow-[var(--accent)]/20">
-            <IconLayers size={28} />
-          </div>
+          <BrandIcon size={36} />
           <div>
             <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
             <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>

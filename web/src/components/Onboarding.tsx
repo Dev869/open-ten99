@@ -4,7 +4,8 @@ import type { User } from 'firebase/auth';
 import type { Client, AppSettings } from '../lib/types';
 import { createClient } from '../services/firestore';
 import { updateSettings } from '../services/firestore';
-import { IconLayers, IconUser, IconDollar, IconSun, IconPlus, IconCalendar, IconGear } from './icons';
+import { IconUser, IconDollar, IconSun, IconPlus, IconCalendar, IconGear } from './icons';
+import { BrandWordmark } from './Brand';
 
 interface OnboardingProps {
   user: User;
@@ -99,12 +100,12 @@ export function Onboarding({ user, clients, settings, onComplete }: OnboardingPr
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-8">
           {step === 0 && (
             <div className="animate-fade-in-up text-center">
-              {/* App icon */}
-              <div className="w-24 h-24 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[var(--accent)]/30">
-                <IconLayers size={44} />
+              {/* Brand */}
+              <div className="flex justify-center mb-5">
+                <BrandWordmark size={40} />
               </div>
               <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
-                Welcome to <span style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>!
+                Welcome!
               </h1>
               <p className="text-sm text-[var(--text-secondary)] mb-1">
                 Hey {firstName}, glad you're here.

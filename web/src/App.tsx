@@ -10,7 +10,8 @@ import { ToastContext, useToastState } from './hooks/useToast';
 import { useTheme } from './hooks/useTheme';
 import { GlobalSearch } from './components/GlobalSearch';
 import { computeNotifications, NotificationPanel, MobileNotificationBell } from './components/NotificationCenter';
-import { IconMenu, IconLayers, IconSearch } from './components/icons';
+import { IconMenu, IconSearch } from './components/icons';
+import { BrandWordmark } from './components/Brand';
 import Login from './routes/Login';
 
 // Lazy-loaded contractor routes
@@ -178,11 +179,8 @@ function ContractorLayout() {
             >
               <IconMenu size={22} />
             </button>
-            <div className="flex-1 flex items-center justify-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-[var(--accent)] flex items-center justify-center shadow-md">
-                <IconLayers size={18} />
-              </div>
-              <span className="font-bold text-[var(--text-primary)] text-base tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
+            <div className="flex-1 flex items-center justify-center">
+              <BrandWordmark size={20} />
             </div>
             <div className="flex items-center gap-1">
               <MobileNotificationBell
@@ -346,10 +344,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
-          <div className="w-24 h-24 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[var(--accent)]/30">
-            <IconLayers size={44} />
+          <div className="mb-5">
+            <BrandWordmark size={48} variant="light" />
           </div>
-          <span className="text-white font-bold text-3xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
           <div className="text-sm text-white/40 mt-3">Loading...</div>
         </div>
       </div>
