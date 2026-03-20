@@ -8,4 +8,10 @@ admin.initializeApp();
 export { onEmailReceived } from "./parseEmail";
 export { generatePDF } from "./generatePdf";
 export { onGenerateReport } from "./generateReport";
-export { getGitHubAuthUrl, handleGitHubCallback, disconnectGitHub } from "./github";
+export {
+  getGitHubAuthUrl,
+  handleGitHubCallback,
+  disconnectGitHub,
+  importGitHubRepos,
+  linkRepoToApp,
+} from "./github";

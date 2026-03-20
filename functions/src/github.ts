@@ -3,7 +3,8 @@ import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
-import { githubJson, markDisconnected } from "./utils/githubClient";
+import { githubJson, getGitHubToken, markDisconnected } from "./utils/githubClient";
+import { syncAppActivity, GitHubRepo } from "./utils/syncActivity";
 
 const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
 const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
@@ -259,6 +260,318 @@ export const handleGitHubCallback = onCall(
       throw new HttpsError(
         "internal",
         "Failed to complete GitHub authorization. Please try again."
+      );
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// inferPlatform
+// ---------------------------------------------------------------------------
+
+/**
+ * Infers an app platform label from a repo's primary language and topics.
+ */
+function inferPlatform(
+  language: string | null,
+  topics: string[]
+): string {
+  const allTopics = topics.map((t) => t.toLowerCase());
+
+  if (allTopics.includes("ios") || allTopics.includes("swift")) return "ios";
+  if (allTopics.includes("android") || allTopics.includes("kotlin")) return "android";
+  if (
+    allTopics.includes("react-native") ||
+    allTopics.includes("flutter") ||
+    allTopics.includes("expo")
+  ) {
+    return "mobile";
+  }
+  if (
+    allTopics.includes("web") ||
+    allTopics.includes("react") ||
+    allTopics.includes("nextjs") ||
+    allTopics.includes("vue") ||
+    allTopics.includes("angular")
+  ) {
+    return "web";
+  }
+
+  const lang = (language ?? "").toLowerCase();
+  if (lang === "swift") return "ios";
+  if (lang === "kotlin" || lang === "java") return "android";
+  if (lang === "dart") return "mobile";
+  if (
+    lang === "typescript" ||
+    lang === "javascript" ||
+    lang === "html" ||
+    lang === "css"
+  ) {
+    return "web";
+  }
+  if (lang === "python" || lang === "go" || lang === "rust" || lang === "ruby") {
+    return "backend";
+  }
+
+  return "other";
+}
+
+// ---------------------------------------------------------------------------
+// importGitHubRepos
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all repos the authenticated user has access to (personal + org repos)
+ * and returns a deduplicated summary list.
+ */
+export const importGitHubRepos = onCall(
+  { maxInstances: 10, timeoutSeconds: 120 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "You must be signed in to import GitHub repositories."
+      );
+    }
+
+    const uid = request.auth.uid;
+    const db = admin.firestore();
+
+    try {
+      const token = await getGitHubToken(uid);
+
+      // Fetch user repos and integration doc in parallel
+      const [userRepos, integrationSnap] = await Promise.all([
+        githubJson<GitHubRepo[]>(
+          token,
+          "/user/repos?per_page=100&sort=updated&type=all"
+        ),
+        db.collection("integrations").doc(uid).get(),
+      ]);
+
+      // Determine connected orgs
+      const integrationData = integrationSnap.data();
+      const orgs: Array<{ login: string }> =
+        integrationData?.orgs ?? [];
+
+      // Fetch org repos in parallel
+      const orgRepoArrays = await Promise.all(
+        orgs.map((org) =>
+          githubJson<GitHubRepo[]>(
+            token,
+            `/orgs/${org.login}/repos?per_page=100&sort=updated&type=all`
+          ).catch(() => [] as GitHubRepo[])
+        )
+      );
+
+      // Merge and deduplicate by full_name
+      const allRepos = [userRepos, ...orgRepoArrays].flat();
+      const seen = new Set<string>();
+      const dedupedRepos: GitHubRepo[] = [];
+      for (const repo of allRepos) {
+        if (!seen.has(repo.full_name)) {
+          seen.add(repo.full_name);
+          dedupedRepos.push(repo);
+        }
+      }
+
+      // Return summaries
+      const summaries = dedupedRepos.map((repo) => ({
+        fullName: repo.full_name,
+        name: repo.name,
+        description: repo.description ?? "",
+        htmlUrl: repo.html_url,
+        language: repo.language ?? "",
+        topics: repo.topics ?? [],
+        private: repo.private,
+        stargazersCount: repo.stargazers_count,
+        forksCount: repo.forks_count,
+        openIssuesCount: repo.open_issues_count,
+        defaultBranch: repo.default_branch,
+        pushedAt: repo.pushed_at ?? null,
+        updatedAt: repo.updated_at ?? null,
+        platform: inferPlatform(repo.language, repo.topics ?? []),
+      }));
+
+      logger.info("importGitHubRepos complete", {
+        uid,
+        repoCount: summaries.length,
+      });
+
+      return { repos: summaries };
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      logger.error("importGitHubRepos failed", { error, uid });
+      throw new HttpsError(
+        "internal",
+        "Failed to import GitHub repositories. Please try again."
+      );
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// linkRepoToApp
+// ---------------------------------------------------------------------------
+
+/**
+ * Links a GitHub repository to an existing app or creates a new app for it.
+ * If appId is provided, updates the existing app (ownership verified).
+ * If clientId is provided, creates a new app with auto-populated fields.
+ */
+export const linkRepoToApp = onCall(
+  { maxInstances: 10, timeoutSeconds: 120 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "You must be signed in to link a repository."
+      );
+    }
+
+    const uid = request.auth.uid;
+    const { repoFullName, appId, clientId } = request.data as {
+      repoFullName?: string;
+      appId?: string;
+      clientId?: string;
+    };
+
+    if (!repoFullName || typeof repoFullName !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "repoFullName is required."
+      );
+    }
+    if (!appId && !clientId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Either appId or clientId must be provided."
+      );
+    }
+
+    const db = admin.firestore();
+
+    try {
+      const token = await getGitHubToken(uid);
+
+      // Check for duplicate: same owner already linked this repo
+      const duplicateSnap = await db
+        .collection("apps")
+        .where("ownerId", "==", uid)
+        .where("githubRepo.fullName", "==", repoFullName)
+        .limit(1)
+        .get();
+
+      if (!duplicateSnap.empty) {
+        throw new HttpsError(
+          "already-exists",
+          `Repository ${repoFullName} is already linked to one of your apps.`
+        );
+      }
+
+      // Fetch repo metadata for populating fields
+      const repo = await githubJson<GitHubRepo>(
+        token,
+        `/repos/${repoFullName}`
+      );
+
+      const githubRepoData = {
+        fullName: repo.full_name,
+        name: repo.name,
+        description: repo.description ?? "",
+        htmlUrl: repo.html_url,
+        cloneUrl: repo.clone_url,
+        sshUrl: repo.ssh_url,
+        language: repo.language ?? "",
+        topics: repo.topics ?? [],
+        defaultBranch: repo.default_branch,
+        private: repo.private,
+      };
+
+      let resolvedAppId: string;
+
+      if (appId) {
+        // Verify ownership
+        const appSnap = await db.collection("apps").doc(appId).get();
+        if (!appSnap.exists) {
+          throw new HttpsError("not-found", "App not found.");
+        }
+        const appData = appSnap.data()!;
+        if (appData.ownerId !== uid) {
+          throw new HttpsError(
+            "permission-denied",
+            "You do not have permission to modify this app."
+          );
+        }
+
+        await db.collection("apps").doc(appId).update({
+          githubRepo: githubRepoData,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        resolvedAppId = appId;
+        logger.info("linkRepoToApp: updated existing app", {
+          uid,
+          appId,
+          repoFullName,
+        });
+      } else {
+        // Create a new app
+        const platform = inferPlatform(repo.language, repo.topics ?? []);
+        const techStack: string[] = [];
+        if (repo.language) techStack.push(repo.language);
+        if (repo.topics) {
+          for (const topic of repo.topics.slice(0, 4)) {
+            if (!techStack.includes(topic)) techStack.push(topic);
+          }
+        }
+
+        const newAppRef = db.collection("apps").doc();
+        await newAppRef.set({
+          ownerId: uid,
+          clientId: clientId ?? null,
+          name: repo.name,
+          description: repo.description ?? "",
+          platform,
+          status: "active",
+          repoUrls: [repo.html_url],
+          techStack,
+          githubRepo: githubRepoData,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        resolvedAppId = newAppRef.id;
+        logger.info("linkRepoToApp: created new app", {
+          uid,
+          appId: resolvedAppId,
+          repoFullName,
+          clientId,
+        });
+      }
+
+      // Perform initial activity sync (non-fatal)
+      try {
+        await syncAppActivity(token, resolvedAppId, repoFullName);
+      } catch (syncError) {
+        logger.warn("linkRepoToApp: initial syncAppActivity failed (non-fatal)", {
+          syncError,
+          appId: resolvedAppId,
+          repoFullName,
+        });
+      }
+
+      return { success: true, appId: resolvedAppId };
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      logger.error("linkRepoToApp failed", { error, uid });
+      throw new HttpsError(
+        "internal",
+        "Failed to link repository. Please try again."
       );
     }
   }
