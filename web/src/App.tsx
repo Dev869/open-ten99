@@ -20,8 +20,9 @@ const WorkItemDetail = lazy(() => import('./routes/contractor/WorkItemDetail'));
 const Calendar = lazy(() => import('./routes/contractor/Calendar'));
 const Clients = lazy(() => import('./routes/contractor/Clients'));
 const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
-const Analytics = lazy(() => import('./routes/contractor/Analytics'));
 const FinanceOverview = lazy(() => import('./routes/contractor/FinanceOverview'));
+const Invoices = lazy(() => import('./routes/contractor/Invoices'));
+const Reports = lazy(() => import('./routes/contractor/Reports'));
 const Team = lazy(() => import('./routes/contractor/Team'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
@@ -277,11 +278,19 @@ function ContractorRoutes() {
       />
       <Route
         path="analytics"
-        element={<Analytics workItems={workItems} clients={clients} />}
+        element={<Navigate to="/dashboard/finance" replace />}
       />
       <Route
         path="finance"
         element={<FinanceOverview workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="finance/invoices"
+        element={<Invoices workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="finance/reports"
+        element={<Reports workItems={workItems} clients={clients} />}
       />
       <Route
         path="team"
