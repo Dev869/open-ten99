@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
@@ -15,7 +15,7 @@ interface NavItem {
   to: string;
   key: string;
   label: string;
-  Icon: (props?: IconProps) => JSX.Element;
+  Icon: (props: IconProps) => React.JSX.Element;
 }
 
 const defaultNavItems: NavItem[] = [

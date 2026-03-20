@@ -31,12 +31,6 @@ const statusColors: Record<App['status'], string> = {
   development: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
-const statusStatColors: Record<App['status'], string> = {
-  active: '#22c55e',
-  maintenance: '#eab308',
-  retired: '#9ca3af',
-  development: '#3b82f6',
-};
 
 const TYPE_TABS = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'] as const;
 
