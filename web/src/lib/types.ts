@@ -22,6 +22,7 @@ export interface WorkItem {
   status: WorkItemStatus;
   clientId: string;
   projectId?: string;
+  appId?: string;
   sourceEmail: string;
   subject: string;
   lineItems: LineItem[];
@@ -139,6 +140,54 @@ export const VAULT_SERVICES = [
 ] as const;
 
 export type VaultServiceId = (typeof VAULT_SERVICES)[number]['id'] | string;
+
+/* ── Apps ──────────────────────────────────────────── */
+
+export type AppPlatform = 'web' | 'ios' | 'android' | 'desktop' | 'api' | 'other';
+export type AppStatus = 'active' | 'maintenance' | 'retired' | 'development';
+export type AppEnvironment = 'production' | 'staging' | 'development' | 'other';
+
+export interface App {
+  id?: string;
+  clientId: string;
+  projectId?: string;
+  name: string;
+  description?: string;
+  platform: AppPlatform;
+  status: AppStatus;
+  url?: string;
+  repoUrls: string[];
+  techStack?: string[];
+  hosting?: string;
+  environment?: AppEnvironment;
+  deploymentNotes?: string;
+  vaultCredentialIds?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const APP_PLATFORM_LABELS: Record<AppPlatform, string> = {
+  web: 'Web',
+  ios: 'iOS',
+  android: 'Android',
+  desktop: 'Desktop',
+  api: 'API',
+  other: 'Other',
+};
+
+export const APP_STATUS_LABELS: Record<AppStatus, string> = {
+  active: 'Active',
+  maintenance: 'Maintenance',
+  retired: 'Retired',
+  development: 'Development',
+};
+
+export const APP_ENVIRONMENT_LABELS: Record<AppEnvironment, string> = {
+  production: 'Production',
+  staging: 'Staging',
+  development: 'Development',
+  other: 'Other',
+};
 
 /* ── Teams ─────────────────────────────────────────── */
 
