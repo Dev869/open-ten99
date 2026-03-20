@@ -577,6 +577,58 @@ export const linkRepoToApp = onCall(
   }
 );
 
+// ---------------------------------------------------------------------------
+// triggerGitHubSync
+// ---------------------------------------------------------------------------
+
+/**
+ * Callable function that lets a user manually trigger a GitHub sync for their
+ * apps. Rate-limited to once per 5 minutes.
+ */
+export const triggerGitHubSync = onCall(
+  { maxInstances: 10, timeoutSeconds: 300 },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "You must be signed in.");
+    }
+    const uid = request.auth.uid;
+    const db = admin.firestore();
+
+    try {
+      // Rate limit: 5 minutes between syncs
+      const integrationDoc = await db.collection("integrations").doc(uid).get();
+      if (!integrationDoc.exists || !integrationDoc.data()?.connected) {
+        throw new HttpsError("failed-precondition", "GitHub not connected.");
+      }
+      const lastSync = integrationDoc.data()?.lastSyncAt?.toDate?.();
+      if (lastSync && Date.now() - lastSync.getTime() < 5 * 60 * 1000) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Please wait at least 5 minutes between syncs."
+        );
+      }
+
+      const { syncUserApps } = await import("./syncGitHub");
+      await syncUserApps(uid);
+
+      return { success: true };
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      logger.error("triggerGitHubSync failed", { error, uid });
+      throw new HttpsError(
+        "internal",
+        "Failed to trigger GitHub sync. Please try again."
+      );
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// disconnectGitHub
+// ---------------------------------------------------------------------------
+
 /**
  * Disconnects GitHub by removing the stored access token and marking the
  * integration as disconnected.

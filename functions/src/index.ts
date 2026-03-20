@@ -14,4 +14,6 @@ export {
   disconnectGitHub,
   importGitHubRepos,
   linkRepoToApp,
+  triggerGitHubSync,
 } from "./github";
+export { syncGitHub } from "./syncGitHub";
