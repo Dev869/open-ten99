@@ -17,8 +17,9 @@
 | Action | File | Responsibility |
 |--------|------|----------------|
 | Create | `functions/src/utils/githubClient.ts` | GitHub API client wrapper — authenticated fetch, error handling, 401 detection |
+| Create | `functions/src/utils/syncActivity.ts` | Shared sync logic: `syncAppActivity` function + GitHub API types (avoids circular import between github.ts and syncGitHub.ts) |
 | Create | `functions/src/github.ts` | Callable functions: `getGitHubAuthUrl`, `handleGitHubCallback`, `disconnectGitHub`, `importGitHubRepos`, `linkRepoToApp`, `triggerGitHubSync` |
-| Create | `functions/src/syncGitHub.ts` | Scheduled sync function (every 6 hours) + shared sync logic |
+| Create | `functions/src/syncGitHub.ts` | Scheduled sync function (every 6 hours) |
 | Create | `functions/src/onGitHubWebhook.ts` | HTTPS webhook endpoint for GitHub events |
 | Modify | `functions/src/index.ts` | Export new functions |
 | Modify | `functions/package.json` | Add `node-fetch` if needed (or use built-in fetch in Node 20) |
@@ -94,10 +95,10 @@ export async function githubJson<T>(token: string, path: string): Promise<T> {
 
 export async function markDisconnected(userId: string): Promise<void> {
   const db = admin.firestore();
-  await db.collection("integrations").doc(userId).update({
+  await db.collection("integrations").doc(userId).set({
     connected: false,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  }, { merge: true });
 }
 ```
 
@@ -127,7 +128,7 @@ import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
-import { githubJson } from "./utils/githubClient";
+import { getGitHubToken, githubJson, markDisconnected } from "./utils/githubClient";
 
 const githubClientId = defineString("GITHUB_CLIENT_ID");
 const githubClientSecret = defineString("GITHUB_CLIENT_SECRET");
@@ -317,10 +318,8 @@ export const disconnectGitHub = onCall(
       .doc("token")
       .delete();
 
-    // Mark disconnected
-    await db.collection("integrations").doc(uid).update({
-      connected: false,
-    });
+    // Mark disconnected (uses set+merge to handle case where doc doesn't exist)
+    await markDisconnected(uid);
 
     logger.info("GitHub disconnected", { uid });
 
@@ -342,14 +341,15 @@ git commit -m "feat: add GitHub OAuth callable functions"
 
 ---
 
-## Task 3: Import & Link Functions
+## Task 3: Shared Sync Activity Module + Import & Link Functions
 
 **Files:**
+- Create: `functions/src/utils/syncActivity.ts`
 - Modify: `functions/src/github.ts`
 
-- [ ] **Step 1: Add importGitHubRepos and linkRepoToApp**
+- [ ] **Step 1: Create `functions/src/utils/syncActivity.ts`**
 
-Append to `functions/src/github.ts`:
+This shared module contains `syncAppActivity` and its GitHub API types to avoid a circular import between `github.ts` and `syncGitHub.ts`.
 
 ```typescript
 // ---------- Types for repos ----------
@@ -434,15 +434,9 @@ export async function syncAppActivity(
   // Fetch open PR count
   const openPrs = await githubJson<GitHubPull[]>(
     token,
-    `/repos/${repoFullName}/pulls?state=open&per_page=1`
-  );
-  // Use Link header for total count, or fetch with per_page=100
-  // For simplicity, fetch open PRs list
-  const allOpenPrs = await githubJson<GitHubPull[]>(
-    token,
     `/repos/${repoFullName}/pulls?state=open&per_page=100`
   );
-  const openPrCount = allOpenPrs.length;
+  const openPrCount = openPrs.length;
 
   // Update app document with repo metadata
   await db
@@ -540,6 +534,36 @@ export async function syncAppActivity(
   }
   await batch.commit();
 }
+```
+
+This file needs imports:
+```typescript
+import * as admin from "firebase-admin";
+import { githubJson } from "./githubClient";
+```
+
+- [ ] **Step 2: Add importGitHubRepos and linkRepoToApp to `functions/src/github.ts`**
+
+Add the import for `syncAppActivity` and the platform inference function, then append the callable functions.
+
+Add to imports in `github.ts`:
+```typescript
+import { syncAppActivity } from "./utils/syncActivity";
+```
+
+Add `inferPlatform` as a local function in `github.ts`:
+
+```typescript
+function inferPlatform(language: string | null, topics: string[]): string {
+  const all = [language?.toLowerCase(), ...topics.map((t) => t.toLowerCase())].filter(Boolean);
+  if (all.some((t) => ["swift", "swiftui"].includes(t!))) return "ios";
+  if (all.some((t) => ["kotlin", "android"].includes(t!))) return "android";
+  if (all.some((t) => ["react", "vue", "angular", "nextjs", "svelte", "html", "css"].includes(t!))) return "web";
+  if (all.some((t) => ["express", "fastapi", "django", "flask", "rails"].includes(t!))) return "api";
+  if (all.some((t) => ["electron", "tauri"].includes(t!))) return "desktop";
+  return "other";
+}
+```
 
 // ---------- importGitHubRepos ----------
 
@@ -633,6 +657,17 @@ export const linkRepoToApp = onCall(
     const token = await getGitHubToken(uid);
     const db = admin.firestore();
 
+    // Check if repo is already linked to an app owned by this user
+    const existingSnap = await db
+      .collection("apps")
+      .where("ownerId", "==", uid)
+      .where("githubRepo.fullName", "==", repoFullName)
+      .limit(1)
+      .get();
+    if (!existingSnap.empty) {
+      throw new HttpsError("already-exists", "This repo is already linked to an app.");
+    }
+
     // Fetch repo info
     const repo = await githubJson<GitHubRepo>(
       token,
@@ -660,7 +695,7 @@ export const linkRepoToApp = onCall(
         throw new HttpsError("not-found", "App not found.");
       }
       if (appDoc.data()?.ownerId !== uid) {
-        throw new HttpsError("unauthenticated", "Not your app.");
+        throw new HttpsError("permission-denied", "Not your app.");
       }
       await db.collection("apps").doc(appId).update({
         githubRepo: githubRepoData,
@@ -703,21 +738,15 @@ export const linkRepoToApp = onCall(
 );
 ```
 
-Also add the missing import at top of file:
-
-```typescript
-import { getGitHubToken, githubJson } from "./utils/githubClient";
-```
-
-- [ ] **Step 2: Verify build passes**
+- [ ] **Step 3: Verify build passes**
 
 Run: `cd functions && npm run build`
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add functions/src/github.ts
-git commit -m "feat: add importGitHubRepos and linkRepoToApp callable functions"
+git add functions/src/utils/syncActivity.ts functions/src/github.ts
+git commit -m "feat: add syncActivity module, importGitHubRepos and linkRepoToApp"
 ```
 
 ---
@@ -757,6 +786,8 @@ export const triggerGitHubSync = onCall(
       );
     }
 
+    // Import syncUserApps — this is safe because syncGitHub.ts no longer
+    // imports from github.ts (syncAppActivity is in utils/syncActivity.ts)
     const { syncUserApps } = await import("./syncGitHub");
     await syncUserApps(uid);
 
@@ -788,7 +819,7 @@ import {
   GitHubTokenRevoked,
   markDisconnected,
 } from "./utils/githubClient";
-import { syncAppActivity } from "./github";
+import { syncAppActivity } from "./utils/syncActivity";
 
 // Sync all GitHub-connected apps for a single user
 export async function syncUserApps(userId: string): Promise<void> {
@@ -908,7 +939,7 @@ import * as crypto from "crypto";
 const webhookSecret = defineString("GITHUB_WEBHOOK_SECRET");
 
 function verifySignature(
-  payload: string,
+  payload: Buffer,
   signature: string | undefined,
   secret: string
 ): boolean {
@@ -930,23 +961,22 @@ export const onGitHubWebhook = onRequest(
       return;
     }
 
-    // Verify webhook signature
-    const rawBody =
-      typeof req.body === "string"
-        ? req.body
-        : JSON.stringify(req.body);
+    // Verify webhook signature using raw body bytes (req.rawBody)
+    // IMPORTANT: Do NOT use JSON.stringify(req.body) — Firebase parses JSON
+    // bodies automatically, and re-serializing may change byte ordering,
+    // causing signature verification to always fail.
     const signature = req.headers["x-hub-signature-256"] as
       | string
       | undefined;
 
-    if (!verifySignature(rawBody, signature, webhookSecret.value())) {
+    if (!verifySignature(req.rawBody, signature, webhookSecret.value())) {
       logger.warn("Invalid webhook signature");
       res.status(401).send("Unauthorized");
       return;
     }
 
     const event = req.headers["x-github-event"] as string;
-    const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const payload = req.body; // Already parsed by Firebase
     const repoFullName = payload?.repository?.full_name as string | undefined;
 
     if (!repoFullName) {
