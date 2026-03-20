@@ -14,6 +14,7 @@ import { AppFormModal } from '../../components/AppFormModal';
 import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
 import { FilterTabs } from '../../components/FilterTabs';
 import { deleteApp } from '../../services/firestore';
+import { useGitHubActivity } from '../../hooks/useFirestore';
 import {
   IconChevronLeft,
   IconEdit,
@@ -28,6 +29,7 @@ interface AppDetailProps {
 }
 
 const TYPE_TABS = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'] as const;
+const TIMELINE_TABS = ['All', 'Change Requests', 'Feature Requests', 'Maintenance', 'GitHub'] as const;
 
 const typeTabToKey: Record<string, string> = {
   'All': 'all',
@@ -35,6 +37,22 @@ const typeTabToKey: Record<string, string> = {
   'Feature Requests': 'featureRequest',
   'Maintenance': 'maintenance',
 };
+
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
+}
 
 export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppDetailProps) {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +65,8 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
   const [deleting, setDeleting] = useState(false);
 
   const app = apps.find((a) => a.id === id);
+
+  const { activities, loading: activitiesLoading } = useGitHubActivity(app?.id);
 
   const clientName = useMemo(() => {
     if (!app) return '';
@@ -95,6 +115,12 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
   }
 
   const activeCount = statusCounts.inReview + statusCounts.approved;
+  const isGitHubTab = selectedType === 'GitHub';
+
+  // Build tab list: include GitHub tab only when repo is linked
+  const availableTabs = app.githubRepo
+    ? [...TIMELINE_TABS]
+    : [...TYPE_TABS];
 
   return (
     <div className="max-w-5xl animate-fade-in-up">
@@ -155,6 +181,16 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
         <div className="animate-fade-in-up flex-1 min-w-[120px]" style={{ animationDelay: '200ms' }}>
           <StatCard label="Credentials" value={String(app.vaultCredentialIds?.length ?? 0)} />
         </div>
+        {app.githubRepo && (
+          <>
+            <div className="animate-fade-in-up flex-1 min-w-[120px]" style={{ animationDelay: '250ms' }}>
+              <StatCard label="Open PRs" value={String(app.githubRepo.openPrCount)} />
+            </div>
+            <div className="animate-fade-in-up flex-1 min-w-[120px]" style={{ animationDelay: '300ms' }}>
+              <StatCard label="Open Issues" value={String(app.githubRepo.openIssuesCount)} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Two-column layout */}
@@ -163,52 +199,201 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
         <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
-              Activity ({filteredWorkOrders.length})
+              {isGitHubTab
+                ? `GitHub Activity (${activities.length})`
+                : `Activity (${filteredWorkOrders.length})`}
             </h2>
           </div>
           <div className="mb-3">
             <FilterTabs
-              tabs={[...TYPE_TABS]}
+              tabs={availableTabs}
               selected={selectedType}
               onSelect={setSelectedType}
             />
           </div>
-          <div className="space-y-2">
-            {filteredWorkOrders.map((item, i) => (
-              <div
-                key={item.id}
-                className="animate-fade-in-up"
-                style={{ animationDelay: `${250 + Math.min(i, 8) * 50}ms` }}
-              >
-                <WorkItemCard item={item} clientName={clientName} appName={app.name} />
-              </div>
-            ))}
-          </div>
-          {filteredWorkOrders.length === 0 && (
-            <div
-              className="text-center py-16 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] animate-fade-in-up"
-              style={{ animationDelay: '250ms' }}
-            >
-              <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  className="text-[var(--text-secondary)]/50"
-                >
-                  <rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M4 11h20" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M9 16h10M9 19h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="text-sm font-semibold text-[var(--text-primary)]">No work orders yet</div>
-              <div className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
-                {selectedType === 'All'
-                  ? 'Work orders linked to this app will appear here.'
-                  : `No ${WORK_ITEM_TYPE_LABELS[typeTabToKey[selectedType] as keyof typeof WORK_ITEM_TYPE_LABELS] ?? selectedType.toLowerCase()} work orders yet.`}
-              </div>
+
+          {/* GitHub tab content */}
+          {isGitHubTab ? (
+            <div className="space-y-2">
+              {activitiesLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-16 bg-[var(--bg-card)] rounded-xl border border-[var(--border)]">
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                    <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor" className="text-[var(--text-secondary)]/50">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">No GitHub activity yet</div>
+                  <div className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
+                    Commits, PRs, issues, and deployments will appear here.
+                  </div>
+                </div>
+              ) : (
+                activities.map((activity, i) => (
+                  <a
+                    key={activity.id ?? i}
+                    href={activity.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:shadow-md transition-shadow group"
+                  >
+                    {/* Activity type icon */}
+                    <div className="flex-shrink-0 mt-0.5">
+                      {activity.type === 'commit' && (
+                        <div className="w-7 h-7 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-[var(--text-secondary)]">
+                            <path d="M10.5 7a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm.061 3.073a6 6 0 10-5.123 0 .75.75 0 01-.461 1.427 7.5 7.5 0 116.046 0 .75.75 0 01-.462-1.427z"/>
+                          </svg>
+                        </div>
+                      )}
+                      {activity.type === 'pull_request' && (
+                        <div className="w-7 h-7 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-purple-500">
+                            <path d="M7.177 3.073L9.573.677A.25.25 0 0110 .854v4.792a.25.25 0 01-.427.177L7.177 3.427a.25.25 0 010-.354zM3.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122v5.256a2.251 2.251 0 11-1.5 0V5.372A2.25 2.25 0 011.5 3.25zM11 2.5h-1V4h1a1 1 0 011 1v5.628a2.251 2.251 0 101.5 0V5A2.5 2.5 0 0011 2.5zm1 10.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0zM3.75 12a.75.75 0 100 1.5.75.75 0 000-1.5z"/>
+                          </svg>
+                        </div>
+                      )}
+                      {activity.type === 'issue' && (
+                        <div className="w-7 h-7 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-orange-500">
+                            <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path fillRule="evenodd" d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/>
+                          </svg>
+                        </div>
+                      )}
+                      {activity.type === 'deployment' && (
+                        <div className="w-7 h-7 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-blue-500">
+                            <path fillRule="evenodd" d="M8.22 1.754a.25.25 0 00-.44 0L1.698 13.132a.25.25 0 00.22.368h12.164a.25.25 0 00.22-.368L8.22 1.754zm-1.763-.707c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0114.082 15H1.918a1.75 1.75 0 01-1.543-2.575L6.457 1.047zM9 11a1 1 0 11-2 0 1 1 0 012 0zm-.25-5.25a.75.75 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5z"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Activity content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Commit: SHA chip */}
+                        {activity.type === 'commit' && activity.sha && (
+                          <code className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-input)] text-[var(--text-secondary)]">
+                            [{activity.sha.slice(0, 7)}]
+                          </code>
+                        )}
+                        {/* PR / Issue: number badge */}
+                        {(activity.type === 'pull_request' || activity.type === 'issue') && activity.number && (
+                          <span className="text-xs font-mono text-[var(--text-secondary)]">
+                            #{activity.number}
+                          </span>
+                        )}
+                        {/* Title */}
+                        <span className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">
+                          {activity.title}
+                        </span>
+                        {/* External link icon */}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 opacity-0 group-hover:opacity-50 transition-opacity text-[var(--text-secondary)]">
+                          <path d="M7 1h4v4M11 1L5 7M4 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {/* PR status badge */}
+                        {activity.type === 'pull_request' && activity.status && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                            activity.status === 'open'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                              : activity.status === 'merged'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                          }`}>
+                            {activity.status}
+                          </span>
+                        )}
+                        {/* Issue status badge */}
+                        {activity.type === 'issue' && activity.status && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                            activity.status === 'open'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400'
+                          }`}>
+                            {activity.status}
+                          </span>
+                        )}
+                        {/* Deployment: environment + status badges */}
+                        {activity.type === 'deployment' && (
+                          <>
+                            {activity.branch && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--bg-input)] text-[var(--text-secondary)]">
+                                {activity.branch}
+                              </span>
+                            )}
+                            {activity.status && (
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                                activity.status === 'success'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                  : activity.status === 'failure'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                              }`}>
+                                {activity.status}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        {/* Author */}
+                        <span className="text-xs text-[var(--text-secondary)]">{activity.author}</span>
+                        {/* Timestamp */}
+                        <span className="text-xs text-[var(--text-tertiary)]">
+                          {formatRelativeTime(activity.updatedAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </a>
+                ))
+              )}
             </div>
+          ) : (
+            /* Work orders tab content */
+            <>
+              <div className="space-y-2">
+                {filteredWorkOrders.map((item, i) => (
+                  <div
+                    key={item.id}
+                    className="animate-fade-in-up"
+                    style={{ animationDelay: `${250 + Math.min(i, 8) * 50}ms` }}
+                  >
+                    <WorkItemCard item={item} clientName={clientName} appName={app.name} />
+                  </div>
+                ))}
+              </div>
+              {filteredWorkOrders.length === 0 && (
+                <div
+                  className="text-center py-16 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] animate-fade-in-up"
+                  style={{ animationDelay: '250ms' }}
+                >
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-[var(--bg-input)] flex items-center justify-center">
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 28 28"
+                      fill="none"
+                      className="text-[var(--text-secondary)]/50"
+                    >
+                      <rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M4 11h20" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M9 16h10M9 19h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">No work orders yet</div>
+                  <div className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
+                    {selectedType === 'All'
+                      ? 'Work orders linked to this app will appear here.'
+                      : `No ${WORK_ITEM_TYPE_LABELS[typeTabToKey[selectedType] as keyof typeof WORK_ITEM_TYPE_LABELS] ?? selectedType.toLowerCase()} work orders yet.`}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -327,6 +512,25 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                 <Link to="/dashboard/vault" className="text-sm text-[var(--accent)] hover:underline">
                   {app.vaultCredentialIds.length} credential{app.vaultCredentialIds.length !== 1 ? 's' : ''} linked
                 </Link>
+              </div>
+            )}
+
+            {/* GitHub section */}
+            {app.githubRepo && (
+              <div>
+                <h4 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">GitHub</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--bg-input)] text-[var(--text-secondary)]">{app.githubRepo.defaultBranch}</span>
+                    {app.githubRepo.language && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--bg-input)] text-[var(--text-secondary)]">{app.githubRepo.language}</span>
+                    )}
+                  </div>
+                  <p className="text-[var(--text-secondary)]">{app.githubRepo.stargazersCount} stars</p>
+                  <a href={`https://github.com/${app.githubRepo.fullName}`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline text-sm">
+                    View on GitHub
+                  </a>
+                </div>
               </div>
             )}
 
