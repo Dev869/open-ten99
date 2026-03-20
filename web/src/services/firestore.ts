@@ -11,8 +11,6 @@ import {
   Timestamp,
   getDocs,
   writeBatch,
-  limit,
-  startAfter,
   type DocumentData,
   type DocumentSnapshot,
   type QueryConstraint,

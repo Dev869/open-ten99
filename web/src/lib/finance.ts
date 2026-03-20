@@ -34,6 +34,7 @@ export interface TypeRevenue {
   type: WorkItemType;
   revenue: number;
   count: number;
+  hours: number;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -271,12 +272,14 @@ export function getRevenueByType(items: readonly WorkItem[], range: DateRange): 
         ...existing,
         revenue: existing.revenue + item.totalCost,
         count: existing.count + 1,
+        hours: existing.hours + item.totalHours,
       });
     } else {
       map.set(item.type, {
         type: item.type,
         revenue: item.totalCost,
         count: 1,
+        hours: item.totalHours,
       });
     }
   }
