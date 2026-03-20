@@ -566,3 +566,20 @@ export function IconInfo({ size = 16, className, color }: IconProps) {
     </svg>
   );
 }
+
+/** Retro app grid with four squares */
+export function IconApps({ size = 22, className, color }: IconProps) {
+  const s = color || 'var(--icon-stroke)';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3" y="3" width="8" height="8" rx="2" fill="var(--icon-fill)" stroke={s} strokeWidth="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="2" fill="var(--icon-fill)" stroke={s} strokeWidth="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="2" fill="var(--icon-fill)" stroke={s} strokeWidth="1.5" />
+      <rect x="13" y="13" width="8" height="8" rx="2" fill="var(--icon-highlight)" stroke={s} strokeWidth="1.5" />
+      <circle cx="7" cy="7" r="1.5" fill="var(--icon-accent)" />
+      <circle cx="17" cy="7" r="1.5" fill="var(--icon-accent)" />
+      <circle cx="7" cy="17" r="1.5" fill="var(--icon-accent)" />
+      <circle cx="17" cy="17" r="1.5" fill="var(--icon-accent)" />
+    </svg>
+  );
+}

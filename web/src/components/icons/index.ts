@@ -7,6 +7,7 @@ export {
   IconClients,
   IconTeam,
   IconAnalytics,
+  IconApps,
   IconSettings,
   IconUser,
   IconLock,

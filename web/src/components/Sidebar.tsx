@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
-  IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics,
+  IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconApps,
   IconSettings, IconUser, IconLock, IconBell, IconGear,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconLayers,
 } from './icons';
@@ -23,6 +23,7 @@ const defaultNavItems: NavItem[] = [
   { to: '/dashboard/work-items', key: 'work-items', label: 'Work Items', Icon: IconDocument },
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
+  { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },
   { to: '/dashboard/analytics', key: 'analytics', label: 'Analytics', Icon: IconAnalytics },
   { key: 'team', to: '/dashboard/team', label: 'Team', Icon: IconTeam },
   { to: '/dashboard/vault', key: 'vault', label: 'Vault', Icon: IconLock },

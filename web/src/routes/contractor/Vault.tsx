@@ -61,7 +61,8 @@ export default function Vault({ user, clients }: VaultProps) {
   const [credentials, setCredentials] = useState<VaultCredential[]>([]);
   const [decryptedMap, setDecryptedMap] = useState<Record<string, DecryptedCredentialData>>({});
   const [unlocked, setUnlocked] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
+  const [collapsedServices, setCollapsedServices] = useState<Set<string>>(new Set());
   const [showModal, setShowModal] = useState(false);
   const [editingCred, setEditingCred] = useState<VaultCredential | null>(null);
   const [search, setSearch] = useState('');
@@ -204,20 +205,42 @@ export default function Vault({ user, clients }: VaultProps) {
     await deleteVaultCredential(user.uid, credId);
   }
 
-  // Filter + search
+  // Search filter
   const filtered = credentials.filter((c) => {
-    if (filter !== 'all' && c.clientId !== filter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const svc = serviceInfo(c.service);
-      return (
-        c.label.toLowerCase().includes(q) ||
-        svc.label.toLowerCase().includes(q) ||
-        (clientMap[c.clientId] ?? '').toLowerCase().includes(q)
-      );
-    }
-    return true;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const svc = serviceInfo(c.service);
+    return (
+      c.label.toLowerCase().includes(q) ||
+      svc.label.toLowerCase().includes(q) ||
+      (clientMap[c.clientId] ?? '').toLowerCase().includes(q)
+    );
   });
+
+  // Group by client → service
+  const grouped = (() => {
+    const byClient = new Map<string, Map<string, VaultCredential[]>>();
+    for (const cred of filtered) {
+      if (!byClient.has(cred.clientId)) byClient.set(cred.clientId, new Map());
+      const svcMap = byClient.get(cred.clientId)!;
+      if (!svcMap.has(cred.service)) svcMap.set(cred.service, []);
+      svcMap.get(cred.service)!.push(cred);
+    }
+    return Array.from(byClient.entries())
+      .map(([cId, svcMap]) => ({
+        clientId: cId,
+        clientName: clientMap[cId] ?? 'Unknown',
+        totalCount: Array.from(svcMap.values()).reduce((sum, arr) => sum + arr.length, 0),
+        services: Array.from(svcMap.entries())
+          .map(([sId, creds]) => ({
+            serviceId: sId,
+            svc: serviceInfo(sId),
+            credentials: creds,
+          }))
+          .sort((a, b) => a.svc.label.localeCompare(b.svc.label)),
+      }))
+      .sort((a, b) => a.clientName.localeCompare(b.clientName));
+  })();
 
   // Render
   if (metaLoading) {
@@ -293,32 +316,7 @@ export default function Vault({ user, clients }: VaultProps) {
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-1.5 flex-wrap mb-4">
-        <button
-          onClick={() => setFilter('all')}
-          className={cn(
-            'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
-            filter === 'all' ? 'bg-[var(--accent)] text-white' : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)]',
-          )}
-        >
-          All ({credentials.length})
-        </button>
-        {clients.filter((c) => credentials.some((cr) => cr.clientId === c.id)).map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setFilter(c.id!)}
-            className={cn(
-              'min-h-[36px] px-3.5 rounded-full text-xs font-medium transition-all active:scale-[0.95]',
-              filter === c.id ? 'bg-[var(--accent)] text-white' : 'border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)]',
-            )}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Credentials */}
+      {/* Credentials grouped by client → application */}
       {filtered.length === 0 ? (
         <div className="text-center py-20 animate-fade-in-up">
           <div className="mx-auto mb-5 w-20 h-20 rounded-2xl bg-[var(--bg-input)] flex items-center justify-center">
@@ -330,7 +328,7 @@ export default function Vault({ user, clients }: VaultProps) {
           <div className="text-sm text-[var(--text-secondary)] mt-1.5 max-w-xs mx-auto">
             {credentials.length === 0
               ? 'Store API keys, passwords, and service credentials for your clients — all encrypted end-to-end.'
-              : 'Try adjusting your search or filter.'}
+              : 'Try adjusting your search.'}
           </div>
           {credentials.length === 0 && (
             <button
@@ -343,18 +341,98 @@ export default function Vault({ user, clients }: VaultProps) {
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((cred, i) => (
-            <CredentialCard
-              key={cred.id}
-              credential={cred}
-              decrypted={decryptedMap[cred.id!]}
-              clientName={clientMap[cred.clientId] ?? 'Unknown'}
-              index={i}
-              onEdit={() => { setEditingCred(cred); setShowModal(true); }}
-              onDelete={() => handleDelete(cred.id!)}
-            />
-          ))}
+        <div className="space-y-4">
+          {grouped.map((group) => {
+            const clientCollapsed = collapsedClients.has(group.clientId);
+            return (
+              <div key={group.clientId} className="rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--bg-card)] animate-fade-in-up">
+                {/* Client header */}
+                <button
+                  onClick={() => setCollapsedClients((prev) => {
+                    const next = new Set(prev);
+                    next.has(group.clientId) ? next.delete(group.clientId) : next.add(group.clientId);
+                    return next;
+                  })}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--bg-input)] transition-colors"
+                >
+                  <IconChevronDown
+                    size={16}
+                    className={cn(
+                      'transition-transform duration-200 text-[var(--text-secondary)] flex-shrink-0',
+                      clientCollapsed && '-rotate-90',
+                    )}
+                  />
+                  <span className="text-sm font-bold text-[var(--text-primary)] flex-1 min-w-0 truncate">
+                    {group.clientName}
+                  </span>
+                  <span className="text-[11px] text-[var(--text-secondary)] tabular-nums flex-shrink-0">
+                    {group.totalCount} credential{group.totalCount !== 1 ? 's' : ''}
+                  </span>
+                </button>
+
+                {/* Services within this client */}
+                {!clientCollapsed && (
+                  <div className="border-t border-[var(--border)]">
+                    {group.services.map((svcGroup, svcIdx) => {
+                      const svcKey = `${group.clientId}:${svcGroup.serviceId}`;
+                      const svcCollapsed = collapsedServices.has(svcKey);
+                      return (
+                        <div key={svcGroup.serviceId}>
+                          {/* Service sub-header */}
+                          <button
+                            onClick={() => setCollapsedServices((prev) => {
+                              const next = new Set(prev);
+                              next.has(svcKey) ? next.delete(svcKey) : next.add(svcKey);
+                              return next;
+                            })}
+                            className={cn(
+                              'w-full flex items-center gap-2.5 px-4 py-2.5 pl-11 text-left hover:bg-[var(--bg-input)] transition-colors',
+                              svcIdx > 0 && 'border-t border-[var(--border)]',
+                            )}
+                          >
+                            <IconChevronDown
+                              size={14}
+                              className={cn(
+                                'transition-transform duration-200 text-[var(--text-secondary)] flex-shrink-0',
+                                svcCollapsed && '-rotate-90',
+                              )}
+                            />
+                            <span
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: svcGroup.svc.color }}
+                            />
+                            <span className="text-xs font-semibold text-[var(--text-primary)] flex-1 min-w-0 truncate">
+                              {svcGroup.svc.label}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-secondary)] tabular-nums flex-shrink-0">
+                              {svcGroup.credentials.length}
+                            </span>
+                          </button>
+
+                          {/* Credentials for this service */}
+                          {!svcCollapsed && (
+                            <div className="px-4 pb-3 pt-1 pl-11 space-y-2">
+                              {svcGroup.credentials.map((cred, i) => (
+                                <CredentialCard
+                                  key={cred.id}
+                                  credential={cred}
+                                  decrypted={decryptedMap[cred.id!]}
+                                  clientName={group.clientName}
+                                  index={i}
+                                  onEdit={() => { setEditingCred(cred); setShowModal(true); }}
+                                  onDelete={() => handleDelete(cred.id!)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
