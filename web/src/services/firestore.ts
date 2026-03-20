@@ -810,6 +810,12 @@ export async function fetchTransactions(options: {
     if (options.type) {
       results = results.filter((t) => t.type === options.type);
     }
+    if (options.dateFrom) {
+      results = results.filter((t) => t.date >= options.dateFrom!);
+    }
+    if (options.dateTo) {
+      results = results.filter((t) => t.date <= options.dateTo!);
+    }
 
     // Client-side sort by date descending
     results.sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -830,5 +836,65 @@ export async function fetchTransactions(options: {
     console.error('Failed to fetch transactions:', error);
     return { transactions: [], lastDoc: null, hasMore: false };
   }
+}
+
+export async function createManualExpense(data: {
+  description: string;
+  amount: number;
+  category: string;
+  date: Date;
+  taxDeductible: boolean;
+  receiptUrl?: string;
+}): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = await addDoc(collection(db, 'transactions'), {
+    ownerId: user.uid,
+    provider: 'manual',
+    externalId: null,
+    date: Timestamp.fromDate(data.date),
+    amount: -Math.abs(data.amount), // Expenses are negative
+    description: data.description,
+    category: data.category,
+    type: 'expense',
+    matchStatus: 'unmatched',
+    isManual: true,
+    taxDeductible: data.taxDeductible,
+    receiptUrl: data.receiptUrl ?? null,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export async function confirmMatch(transactionId: string, workItemId: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'transactions', transactionId), {
+    matchStatus: 'confirmed',
+    matchedWorkItemId: workItemId,
+    updatedAt: Timestamp.now(),
+  });
+  batch.update(doc(db, 'workItems', workItemId), {
+    invoiceStatus: 'paid',
+    invoicePaidDate: Timestamp.fromDate(new Date()),
+    updatedAt: Timestamp.now(),
+  });
+  await batch.commit();
+}
+
+export async function rejectMatch(transactionId: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  await updateDoc(doc(db, 'transactions', transactionId), {
+    matchStatus: 'rejected',
+    matchedWorkItemId: null,
+    matchConfidence: null,
+    updatedAt: Timestamp.now(),
+  });
 }
 
