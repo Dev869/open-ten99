@@ -82,8 +82,8 @@ export default function Transactions() {
   }, []);
 
   // Reload whenever filters change
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadInitial(filterAccountId, filterType);
   }, [filterAccountId, filterType, loadInitial]);
 
