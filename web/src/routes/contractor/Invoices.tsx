@@ -5,7 +5,7 @@ import { getInvoicesByStatus, getInvoiceStatusCounts, getAgingBuckets } from '..
 import { AgingSummary } from '../../components/finance/AgingSummary';
 import { InvoiceTable } from '../../components/finance/InvoiceTable';
 import { InvoicePreview } from '../../components/finance/InvoicePreview';
-import { updateInvoiceStatus } from '../../services/firestore';
+import { updateInvoiceStatus, archiveWorkItem } from '../../services/firestore';
 import { formatCurrency, formatDate, exportToCsv } from '../../lib/utils';
 
 interface InvoicesProps {
@@ -89,6 +89,25 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
     } finally {
       setBulkLoading(false);
     }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Archive ${selectedIds.size} work order${selectedIds.size !== 1 ? 's' : ''}?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id => archiveWorkItem(id)),
+      );
+      setSelectedIds(new Set());
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    await archiveWorkItem(id);
+    setPreviewItem(null);
   }
 
   function handleExportCsv() {
@@ -180,6 +199,13 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
           >
             Mark as Paid
           </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkLoading}
+            className="px-3 py-1.5 text-sm rounded-lg border border-red-500 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Delete
+          </button>
         </div>
       )}
 
@@ -202,6 +228,7 @@ export default function Invoices({ workItems, clients }: InvoicesProps) {
             setPreviewItem(null);
             navigate(`/dashboard/work-items/${id}`);
           }}
+          onDelete={handleDelete}
         />
       )}
     </div>

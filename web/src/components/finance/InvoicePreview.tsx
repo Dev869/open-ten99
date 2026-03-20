@@ -6,6 +6,7 @@ interface InvoicePreviewProps {
   client: Client | undefined;
   onClose: () => void;
   onNavigate: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -15,7 +16,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   overdue: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
 };
 
-export function InvoicePreview({ workItem, client, onClose, onNavigate }: InvoicePreviewProps) {
+export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete }: InvoicePreviewProps) {
   const status = workItem.invoiceStatus ?? 'draft';
   const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.draft;
   const now = new Date().getTime();
@@ -154,7 +155,7 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate }: Invoic
         </div>
 
         {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-[var(--border)] flex gap-3">
+        <div className="px-6 py-4 border-t border-[var(--border)] flex items-center gap-3">
           <button
             onClick={() => onNavigate(workItem.id ?? '')}
             className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
@@ -166,6 +167,19 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate }: Invoic
             className="px-4 py-2.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
           >
             Close
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Delete "${workItem.subject}"? This will archive the work order.`)) {
+                onDelete(workItem.id ?? '');
+              }
+            }}
+            className="px-4 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+            aria-label="Delete invoice"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </div>
