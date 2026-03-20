@@ -184,6 +184,17 @@ describe('getInvoiceStatusCounts', () => {
     expect(counts.sent).toBe(2);
     expect(counts.paid).toBe(1);
   });
+
+  it('excludes archived items', () => {
+    const items = [
+      makeWorkItem({ isBillable: true, invoiceStatus: 'sent' }),
+      makeWorkItem({ isBillable: true, invoiceStatus: 'paid', status: 'archived' }),
+    ];
+    const counts = getInvoiceStatusCounts(items);
+    expect(counts.all).toBe(1);
+    expect(counts.sent).toBe(1);
+    expect(counts.paid).toBe(0);
+  });
 });
 
 describe('calculateTrend', () => {

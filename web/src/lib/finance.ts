@@ -292,10 +292,11 @@ export function getInvoicesByStatus(
   items: readonly WorkItem[],
   status?: WorkItem['invoiceStatus'],
 ): WorkItem[] {
+  const active = items.filter(item => item.isBillable && item.status !== 'archived');
   if (status === undefined) {
-    return items.filter(item => item.isBillable);
+    return active;
   }
-  return items.filter(item => item.isBillable && item.invoiceStatus === status);
+  return active.filter(item => item.invoiceStatus === status);
 }
 
 /**
@@ -307,7 +308,7 @@ export function getInvoiceStatusCounts(items: readonly WorkItem[]): Record<strin
   const counts: Record<string, number> = { all: 0, draft: 0, sent: 0, paid: 0, overdue: 0 };
 
   for (const item of items) {
-    if (!item.isBillable) continue;
+    if (!item.isBillable || item.status === 'archived') continue;
     counts.all += 1;
     const status = item.invoiceStatus ?? 'draft';
     counts[status] = (counts[status] ?? 0) + 1;
