@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import type { WorkItem, Client, App } from '../../lib/types';
-import { APP_PLATFORM_LABELS, APP_STATUS_LABELS } from '../../lib/types';
+import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../../lib/types';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { AppFormModal } from '../../components/AppFormModal';
 import { updateClient, deleteClient } from '../../services/firestore';
@@ -45,6 +45,12 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
     () => apps.filter(a => a.clientId === client?.id),
     [apps, client?.id]
   );
+
+  const appMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
+    return map;
+  }, [apps]);
 
   const retainerUsage = useMemo(() => {
     if (!client?.retainerHours || !client?.retainerRenewalDay) return null;
@@ -405,6 +411,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
               <WorkItemCard
                 item={item}
                 clientName={client.name}
+                appName={item.appId ? appMap[item.appId] : undefined}
               />
             </div>
           ))}
@@ -462,15 +469,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)]">
                       {APP_PLATFORM_LABELS[app.platform]}
                     </span>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                      app.status === 'active'
-                        ? 'bg-green-500/10 text-green-600'
-                        : app.status === 'development'
-                        ? 'bg-blue-500/10 text-blue-600'
-                        : app.status === 'maintenance'
-                        ? 'bg-yellow-500/10 text-yellow-600'
-                        : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'
-                    }`}>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${APP_STATUS_COLORS[app.status]}`}>
                       {APP_STATUS_LABELS[app.status]}
                     </span>
                   </div>

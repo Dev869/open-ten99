@@ -4,6 +4,7 @@ import type { App, WorkItem, Client } from '../../lib/types';
 import {
   APP_PLATFORM_LABELS,
   APP_STATUS_LABELS,
+  APP_STATUS_COLORS,
   APP_ENVIRONMENT_LABELS,
   WORK_ITEM_TYPE_LABELS,
 } from '../../lib/types';
@@ -25,14 +26,6 @@ interface AppDetailProps {
   clients: Client[];
   hourlyRate: number;
 }
-
-const statusColors: Record<App['status'], string> = {
-  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  retired: 'bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400',
-  development: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-};
-
 
 const TYPE_TABS = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'] as const;
 
@@ -115,14 +108,22 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
       </Link>
 
       {/* App Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">{app.name}</h1>
-        {clientName && (
-          <p className="text-sm text-[var(--text-secondary)] mt-0.5">{clientName}</p>
-        )}
-        {app.description && (
-          <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-2xl">{app.description}</p>
-        )}
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{app.name}</h1>
+          {clientName && (
+            <p className="text-sm text-[var(--text-secondary)] mt-0.5">{clientName}</p>
+          )}
+          {app.description && (
+            <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-2xl">{app.description}</p>
+          )}
+        </div>
+        <button
+          onClick={() => setShowNewWorkOrder(true)}
+          className="flex-shrink-0 px-4 py-2 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all min-h-[44px]"
+        >
+          + New Work Order
+        </button>
       </div>
 
       {/* Stat Cards */}
@@ -179,7 +180,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                 className="animate-fade-in-up"
                 style={{ animationDelay: `${250 + Math.min(i, 8) * 50}ms` }}
               >
-                <WorkItemCard item={item} clientName={clientName} />
+                <WorkItemCard item={item} clientName={clientName} appName={app.name} />
               </div>
             ))}
           </div>
@@ -219,7 +220,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
               <span className="px-2.5 py-1 rounded bg-[var(--bg-input)] text-xs font-medium text-[var(--text-secondary)]">
                 {APP_PLATFORM_LABELS[app.platform]}
               </span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[app.status]}`}>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${APP_STATUS_COLORS[app.status]}`}>
                 {APP_STATUS_LABELS[app.status]}
               </span>
             </div>

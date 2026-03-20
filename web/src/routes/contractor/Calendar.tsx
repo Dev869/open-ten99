@@ -102,7 +102,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 /* ── Component ────────────────────────────────────── */
 
-export default function Calendar({ workItems, clients, apps: _apps }: CalendarProps) {
+export default function Calendar({ workItems, clients, apps }: CalendarProps) {
   const [view, setView] = useState<View>('month');
   const [current, setCurrent] = useState(new Date());
   const navigate = useNavigate();
@@ -112,6 +112,12 @@ export default function Calendar({ workItems, clients, apps: _apps }: CalendarPr
     clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
     return map;
   }, [clients]);
+
+  const appMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
+    return map;
+  }, [apps]);
 
   const active = workItems.filter((i) => i.status !== 'archived');
 
@@ -443,6 +449,9 @@ export default function Calendar({ workItems, clients, apps: _apps }: CalendarPr
                           </div>
                           <div className="text-[9px] text-white/75 font-medium truncate mt-0.5">
                             {clientMap[ci.item.clientId] ?? 'Unknown'}
+                            {ci.item.appId && appMap[ci.item.appId] && (
+                              <> · {appMap[ci.item.appId]}</>
+                            )}
                           </div>
                           <div className="hidden md:flex items-center gap-1 mt-1 flex-wrap">
                             <span className="text-[8px] bg-black/15 px-1 py-px rounded font-semibold">
@@ -531,6 +540,9 @@ export default function Calendar({ workItems, clients, apps: _apps }: CalendarPr
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] text-[var(--text-secondary)]">
                             {clientMap[ci.item.clientId] ?? 'Unknown'}
+                            {ci.item.appId && appMap[ci.item.appId] && (
+                              <> · {appMap[ci.item.appId]}</>
+                            )}
                           </span>
                           <span className="text-[10px] text-[var(--text-secondary)] font-semibold">
                             {ci.item.totalHours.toFixed(1)}h
