@@ -225,12 +225,15 @@ Create `functions/src/matchTransaction.ts`:
 
 - Uses `onDocumentCreated` from `firebase-functions/v2/firestore`
 - Triggered on `transactions/{docId}`
-- Only processes income transactions (`type === 'income'`)
-- Loads all unpaid work items (`invoiceStatus` in `['sent', 'overdue']`) for the same `ownerId`
+- **Exit early** (return without writing) if ANY of these are true:
+  - `isManual === true` (manual expenses don't need matching)
+  - `type !== 'income'` (only match income transactions)
+  - `matchStatus` is already `'suggested'` or `'confirmed'` (prevent re-processing)
+- If none of the early-exit conditions apply, loads all unpaid work items (`invoiceStatus` in `['sent', 'overdue']`) for the same `ownerId`
 - Also loads clients for that owner to resolve `clientId` → `name`
 - For each unpaid work item, calls `computeMatchScore`
 - Takes the best match — if score > 0.7, updates the transaction with `matchStatus: 'suggested'`, `matchConfidence: score`, `matchedWorkItemId: bestMatch.id`
-- If no match > 0.7, leaves `matchStatus: 'unmatched'`
+- If no match > 0.7, **does NOT write** — the document already has `matchStatus: 'unmatched'` from the sync function. Writing back would re-trigger this function in an infinite loop.
 - Never auto-confirms
 
 ```typescript
@@ -260,6 +263,21 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/mat
 
 **Files:**
 - Modify: `web/src/services/firestore.ts`
+
+- [ ] **Step 0: Fix fetchTransactions date range filtering**
+
+The existing `fetchTransactions` in `firestore.ts` declares `dateFrom`/`dateTo` in its options but never filters by them. Add client-side date filtering alongside the existing `accountId`/`type` filters:
+
+```typescript
+if (options.dateFrom) {
+  results = results.filter((t) => t.date >= options.dateFrom!);
+}
+if (options.dateTo) {
+  results = results.filter((t) => t.date <= options.dateTo!);
+}
+```
+
+Add these lines in the client-side filtering section, after the `accountId` and `type` filters.
 
 - [ ] **Step 1: Add createManualExpense function**
 
@@ -297,21 +315,31 @@ export async function createManualExpense(data: {
 
 - [ ] **Step 2: Add confirmMatch and rejectMatch functions**
 
+Use `writeBatch` (already imported in firestore.ts) for atomicity — both the transaction and work item must update together or not at all.
+
 ```typescript
 export async function confirmMatch(transactionId: string, workItemId: string): Promise<void> {
-  await updateDoc(doc(db, 'transactions', transactionId), {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'transactions', transactionId), {
     matchStatus: 'confirmed',
     matchedWorkItemId: workItemId,
     updatedAt: Timestamp.now(),
   });
-  // Also mark the work item as paid
-  await updateInvoiceStatus(workItemId, {
+  batch.update(doc(db, 'workItems', workItemId), {
     invoiceStatus: 'paid',
-    invoicePaidDate: new Date(),
+    invoicePaidDate: Timestamp.fromDate(new Date()),
+    updatedAt: Timestamp.now(),
   });
+  await batch.commit();
 }
 
 export async function rejectMatch(transactionId: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
   await updateDoc(doc(db, 'transactions', transactionId), {
     matchStatus: 'rejected',
     matchedWorkItemId: null,
@@ -372,11 +400,7 @@ The Transactions page needs:
 - Wire `confirmMatch` and `rejectMatch` from firestore service
 - Optimistically update local transaction state after confirm/reject
 
-Since Transactions doesn't currently receive `workItems` props, the simplest approach is to pass them via the route. Update `App.tsx`:
-```typescript
-<Route path="finance/transactions" element={<Transactions workItems={workItems} />} />
-```
-And update `Transactions.tsx` to accept `workItems?: WorkItem[]` as an optional prop for resolving match suggestions.
+Keep Transactions self-contained (no new props). When a transaction has `matchStatus === 'suggested'` and `matchedWorkItemId`, fetch the matched work item on demand using `getDoc` from Firestore to resolve the subject and amount for the suggestion card. This avoids coupling Transactions to the route's `workItems` prop and keeps the component independent.
 
 - [ ] **Step 4: Verify build and commit**
 
@@ -479,10 +503,10 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add web/src/routes/co
 In the finance group children (in `Sidebar.tsx`), add Expenses between Transactions and Reports:
 
 ```typescript
-{ to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconDollar },
+{ to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconReceipt },
 ```
 
-Use an appropriate icon from the existing icon library. Read Icons.tsx to pick one — `IconDollar` or similar.
+Read `web/src/components/icons/Icons.tsx` to find an appropriate icon. Do NOT reuse `IconDollar` (already used by Invoices). Use `IconReceipt`, `IconWallet`, `IconTag`, or another distinct icon. If none exist, use `IconDocument` as fallback.
 
 - [ ] **Step 2: Add Expenses route to App.tsx**
 
@@ -535,12 +559,14 @@ Replace the "Coming in Phase 3" placeholder in the `expense` case:
 - Include receipt URLs as text references
 - Total by category and grand total
 
-- [ ] **Step 4: Update Reports.tsx to pass transactions**
+- [ ] **Step 4: Update Reports.tsx to fetch and pass transactions**
 
 The Reports page needs transaction data for the enhanced P&L and expense reports:
-- Fetch expenses using `fetchTransactions({ type: 'expense' })` on mount
-- Pass `transactions` to `generateReportPdf` and `generateCombinedReportPdf`
-- Update the CSV exports for P&L and expenses to include transaction data
+- Add `useEffect` + `cancelled` flag pattern (same as Transactions page) to fetch expenses via `fetchTransactions({ type: 'expense' })`
+- Track loading state: `const [expenseTransactions, setExpenseTransactions] = useState<Transaction[]>([])`
+- Pass `expenseTransactions` to `generateReportPdf` and `generateCombinedReportPdf`
+- Update CSV exports for P&L (add expenses column) and Expense report (list all expenses with category, amount, date)
+- While expenses are loading, disable the P&L, Tax Summary, and Expense PDF buttons (or show a loading indicator)
 
 - [ ] **Step 5: Update generateReportPdf and generateCombinedReportPdf signatures**
 
@@ -555,7 +581,13 @@ export async function generateReportPdf(
 ): Promise<void>
 ```
 
-- [ ] **Step 6: Verify build and commit**
+**Important:** `buildProfitLoss` and `buildTaxSummary` must handle `transactions` being `undefined` gracefully — when not provided, show revenue-only as they do today (no "Expenses: $0.00" row, just omit the section). This ensures existing call sites don't break.
+
+- [ ] **Step 6: Update generateCombinedReportPdf to include Expense Report**
+
+Add the Expense Report as a 6th section in the combined PDF (after Aging Report). Pass `transactions` to the combined function and render the expense report page.
+
+- [ ] **Step 7: Verify build and commit**
 
 ```bash
 cd /Users/devinwilson/Projects/personal/openchanges && git add web/src/lib/generateReportPdf.ts web/src/routes/contractor/Reports.tsx && git commit -m "feat(finance): enhance P&L, Tax Summary, and Expense reports with transaction expense data"
