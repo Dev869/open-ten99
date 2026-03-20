@@ -390,15 +390,30 @@ cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/str
   - `'stripe'` → import and call `syncStripeAccount(accountId, ownerId)` from `./stripe`
 - Return `{ success: true, transactionCount }`
 
+**`onDeleteConnectedAccount`** (Callable):
+- Auth check
+- Receives `{ accountId: string }`
+- Verify `connectedAccounts` doc `ownerId == uid`
+- Delete the `_secrets/connectedAccountTokens` doc for this account (cleanup)
+- Delete the `connectedAccounts` doc
+- Return `{ success: true }`
+
+**`onPlaidUpdateLinkToken`** (Callable):
+- Auth check
+- Receives `{ accountId: string }` — for re-authentication flow
+- Load the `_secrets` doc, decrypt the access_token
+- Call `plaidClient.linkTokenCreate({ access_token, ... })` in update mode
+- Return `{ linkToken }`
+
 - [ ] **Step 2: Export from index.ts**
 
-Add: `export { onManualSync } from './manualSync';`
+Add: `export { onManualSync, onDeleteConnectedAccount, onPlaidUpdateLinkToken } from './manualSync';`
 
 - [ ] **Step 3: Build and commit**
 
 ```bash
 cd /Users/devinwilson/Projects/personal/openchanges/functions && npm run build
-cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/manualSync.ts functions/src/plaid.ts functions/src/stripe.ts functions/src/index.ts && git commit -m "feat(finance): add manual sync Cloud Function with 15-min throttle"
+cd /Users/devinwilson/Projects/personal/openchanges && git add functions/src/manualSync.ts functions/src/plaid.ts functions/src/stripe.ts functions/src/index.ts && git commit -m "feat(finance): add manual sync, account deletion, and Plaid re-auth Cloud Functions"
 ```
 
 ---
@@ -432,7 +447,7 @@ export interface ConnectedAccount {
   accountMask: string;
   status: AccountStatus;
   errorMessage?: string;
-  lastSyncedAt?: Date;
+  lastSyncedAt?: Date;  // Optional — null until first sync completes
   createdAt: Date;
   updatedAt: Date;
 }
@@ -762,8 +777,9 @@ Check existence of all new files:
 
 - [ ] **Step 6: Fix any issues and commit if needed**
 
+Stage only the specific files that were fixed (do not use `git add -A`):
 ```bash
-cd /Users/devinwilson/Projects/personal/openchanges && git add -A && git commit -m "fix(finance): Phase 2 integration polish"
+cd /Users/devinwilson/Projects/personal/openchanges && git add <specific-files-that-were-fixed> && git commit -m "fix(finance): Phase 2 integration polish"
 ```
 
 ---
