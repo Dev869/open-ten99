@@ -4,6 +4,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { defineString } from 'firebase-functions/params';
 import Stripe from 'stripe';
 import { encryptToken, decryptToken } from './utils/crypto';
+import { categorizeTransaction } from './utils/categorize';
 import * as logger from 'firebase-functions/logger';
 
 const stripeWebhookSecret = defineString('STRIPE_WEBHOOK_SECRET');
@@ -134,6 +135,7 @@ export async function syncStripeAccount(
       if (!existingSnap.empty) return;
 
       const now = Timestamp.now();
+      const chargeDesc = charge.description ?? (charge.metadata?.description as string | undefined) ?? 'Stripe payment';
       await db.collection('transactions').add({
         ownerId,
         accountId,
@@ -141,8 +143,8 @@ export async function syncStripeAccount(
         externalId: charge.id,
         date: Timestamp.fromMillis(charge.created * 1000),
         amount: charge.amount / 100, // Stripe uses cents; convert to dollars (positive = income)
-        description: charge.description ?? (charge.metadata?.description as string | undefined) ?? 'Stripe payment',
-        category: 'Uncategorized',
+        description: chargeDesc,
+        category: categorizeTransaction(null, chargeDesc),
         type: 'income',
         matchStatus: 'unmatched',
         isManual: false,
@@ -297,6 +299,7 @@ async function handleChargeSucceeded(
   }
 
   const now = Timestamp.now();
+  const desc = charge.description ?? (charge.metadata?.description as string | undefined) ?? 'Stripe payment';
   await db.collection('transactions').add({
     ownerId,
     accountId: accountDoc.id,
@@ -304,8 +307,8 @@ async function handleChargeSucceeded(
     externalId: charge.id,
     date: Timestamp.fromMillis(charge.created * 1000),
     amount: charge.amount / 100,
-    description: charge.description ?? (charge.metadata?.description as string | undefined) ?? 'Stripe payment',
-    category: 'Uncategorized',
+    description: desc,
+    category: categorizeTransaction(null, desc),
     type: 'income',
     matchStatus: 'unmatched',
     isManual: false,
@@ -352,6 +355,7 @@ async function handlePaymentIntentSucceeded(
   }
 
   const now = Timestamp.now();
+  const piDesc = paymentIntent.description ?? (paymentIntent.metadata?.description as string | undefined) ?? 'Stripe payment';
   await db.collection('transactions').add({
     ownerId,
     accountId: accountDoc.id,
@@ -359,8 +363,8 @@ async function handlePaymentIntentSucceeded(
     externalId: paymentIntent.id,
     date: Timestamp.fromMillis(paymentIntent.created * 1000),
     amount: paymentIntent.amount / 100,
-    description: paymentIntent.description ?? (paymentIntent.metadata?.description as string | undefined) ?? 'Stripe payment',
-    category: 'Uncategorized',
+    description: piDesc,
+    category: categorizeTransaction(null, piDesc),
     type: 'income',
     matchStatus: 'unmatched',
     isManual: false,

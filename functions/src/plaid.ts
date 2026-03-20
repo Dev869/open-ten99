@@ -10,6 +10,7 @@ import {
   CountryCode,
 } from 'plaid';
 import { encryptToken, decryptToken } from './utils/crypto';
+import { categorizeTransaction, classifyTransactionType } from './utils/categorize';
 import * as logger from 'firebase-functions/logger';
 
 // ---------------------------------------------------------------------------
@@ -212,6 +213,9 @@ export async function syncPlaidAccount(
           const txRef = db.collection('transactions').doc();
           // Negate Plaid amount: Plaid positive = debit (expense), our convention positive = income
           const amount = -tx.amount;
+          const description = tx.name ?? (tx as { merchant_name?: string }).merchant_name ?? '';
+          // Extract Plaid's personal_finance_category for auto-categorization
+          const plaidCategory = (tx as { personal_finance_category?: { primary?: string } }).personal_finance_category?.primary ?? null;
           batch.set(txRef, {
             ownerId,
             accountId,
@@ -219,10 +223,9 @@ export async function syncPlaidAccount(
             externalId: tx.transaction_id,
             date: Timestamp.fromDate(new Date(tx.date)),
             amount,
-            description: tx.name ?? (tx as { merchant_name?: string }).merchant_name ?? '',
-            category: 'Uncategorized',
-            // After negation: positive amount = income, negative = expense
-            type: amount >= 0 ? 'income' : 'expense',
+            description,
+            category: categorizeTransaction(plaidCategory, description),
+            type: classifyTransactionType(amount, plaidCategory),
             matchStatus: 'unmatched',
             isManual: false,
             createdAt: now,
