@@ -5,7 +5,7 @@ import {
   type IconProps,
   IconSun, IconMoon,
   IconDashboard, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconApps,
-  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar,
+  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconLayers,
 } from './icons';
 
@@ -33,7 +33,9 @@ const defaultNavItems: NavItem[] = [
     children: [
       { to: '/dashboard/finance', key: 'finance-overview', label: 'Overview', Icon: IconDashboard },
       { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
+      { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
+      { to: '/dashboard/finance/accounts', key: 'finance-accounts', label: 'Accounts', Icon: IconGear },
     ],
   },
   { key: 'team', to: '/dashboard/team', label: 'Team', Icon: IconTeam },
@@ -393,11 +395,11 @@ export function Sidebar({
         {/* Brand mark */}
         <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
           <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
-            <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0">
-              <IconLayers size={18} />
+            <div className="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center flex-shrink-0 shadow-md shadow-[var(--accent)]/20">
+              <IconLayers size={24} />
             </div>
             <span className={cn(
-              'font-bold text-[var(--text-primary)] text-lg tracking-tight',
+              'font-bold text-[var(--text-primary)] text-xl tracking-tight',
               expanded ? '' : 'md:hidden'
             )} style={{ fontFamily: "'Space Mono', monospace" }}>
               TEN99

@@ -22,7 +22,9 @@ const Clients = lazy(() => import('./routes/contractor/Clients'));
 const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
 const FinanceOverview = lazy(() => import('./routes/contractor/FinanceOverview'));
 const Invoices = lazy(() => import('./routes/contractor/Invoices'));
+const Transactions = lazy(() => import('./routes/contractor/Transactions'));
 const Reports = lazy(() => import('./routes/contractor/Reports'));
+const Accounts = lazy(() => import('./routes/contractor/Accounts'));
 const Team = lazy(() => import('./routes/contractor/Team'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
@@ -177,10 +179,10 @@ function ContractorLayout() {
               <IconMenu size={22} />
             </button>
             <div className="flex-1 flex items-center justify-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[var(--accent)] flex items-center justify-center">
-                <IconLayers size={13} />
+              <div className="w-9 h-9 rounded-full bg-[var(--accent)] flex items-center justify-center shadow-md">
+                <IconLayers size={18} />
               </div>
-              <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
+              <span className="font-bold text-[var(--text-primary)] text-base tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
             </div>
             <div className="flex items-center gap-1">
               <MobileNotificationBell
@@ -289,10 +291,12 @@ function ContractorRoutes() {
         path="finance/invoices"
         element={<Invoices workItems={workItems} clients={clients} />}
       />
+      <Route path="finance/transactions" element={<Transactions />} />
       <Route
         path="finance/reports"
         element={<Reports workItems={workItems} clients={clients} />}
       />
+      <Route path="finance/accounts" element={<Accounts />} />
       <Route
         path="team"
         element={user ? <Team user={user} settings={settings} /> : null}
@@ -342,10 +346,10 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
-          <div className="w-16 h-16 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-4">
-            <IconLayers size={28} />
+          <div className="w-24 h-24 rounded-full bg-[var(--accent)] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[var(--accent)]/30">
+            <IconLayers size={44} />
           </div>
-          <span className="text-white font-bold text-xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
+          <span className="text-white font-bold text-3xl tracking-tight" style={{ fontFamily: "'Space Mono', monospace" }}>TEN99</span>
           <div className="text-sm text-white/40 mt-3">Loading...</div>
         </div>
       </div>
