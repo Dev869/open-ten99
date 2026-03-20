@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { FilterTabs } from '../../components/FilterTabs';
 import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
@@ -16,14 +17,52 @@ interface WorkItemsProps {
 
 const typeTabs = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'];
 const statusTabs = ['All', 'Draft', 'In Review', 'Approved', 'Completed'];
+const invoiceStatusOptions = ['draft', 'sent', 'paid', 'overdue'];
+const invoiceStatusLabels: Record<string, string> = { draft: 'Draft', sent: 'Sent', paid: 'Paid', overdue: 'Overdue' };
 
 export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedApps, setSelectedApps] = useState<string[]>([]);
+  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+
+  // Initialize from URL on mount
+  useEffect(() => {
+    const clientsParam = searchParams.get('clients');
+    const appsParam = searchParams.get('apps');
+    const invoice = searchParams.get('invoice');
+    const start = searchParams.get('start');
+    const end = searchParams.get('end');
+    if (clientsParam) setSelectedClients(clientsParam.split(','));
+    if (appsParam) setSelectedApps(appsParam.split(','));
+    if (invoice) setSelectedInvoiceStatus(invoice.split(','));
+    if (start) setDateRange(prev => ({ ...prev, start }));
+    if (end) setDateRange(prev => ({ ...prev, end }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync filters to URL when filter state changes
+  const updateUrlParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (selectedClients.length) params.set('clients', selectedClients.join(','));
+    if (selectedApps.length) params.set('apps', selectedApps.join(','));
+    if (selectedInvoiceStatus.length) params.set('invoice', selectedInvoiceStatus.join(','));
+    if (dateRange.start) params.set('start', dateRange.start);
+    if (dateRange.end) params.set('end', dateRange.end);
+    setSearchParams(params, { replace: true });
+  }, [selectedClients, selectedApps, selectedInvoiceStatus, dateRange, setSearchParams]);
+
+  useEffect(() => {
+    updateUrlParams();
+  }, [updateUrlParams]);
 
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -36,6 +75,20 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
     return map;
   }, [apps]);
+
+  const availableApps = useMemo(() => {
+    if (selectedClients.length === 0) return apps;
+    return apps.filter(a => selectedClients.includes(a.clientId));
+  }, [apps, selectedClients]);
+
+  const totalNonArchived = workItems.filter(i => i.status !== 'archived').length;
+
+  const hasActiveFilters =
+    selectedClients.length > 0 ||
+    selectedApps.length > 0 ||
+    selectedInvoiceStatus.length > 0 ||
+    !!dateRange.start ||
+    !!dateRange.end;
 
   const filtered = useMemo(() => {
     return workItems
@@ -61,8 +114,20 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
           i.subject.toLowerCase().includes(q) ||
           name.toLowerCase().includes(q)
         );
+      })
+      // client filter
+      .filter((i) => selectedClients.length === 0 || selectedClients.includes(i.clientId))
+      // app filter
+      .filter((i) => selectedApps.length === 0 || (i.appId ? selectedApps.includes(i.appId) : false))
+      // invoice status filter
+      .filter((i) => selectedInvoiceStatus.length === 0 || (i.invoiceStatus ? selectedInvoiceStatus.includes(i.invoiceStatus) : false))
+      // date range filter
+      .filter((i) => {
+        if (dateRange.start && i.createdAt < new Date(dateRange.start)) return false;
+        if (dateRange.end && i.createdAt > new Date(dateRange.end + 'T23:59:59')) return false;
+        return true;
       });
-  }, [workItems, selectedType, selectedStatus, search, clientMap]);
+  }, [workItems, selectedType, selectedStatus, search, clientMap, selectedClients, selectedApps, selectedInvoiceStatus, dateRange]);
 
   function toggleSelect(id: string) {
     const next = new Set(selectedIds);
@@ -109,6 +174,13 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     setBulkLoading(false);
   }
 
+  function clearAllFilters() {
+    setSelectedClients([]);
+    setSelectedApps([]);
+    setSelectedInvoiceStatus([]);
+    setDateRange({ start: '', end: '' });
+  }
+
   return (
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
@@ -151,6 +223,142 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
       <div className="space-y-2 mb-4">
         <FilterTabs tabs={typeTabs} selected={selectedType} onSelect={setSelectedType} />
         <FilterTabs tabs={statusTabs} selected={selectedStatus} onSelect={setSelectedStatus} />
+      </div>
+
+      {/* Advanced Filter Bar */}
+      <div className="mb-4 p-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] space-y-2">
+        <div className="flex flex-wrap items-start gap-3">
+
+          {/* Client filter */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedClients.map(id => (
+              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                {clientMap[id] ?? id}
+                <button
+                  onClick={() => {
+                    const next = selectedClients.filter(c => c !== id);
+                    setSelectedClients(next);
+                    setSelectedApps(prev => prev.filter(appId => apps.some(a => a.id === appId && next.includes(a.clientId))));
+                  }}
+                  className="hover:text-red-500 leading-none"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            <select
+              value=""
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !selectedClients.includes(val)) {
+                  setSelectedClients(prev => [...prev, val]);
+                }
+              }}
+              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+            >
+              <option value="">+ Client</option>
+              {clients.filter(c => c.id && !selectedClients.includes(c.id)).map(c => (
+                <option key={c.id} value={c.id!}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* App filter */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedApps.map(id => (
+              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                {appMap[id] ?? id}
+                <button
+                  onClick={() => setSelectedApps(prev => prev.filter(a => a !== id))}
+                  className="hover:text-red-500 leading-none"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            {availableApps.filter(a => a.id && !selectedApps.includes(a.id)).length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !selectedApps.includes(val)) {
+                    setSelectedApps(prev => [...prev, val]);
+                  }
+                }}
+                className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+              >
+                <option value="">+ App</option>
+                {availableApps.filter(a => a.id && !selectedApps.includes(a.id)).map(a => (
+                  <option key={a.id} value={a.id!}>{a.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Invoice status filter */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedInvoiceStatus.map(status => (
+              <span key={status} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                {invoiceStatusLabels[status] ?? status}
+                <button
+                  onClick={() => setSelectedInvoiceStatus(prev => prev.filter(s => s !== status))}
+                  className="hover:text-red-500 leading-none"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && !selectedInvoiceStatus.includes(val)) {
+                    setSelectedInvoiceStatus(prev => [...prev, val]);
+                  }
+                }}
+                className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+              >
+                <option value="">+ Invoice</option>
+                {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).map(s => (
+                  <option key={s} value={s}>{invoiceStatusLabels[s]}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Date range filter */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+            />
+            <span className="text-xs text-[var(--text-tertiary)]">to</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Footer row: clear all + result count */}
+        <div className="flex items-center gap-3 pt-1">
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-[var(--accent)] hover:underline"
+            >
+              Clear all
+            </button>
+          )}
+          <span className="text-xs text-[var(--text-tertiary)] ml-auto">
+            Showing {filtered.length} of {totalNonArchived} work orders
+          </span>
+        </div>
       </div>
 
       {/* Bulk Actions */}
