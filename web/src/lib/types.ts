@@ -245,3 +245,35 @@ export const WORK_ITEM_STATUS_LABELS: Record<WorkItemStatus, string> = {
   completed: 'Completed',
   archived: 'Archived',
 };
+
+/* ── Finance ────────────────────────────────────────── */
+
+// Invoice status
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue';
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  paid: 'Paid',
+  overdue: 'Overdue',
+};
+
+// Expense categories (Schedule C aligned)
+export const EXPENSE_CATEGORIES = [
+  'Software & Subscriptions',
+  'Equipment & Tools',
+  'Office Supplies',
+  'Travel',
+  'Meals & Entertainment',
+  'Vehicle & Fuel',
+  'Insurance',
+  'Professional Services',
+  'Advertising & Marketing',
+  'Utilities & Telecom',
+  'Subcontractors',
+  'Materials & Supplies',
+  'Education & Training',
+  'Uncategorized',
+] as const;
+
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
