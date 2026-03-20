@@ -11,7 +11,7 @@ const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
 const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
 const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
 
-const REDIRECT_URI = "https://openchanges.web.app/dashboard/github/callback";
+const REDIRECT_URI = "https://ten99-7cd44.web.app/dashboard/github/callback";
 const OAUTH_SCOPE = "repo,read:org";
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
