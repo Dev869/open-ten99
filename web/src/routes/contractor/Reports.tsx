@@ -1,6 +1,4 @@
 import { useState, useMemo, useCallback } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../lib/firebase';
 import type { WorkItem, Client } from '../../lib/types';
 import {
   getDateRange,
@@ -12,6 +10,8 @@ import {
 import type { DateRangePreset } from '../../lib/finance';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
 import { exportToCsv } from '../../lib/utils';
+import { generateReportPdf } from '../../lib/generateReportPdf';
+import type { ReportType } from '../../lib/generateReportPdf';
 
 interface ReportCardProps {
   title: string;
@@ -65,14 +65,6 @@ function ReportCard({
   );
 }
 
-type ReportType =
-  | 'profit_loss'
-  | 'income_by_client'
-  | 'tax_summary'
-  | 'hours_billing'
-  | 'aging'
-  | 'expense';
-
 export default function Reports({ workItems, clients }: { workItems: WorkItem[]; clients: Client[] }) {
   const now = useMemo(() => new Date(), []);
   const [preset, setPreset] = useState<DateRangePreset>('ytd');
@@ -85,18 +77,14 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     async (reportType: ReportType) => {
       setPdfLoading(reportType);
       try {
-        const callable = httpsCallable(functions, 'onGenerateReport');
-        const result = await callable({
-          reportType,
-          startDate: range.start.toISOString().split('T')[0],
-          endDate: range.end.toISOString().split('T')[0],
-        });
-        window.open((result.data as { url: string }).url, '_blank');
+        await generateReportPdf(reportType, workItems, clients, range);
+      } catch (err) {
+        console.error('PDF generation failed:', err);
       } finally {
         setPdfLoading(null);
       }
     },
-    [range]
+    [workItems, clients, range]
   );
 
   const handleCsvProfitLoss = useCallback(() => {
