@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '../../lib/firebase';
+import { uploadReceiptFile } from '../../services/firestore';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
 
 interface ExpenseFormProps {
@@ -11,6 +10,7 @@ interface ExpenseFormProps {
     date: Date;
     taxDeductible: boolean;
     receiptUrl?: string;
+    receiptId?: string;
   }) => Promise<void>;
   loading?: boolean;
 }
@@ -58,27 +58,20 @@ export function ExpenseForm({ onSubmit, loading = false }: ExpenseFormProps) {
     setReceiptFile(file);
   }
 
-  async function uploadReceipt(file: File): Promise<string> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Not authenticated');
-    const timestamp = Date.now();
-    const storagePath = `receipts/${userId}/${timestamp}-${file.name}`;
-    const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, file);
-    return getDownloadURL(storageRef);
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) return;
 
     setError('');
     let receiptUrl: string | undefined;
+    let receiptId: string | undefined;
 
     if (receiptFile) {
       setUploading(true);
       try {
-        receiptUrl = await uploadReceipt(receiptFile);
+        const result = await uploadReceiptFile(receiptFile);
+        receiptUrl = result.imageUrl;
+        receiptId = result.receiptId;
       } catch (err) {
         console.error('Receipt upload failed:', err);
         setError('Failed to upload receipt. Please try again.');
@@ -97,6 +90,7 @@ export function ExpenseForm({ onSubmit, loading = false }: ExpenseFormProps) {
         date: new Date(date + 'T00:00:00'),
         taxDeductible,
         receiptUrl,
+        receiptId,
       });
 
       // Reset form after successful submit

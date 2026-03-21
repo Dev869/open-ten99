@@ -1,13 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useReceipts } from '../../hooks/useFirestore';
 import type { Receipt } from '../../lib/types';
 import ReceiptGrid from '../../components/finance/ReceiptGrid';
 import ReceiptDetail from '../../components/finance/ReceiptDetail';
+import { uploadReceiptFile } from '../../services/firestore';
 
 export default function Receipts() {
   const { receipts, loading } = useReceipts();
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('shared') !== 'true') return;
+
+    (async () => {
+      try {
+        const cache = await caches.open('share-target');
+        const keys = await cache.keys();
+        for (const key of keys) {
+          const response = await cache.match(key);
+          if (!response) continue;
+          const blob = await response.blob();
+          const fileName = response.headers.get('X-Filename') ?? 'shared-receipt.jpg';
+          const file = new File([blob], fileName, { type: blob.type });
+          await uploadReceiptFile(file);
+        }
+        await caches.delete('share-target');
+      } catch (err) {
+        console.error('Failed to process shared receipts:', err);
+      }
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard/finance/receipts');
+    })();
+  }, []);
 
   // Keep selected receipt in sync with real-time data
   const currentReceipt = selectedReceipt
