@@ -6,6 +6,7 @@ import { useConnectedAccounts } from '../../hooks/useFirestore';
 import { fetchTransactions, updateTransactionCategory, confirmMatch, rejectMatch } from '../../services/firestore';
 import { TransactionRow } from '../../components/finance/TransactionRow';
 import { MatchSuggestion } from '../../components/finance/MatchSuggestion';
+import { CsvImportModal } from '../../components/finance/CsvImportModal';
 import { formatDate } from '../../lib/utils';
 import { db, functions } from '../../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -66,6 +67,7 @@ export default function Transactions() {
   // Smart sort state
   const [smartSorting, setSmartSorting] = useState(false);
   const [smartSortResult, setSmartSortResult] = useState<string | null>(null);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Match suggestion state
@@ -268,6 +270,15 @@ export default function Transactions() {
             </>
           )}
         </button>
+        <button
+          onClick={() => setShowCsvImport(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 10V2M5 5l3-3 3 3M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Import CSV
+        </button>
       </div>
 
       {/* Smart sort result */}
@@ -438,6 +449,28 @@ export default function Transactions() {
             )}
           </button>
         </div>
+      )}
+      {/* CSV Import Modal */}
+      {showCsvImport && (
+        <CsvImportModal
+          onClose={() => setShowCsvImport(false)}
+          onImported={(count) => {
+            setSmartSortResult(`Imported ${count} transaction${count !== 1 ? 's' : ''} from CSV`);
+            // Refetch transactions
+            fetchTransactions({
+              pageSize: PAGE_SIZE,
+              accountId: filterAccountId || undefined,
+              type: filterType || undefined,
+            }).then((result) => {
+              setPage({
+                transactions: result.transactions,
+                lastDoc: result.lastDoc,
+                hasMore: result.hasMore,
+                loading: false,
+              });
+            });
+          }}
+        />
       )}
     </div>
   );
