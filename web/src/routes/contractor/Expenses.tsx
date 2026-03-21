@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Transaction } from '../../lib/types';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
-import { fetchTransactions, createManualExpense } from '../../services/firestore';
+import { fetchTransactions, createManualExpense, reassignReceipt } from '../../services/firestore';
 import { ExpenseForm } from '../../components/finance/ExpenseForm';
+import ReceiptBadge from '../../components/finance/ReceiptBadge';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
 import { getDateRange } from '../../lib/finance';
 import type { DateRangePreset } from '../../lib/finance';
@@ -132,7 +133,9 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
               Manual
             </span>
           )}
-          {expense.receiptUrl && sanitizeUrl(expense.receiptUrl) && (
+          {expense.receiptIds && expense.receiptIds.length > 0 ? (
+            <ReceiptBadge status="confirmed" />
+          ) : expense.receiptUrl && sanitizeUrl(expense.receiptUrl) ? (
             <a
               href={sanitizeUrl(expense.receiptUrl)}
               target="_blank"
@@ -141,7 +144,7 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
             >
               View Receipt
             </a>
-          )}
+          ) : null}
         </div>
       </td>
     </tr>
@@ -180,10 +183,15 @@ export default function Expenses() {
     date: Date;
     taxDeductible: boolean;
     receiptUrl?: string;
+    receiptId?: string;
   }) {
     setFormLoading(true);
     try {
-      await createManualExpense(data);
+      const transactionId = await createManualExpense(data);
+      // Link the receipt document to the new transaction if one was uploaded
+      if (data.receiptId) {
+        await reassignReceipt(data.receiptId, undefined, transactionId);
+      }
       // Refetch to include the new expense
       const result = await fetchTransactions({ type: 'expense', dateFrom: range.start, dateTo: range.end });
       setExpenses(result.transactions);
