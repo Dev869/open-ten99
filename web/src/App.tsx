@@ -25,6 +25,7 @@ const FinanceOverview = lazy(() => import('./routes/contractor/FinanceOverview')
 const Invoices = lazy(() => import('./routes/contractor/Invoices'));
 const Transactions = lazy(() => import('./routes/contractor/Transactions'));
 const Expenses = lazy(() => import('./routes/contractor/Expenses'));
+const Receipts = lazy(() => import('./routes/contractor/Receipts'));
 const Reports = lazy(() => import('./routes/contractor/Reports'));
 const Accounts = lazy(() => import('./routes/contractor/Accounts'));
 const Team = lazy(() => import('./routes/contractor/Team'));
@@ -299,6 +300,7 @@ function ContractorRoutes() {
       />
       <Route path="finance/transactions" element={<Transactions />} />
       <Route path="finance/expenses" element={<Expenses />} />
+      <Route path="finance/receipts" element={<Receipts />} />
       <Route
         path="finance/reports"
         element={<Reports workItems={workItems} clients={clients} />}

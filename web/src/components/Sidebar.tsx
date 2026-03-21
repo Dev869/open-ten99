@@ -36,6 +36,7 @@ const defaultNavItems: NavItem[] = [
       { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconBook },
+      { to: '/dashboard/finance/receipts', key: 'finance-receipts', label: 'Receipts', Icon: IconDocument },
       { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
       { to: '/dashboard/finance/accounts', key: 'finance-accounts', label: 'Accounts', Icon: IconGear },
     ],
