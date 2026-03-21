@@ -45,7 +45,7 @@ function AccountStatusDot({ status }: { status: ConnectedAccount['status'] }) {
 function SkeletonRow() {
   return (
     <tr className="border-b border-[var(--border)]">
-      {[...Array(5)].map((_, i) => (
+      {[...Array(6)].map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-[var(--border)] rounded animate-pulse" />
         </td>
@@ -373,6 +373,9 @@ export default function Transactions() {
               <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
                 Category
               </th>
+              <th className="px-4 py-3 text-center font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                Receipt
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -381,7 +384,7 @@ export default function Transactions() {
               [...Array(8)].map((_, i) => <SkeletonRow key={i} />)
             ) : transactions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-[var(--text-secondary)] text-sm">
+                <td colSpan={6} className="px-4 py-12 text-center text-[var(--text-secondary)] text-sm">
                   No transactions found.
                   {(filterAccountId || filterType) && (
                     <span> Try adjusting your filters.</span>
@@ -409,7 +412,7 @@ export default function Transactions() {
                     />
                     {showSuggestion && (
                       <tr key={`${transaction.id}-match`}>
-                        <td colSpan={5} className="px-4 pb-3">
+                        <td colSpan={6} className="px-4 pb-3">
                           <MatchSuggestion
                             transactionId={transaction.id}
                             workItemId={workItemId}

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import ReceiptBadge from './ReceiptBadge';
 
 interface TransactionRowProps {
   transaction: Transaction;
   accounts: ConnectedAccount[];
   onCategoryChange: (id: string, category: string) => void;
   onRowClick?: (id: string) => void;
+  onReceiptClick?: (id: string) => void;
 }
 
 function SourceBadge({ transaction, accounts }: { transaction: Transaction; accounts: ConnectedAccount[] }) {
@@ -71,7 +73,7 @@ function MatchStatusBadge({ matchStatus }: { matchStatus: Transaction['matchStat
   return null;
 }
 
-export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick }: TransactionRowProps) {
+export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick, onReceiptClick }: TransactionRowProps) {
   const [localCategory, setLocalCategory] = useState(transaction.category);
 
   const isIncome = transaction.amount > 0;
@@ -88,6 +90,9 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
 
   const isSuggested = transaction.matchStatus === 'suggested';
   const rowCursor = isSuggested ? 'cursor-pointer' : '';
+
+  const receiptStatus: 'confirmed' | 'none' =
+    transaction.receiptIds && transaction.receiptIds.length > 0 ? 'confirmed' : 'none';
 
   function handleRowClick() {
     if (isSuggested && onRowClick) {
@@ -139,6 +144,14 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
             </option>
           ))}
         </select>
+      </td>
+
+      {/* Receipt */}
+      <td className="px-4 py-3 text-center">
+        <ReceiptBadge
+          status={receiptStatus}
+          onClick={onReceiptClick ? () => onReceiptClick(transaction.id) : undefined}
+        />
       </td>
     </tr>
   );
