@@ -1,21 +1,21 @@
 import { onCall, HttpsError, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { defineString } from 'firebase-functions/params';
+import { defineSecret } from 'firebase-functions/params';
 import Stripe from 'stripe';
 import { encryptToken, decryptToken } from './utils/crypto';
 import { categorizeTransaction } from './utils/categorize';
 import * as logger from 'firebase-functions/logger';
 
-const stripeWebhookSecret = defineString('STRIPE_WEBHOOK_SECRET');
-const encryptionKey = defineString('TOKEN_ENCRYPTION_KEY');
+const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
+const encryptionKey = defineSecret('TOKEN_ENCRYPTION_KEY');
 
 /**
  * Callable Cloud Function to connect a Stripe account via API key.
  * Validates the key, encrypts it, stores credentials, and runs an initial sync.
  */
 export const onStripeConnect = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to connect a Stripe account.');
@@ -182,7 +182,7 @@ export async function syncStripeAccount(
 /**
  * Scheduled Cloud Function that syncs all active Stripe connected accounts every 6 hours.
  */
-export const onStripeSync = onSchedule('every 6 hours', async () => {
+export const onStripeSync = onSchedule({ schedule: 'every 6 hours', secrets: [encryptionKey] }, async () => {
   const db = getFirestore();
 
   const accountsSnap = await db

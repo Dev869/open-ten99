@@ -1,7 +1,7 @@
 import { onCall, HttpsError, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { defineString } from 'firebase-functions/params';
+import { defineSecret } from 'firebase-functions/params';
 import {
   Configuration,
   PlaidApi,
@@ -18,10 +18,10 @@ import * as crypto from 'crypto';
 // Config
 // ---------------------------------------------------------------------------
 
-const plaidClientId = defineString('PLAID_CLIENT_ID');
-const plaidSecret = defineString('PLAID_SECRET');
-const plaidEnv = defineString('PLAID_ENV');
-const encryptionKey = defineString('TOKEN_ENCRYPTION_KEY');
+const plaidClientId = defineSecret('PLAID_CLIENT_ID');
+const plaidSecret = defineSecret('PLAID_SECRET');
+const plaidEnv = defineSecret('PLAID_ENV');
+const encryptionKey = defineSecret('TOKEN_ENCRYPTION_KEY');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -150,7 +150,7 @@ async function verifyPlaidWebhook(
 // ---------------------------------------------------------------------------
 
 export const onPlaidLinkToken = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to create a link token.');
@@ -185,7 +185,7 @@ export const onPlaidLinkToken = onCall(
 // ---------------------------------------------------------------------------
 
 export const onPlaidExchange = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to connect a bank account.');
@@ -402,7 +402,7 @@ export async function syncPlaidAccount(
 // ---------------------------------------------------------------------------
 
 export const onPlaidSync = onSchedule(
-  { schedule: 'every 6 hours', timeoutSeconds: 300 },
+  { schedule: 'every 6 hours', timeoutSeconds: 300, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async () => {
     const db = getFirestore();
 

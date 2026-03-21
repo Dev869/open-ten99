@@ -1,16 +1,16 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { defineString } from 'firebase-functions/params';
+import { defineSecret } from 'firebase-functions/params';
 import { syncPlaidAccount } from './plaid';
 import { syncStripeAccount } from './stripe';
 import { encryptToken, decryptToken } from './utils/crypto';
 import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from 'plaid';
 import * as logger from 'firebase-functions/logger';
 
-const plaidClientId = defineString('PLAID_CLIENT_ID');
-const plaidSecret = defineString('PLAID_SECRET');
-const plaidEnv = defineString('PLAID_ENV');
-const encryptionKey = defineString('TOKEN_ENCRYPTION_KEY');
+const plaidClientId = defineSecret('PLAID_CLIENT_ID');
+const plaidSecret = defineSecret('PLAID_SECRET');
+const plaidEnv = defineSecret('PLAID_ENV');
+const encryptionKey = defineSecret('TOKEN_ENCRYPTION_KEY');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,7 +39,7 @@ function getPlaidClient(clientId: string, secret: string, env: string): PlaidApi
 // ---------------------------------------------------------------------------
 
 export const onManualSync = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to sync an account.');
@@ -104,7 +104,7 @@ export const onManualSync = onCall(
 // ---------------------------------------------------------------------------
 
 export const onDeleteConnectedAccount = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to delete an account.');
@@ -157,7 +157,7 @@ export const onDeleteConnectedAccount = onCall(
 // ---------------------------------------------------------------------------
 
 export const onPlaidUpdateLinkToken = onCall(
-  { maxInstances: 10 },
+  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to re-authenticate.');
