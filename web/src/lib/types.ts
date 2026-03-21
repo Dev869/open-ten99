@@ -44,6 +44,8 @@ export interface WorkItem {
   invoiceSentDate?: Date;
   invoicePaidDate?: Date;
   invoiceDueDate?: Date;
+  preDiscardStatus?: WorkItemStatus;
+  discardedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,10 +77,25 @@ export interface AppSettings {
   hourlyRate: number;
   companyName: string;
   pdfLogoUrl?: string;
+  // Invoice template
+  invoicePrefix?: string;         // e.g. "INV-"
+  invoiceNextNumber?: number;     // auto-incrementing number
+  invoicePaymentTerms?: string;   // e.g. "Net 30", "Due on Receipt"
+  invoiceNotes?: string;          // default footer notes (payment instructions, etc.)
+  invoiceTaxRate?: number;        // optional tax percentage (e.g. 8.25)
+  invoiceFromAddress?: string;    // sender address block
   teamId?: string;
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys
 }
+
+export const PAYMENT_TERMS_OPTIONS = [
+  'Due on Receipt',
+  'Net 15',
+  'Net 30',
+  'Net 45',
+  'Net 60',
+] as const;
 
 export interface MagicLink {
   clientId: string;
@@ -327,6 +344,28 @@ export type TransactionType = 'income' | 'expense' | 'transfer' | 'uncategorized
 export type TransactionProvider = 'plaid' | 'stripe' | 'manual';
 export type MatchStatus = 'unmatched' | 'suggested' | 'confirmed' | 'rejected';
 
+export type ReceiptStatus = 'processing' | 'unmatched' | 'matched' | 'confirmed';
+
+export interface Receipt {
+  id: string;
+  ownerId: string;
+  status: ReceiptStatus;
+  imageUrl: string;
+  fileName: string;
+  uploadedAt: Date;
+  vendor?: string;
+  amount?: number;
+  date?: Date;
+  category?: string;
+  lineItems?: Array<{ description: string; amount: number }>;
+  rawText?: string;
+  transactionId?: string;
+  matchConfidence?: number;
+  matchMethod?: 'auto' | 'manual';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ConnectedAccount {
   id: string;
   ownerId: string;
@@ -356,7 +395,8 @@ export interface Transaction {
   matchConfidence?: number;
   matchStatus: MatchStatus;
   isManual: boolean;
-  receiptUrl?: string;
+  receiptUrl?: string;    // Legacy — migrate to receiptIds
+  receiptIds?: string[];  // Linked Receipt document IDs
   taxDeductible?: boolean;
   createdAt: Date;
   updatedAt: Date;
