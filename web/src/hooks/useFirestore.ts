@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import {
   subscribeWorkItems,
   subscribeClients,
@@ -10,8 +12,31 @@ import {
   subscribeIntegration,
   subscribeGitHubActivity,
   subscribeConnectedAccounts,
+  subscribeReceipts,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt } from '../lib/types';
+
+/**
+ * Wait for Firebase auth to be ready before subscribing to Firestore.
+ * On reload, auth.currentUser is already set. On fresh login, we wait
+ * for onAuthStateChanged to fire with the authenticated user.
+ */
+function whenAuthReady(fn: () => () => void): () => void {
+  if (auth.currentUser) return fn();
+
+  let unsub: (() => void) | null = null;
+  const unsubAuth = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      unsubAuth();
+      unsub = fn();
+    }
+  });
+
+  return () => {
+    unsubAuth();
+    unsub?.();
+  };
+}
 
 export function useWorkItems(clientId?: string) {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -19,14 +44,22 @@ export function useWorkItems(clientId?: string) {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = subscribeWorkItems((items) => {
-      setWorkItems(items);
-      setLoading(false);
-    }, clientId);
+    const unsubscribe = whenAuthReady(() =>
+      subscribeWorkItems((items) => {
+        setWorkItems(items);
+        setLoading(false);
+      }, clientId, () => setLoading(false))
+    );
     return unsubscribe;
   }, [clientId]);
 
   return { workItems, loading };
+}
+
+export function useDiscardedWorkItems() {
+  const { workItems, loading } = useWorkItems();
+  const discarded = workItems.filter(item => item.discardedAt != null);
+  return { discardedItems: discarded, loading };
 }
 
 export function useClients() {
@@ -35,10 +68,12 @@ export function useClients() {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = subscribeClients((c) => {
-      setClients(c);
-      setLoading(false);
-    });
+    const unsubscribe = whenAuthReady(() =>
+      subscribeClients((c) => {
+        setClients(c);
+        setLoading(false);
+      }, () => setLoading(false))
+    );
     return unsubscribe;
   }, []);
 
@@ -51,10 +86,12 @@ export function useApps() {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = subscribeApps((a) => {
-      setApps(a);
-      setLoading(false);
-    });
+    const unsubscribe = whenAuthReady(() =>
+      subscribeApps((a) => {
+        setApps(a);
+        setLoading(false);
+      }, () => setLoading(false))
+    );
     return unsubscribe;
   }, []);
 
@@ -72,12 +109,15 @@ export function useSettings(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const unsubscribe = subscribeSettings(userId, (s) => {
       setSettings(s);
       setLoading(false);
-    });
+    }, () => setLoading(false));
     return unsubscribe;
   }, [userId]);
 
@@ -174,12 +214,33 @@ export function useConnectedAccounts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = subscribeConnectedAccounts((items) => {
-      setAccounts(items);
-      setLoading(false);
-    });
+    const unsubscribe = whenAuthReady(() =>
+      subscribeConnectedAccounts((items) => {
+        setAccounts(items);
+        setLoading(false);
+      }),
+    );
+    // Note: subscribeConnectedAccounts has its own error handler that calls
+    // callback([]) — loading is set false via the callback path.
     return unsubscribe;
   }, []);
 
   return { accounts, loading };
+}
+
+export function useReceipts() {
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = whenAuthReady(() =>
+      subscribeReceipts((items) => {
+        setReceipts(items);
+        setLoading(false);
+      }),
+    );
+    return unsubscribe;
+  }, []);
+
+  return { receipts, loading };
 }
