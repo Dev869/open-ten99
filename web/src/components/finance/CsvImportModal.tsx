@@ -50,7 +50,6 @@ export function CsvImportModal({ onClose, onImported }: CsvImportModalProps) {
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row');
 
-    const header = lines[0].toLowerCase();
     const cols = splitCsvLine(lines[0]);
     const headerLower = cols.map((c) => c.toLowerCase().trim());
 
