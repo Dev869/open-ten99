@@ -4,20 +4,23 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   query,
   orderBy,
   where,
   Timestamp,
   getDocs,
+  getDoc,
   writeBatch,
   type DocumentData,
   type DocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions, auth } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus } from '../lib/types';
+import { db, functions, auth, storage } from '../lib/firebase';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt } from '../lib/types';
 
 // --- Converters ---
 
@@ -65,6 +68,8 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     invoiceSentDate: data.invoiceSentDate ? toDate(data.invoiceSentDate) : undefined,
     invoicePaidDate: data.invoicePaidDate ? toDate(data.invoicePaidDate) : undefined,
     invoiceDueDate: data.invoiceDueDate ? toDate(data.invoiceDueDate) : undefined,
+    preDiscardStatus: data.preDiscardStatus ?? undefined,
+    discardedAt: data.discardedAt ? toDate(data.discardedAt) : undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -121,58 +126,99 @@ function docToApp(id: string, data: DocumentData): App {
 
 // --- Realtime Listeners ---
 
+/**
+ * onSnapshot with auto-retry — if Firestore rejects the listener (e.g. auth
+ * token not yet propagated after a fresh sign-in), wait and re-subscribe.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function snapshotWithRetry(
+  target: any,
+  onNext: (snap: any) => void,
+  options?: { maxRetries?: number; onExhausted?: () => void },
+): () => void {
+  const maxRetries = options?.maxRetries ?? 3;
+  let attempt = 0;
+  let unsub: (() => void) | null = null;
+  let cancelled = false;
+
+  function subscribe() {
+    unsub = onSnapshot(target, onNext, (err: unknown) => {
+      console.warn(`Firestore listener error (attempt ${attempt + 1}/${maxRetries + 1}):`, err);
+      if (!cancelled && attempt < maxRetries) {
+        attempt++;
+        unsub?.();
+        unsub = null;
+        setTimeout(() => { if (!cancelled) subscribe(); }, 1000 * attempt);
+      } else if (!cancelled) {
+        options?.onExhausted?.();
+      }
+    });
+  }
+
+  subscribe();
+  return () => { cancelled = true; unsub?.(); };
+}
+
 export function subscribeWorkItems(
   callback: (items: WorkItem[]) => void,
-  clientId?: string
+  clientId?: string,
+  onError?: () => void,
 ) {
   const ref = collection(db, 'workItems');
   const q = clientId
     ? query(ref, where('clientId', '==', clientId), orderBy('updatedAt', 'desc'))
     : query(ref, orderBy('updatedAt', 'desc'));
 
-  return onSnapshot(q, (snapshot) => {
-    const items = snapshot.docs.map((doc) => docToWorkItem(doc.id, doc.data()));
+  return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
+    const items = snapshot.docs.map((d: DocumentSnapshot) => docToWorkItem(d.id, d.data()!));
     callback(items);
-  });
+  }, { onExhausted: onError });
 }
 
-export function subscribeClients(callback: (clients: Client[]) => void) {
+export function subscribeClients(callback: (clients: Client[]) => void, onError?: () => void) {
   const ref = collection(db, 'clients');
   const q = query(ref, orderBy('name', 'asc'));
 
-  return onSnapshot(q, (snapshot) => {
-    const clients = snapshot.docs.map((doc) => docToClient(doc.id, doc.data()));
+  return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
+    const clients = snapshot.docs.map((d: DocumentSnapshot) => docToClient(d.id, d.data()!));
     callback(clients);
-  });
+  }, { onExhausted: onError });
 }
 
-export function subscribeApps(callback: (apps: App[]) => void) {
+export function subscribeApps(callback: (apps: App[]) => void, onError?: () => void) {
   const ref = collection(db, 'apps');
   const q = query(ref, orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const apps = snapshot.docs.map((doc) => docToApp(doc.id, doc.data()));
+  return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
+    const apps = snapshot.docs.map((d: DocumentSnapshot) => docToApp(d.id, d.data()!));
     callback(apps);
-  });
+  }, { onExhausted: onError });
 }
 
 export function subscribeSettings(
   userId: string,
-  callback: (settings: AppSettings) => void
+  callback: (settings: AppSettings) => void,
+  onError?: () => void,
 ) {
   const ref = doc(db, 'settings', userId);
 
-  return onSnapshot(ref, (snapshot) => {
+  return snapshotWithRetry(ref, (snapshot: DocumentSnapshot) => {
     const data = snapshot.data();
     callback({
       accentColor: data?.accentColor ?? '#4BA8A8',
       hourlyRate: data?.hourlyRate ?? 150,
       companyName: data?.companyName ?? 'DW Tailored',
       pdfLogoUrl: data?.pdfLogoUrl ?? undefined,
+      invoicePrefix: data?.invoicePrefix ?? undefined,
+      invoiceNextNumber: data?.invoiceNextNumber ?? undefined,
+      invoicePaymentTerms: data?.invoicePaymentTerms ?? undefined,
+      invoiceNotes: data?.invoiceNotes ?? undefined,
+      invoiceTaxRate: data?.invoiceTaxRate ?? undefined,
+      invoiceFromAddress: data?.invoiceFromAddress ?? undefined,
       teamId: data?.teamId ?? undefined,
       sidebarOrder: data?.sidebarOrder ?? undefined,
       sidebarHidden: data?.sidebarHidden ?? undefined,
     });
-  });
+  }, { onExhausted: onError });
 }
 
 // --- Work Items CRUD ---
@@ -235,22 +281,48 @@ export async function updateWorkItem(item: WorkItem) {
       : null,
     pdfUrl: item.pdfUrl ?? null,
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
+    ownerId: auth.currentUser?.uid ?? null,
     updatedAt: Timestamp.now(),
   });
 }
 
-export async function archiveWorkItem(id: string) {
+export async function discardWorkItem(id: string, currentStatus?: string) {
   const ref = doc(db, 'workItems', id);
   await updateDoc(ref, {
+    preDiscardStatus: currentStatus ?? 'completed',
     status: 'archived',
+    discardedAt: Timestamp.now(),
+    ownerId: auth.currentUser?.uid ?? null,
     updatedAt: Timestamp.now(),
   });
+}
+
+export async function restoreWorkItem(id: string) {
+  const { runTransaction } = await import('firebase/firestore');
+  const ref = doc(db, 'workItems', id);
+  await runTransaction(db, async (txn) => {
+    const snap = await txn.get(ref);
+    const restoredStatus = snap.data()?.preDiscardStatus || 'completed';
+    txn.update(ref, {
+      status: restoredStatus,
+      preDiscardStatus: deleteField(),
+      discardedAt: deleteField(),
+      ownerId: auth.currentUser?.uid ?? null,
+      updatedAt: Timestamp.now(),
+    });
+  });
+}
+
+export async function permanentlyDeleteWorkItem(id: string) {
+  const ref = doc(db, 'workItems', id);
+  await deleteDoc(ref);
 }
 
 export async function bulkUpdateStatus(ids: string[], status: string) {
+  const uid = auth.currentUser?.uid ?? null;
   const promises = ids.map((id) => {
     const ref = doc(db, 'workItems', id);
-    return updateDoc(ref, { status, updatedAt: Timestamp.now() });
+    return updateDoc(ref, { status, ownerId: uid, updatedAt: Timestamp.now() });
   });
   await Promise.all(promises);
 }
@@ -262,7 +334,7 @@ export async function updateInvoiceStatus(
   data: { invoiceStatus: string; invoiceSentDate?: Date; invoicePaidDate?: Date; invoiceDueDate?: Date },
 ) {
   const ref = doc(db, 'workItems', workItemId);
-  const clean: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  const clean: Record<string, unknown> = { ownerId: auth.currentUser?.uid ?? null, updatedAt: Timestamp.now() };
   clean.invoiceStatus = data.invoiceStatus;
   if (data.invoiceSentDate) clean.invoiceSentDate = Timestamp.fromDate(data.invoiceSentDate);
   if (data.invoicePaidDate) clean.invoicePaidDate = Timestamp.fromDate(data.invoicePaidDate);
@@ -286,6 +358,7 @@ export async function updateWorkItemClientResponse(
   await updateDoc(ref, clean);
 }
 
+
 // --- Clients CRUD ---
 
 export async function createClient(client: Omit<Client, 'id' | 'createdAt'>) {
@@ -295,6 +368,8 @@ export async function createClient(client: Omit<Client, 'id' | 'createdAt'>) {
   for (const [k, v] of Object.entries(client)) {
     if (v !== undefined) clean[k] = v;
   }
+  // Normalize email for consistent lookup (e.g. parseEmail.ts matches lowercase)
+  if (typeof clean.email === 'string') clean.email = (clean.email as string).toLowerCase().trim();
   if (auth.currentUser) clean.ownerId = auth.currentUser.uid;
   const docRef = await addDoc(ref, clean);
   return docRef.id;
@@ -305,17 +380,33 @@ export async function updateClient(client: Client) {
   const ref = doc(db, 'clients', client.id);
   await updateDoc(ref, {
     name: client.name,
-    email: client.email,
+    email: client.email.toLowerCase().trim(),
     phone: client.phone ?? null,
     company: client.company ?? null,
     notes: client.notes ?? null,
     retainerHours: client.retainerHours ?? null,
     retainerRenewalDay: client.retainerRenewalDay ?? null,
     retainerPaused: client.retainerPaused ?? false,
+    ownerId: auth.currentUser?.uid ?? null,
   });
 }
 
 export async function deleteClient(id: string) {
+  // Clear clientId on all work orders referencing this client
+  const wiRef = collection(db, 'workItems');
+  const q = query(wiRef, where('clientId', '==', id));
+  const snapshot = await getDocs(q);
+
+  const BATCH_LIMIT = 499;
+  for (let i = 0; i < snapshot.docs.length; i += BATCH_LIMIT) {
+    const chunk = snapshot.docs.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    chunk.forEach((d) => {
+      batch.update(d.ref, { clientId: '', updatedAt: Timestamp.now() });
+    });
+    await batch.commit();
+  }
+
   const ref = doc(db, 'clients', id);
   await deleteDoc(ref);
 }
@@ -355,6 +446,7 @@ export async function updateApp(app: App) {
     deploymentNotes: app.deploymentNotes ?? null,
     vaultCredentialIds: app.vaultCredentialIds ?? null,
     githubRepo: app.githubRepo ?? null,
+    ownerId: auth.currentUser?.uid ?? null,
     updatedAt: Timestamp.now(),
   });
 }
@@ -386,7 +478,23 @@ export async function deleteApp(id: string) {
 export async function updateSettings(userId: string, settings: Partial<AppSettings>) {
   const ref = doc(db, 'settings', userId);
   const { setDoc } = await import('firebase/firestore');
-  await setDoc(ref, settings, { merge: true });
+  // Firestore rejects undefined values — strip them before writing
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(settings)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  await setDoc(ref, clean, { merge: true });
+}
+
+export async function getAndIncrementInvoiceNumber(userId: string): Promise<number> {
+  const { runTransaction } = await import('firebase/firestore');
+  const ref = doc(db, 'settings', userId);
+  return runTransaction(db, async (txn) => {
+    const snap = await txn.get(ref);
+    const current = snap.data()?.invoiceNextNumber ?? 1;
+    txn.update(ref, { invoiceNextNumber: current + 1 });
+    return current;
+  });
 }
 
 // --- Profile ---
@@ -761,6 +869,170 @@ export async function deleteConnectedAccount(accountId: string): Promise<void> {
   await deleteDoc(doc(db, 'connectedAccounts', accountId));
 }
 
+// === Receipt Service Functions ===
+
+function docToReceipt(id: string, data: DocumentData): Receipt {
+  return {
+    id,
+    ownerId: data.ownerId ?? '',
+    status: data.status ?? 'processing',
+    imageUrl: data.imageUrl ?? '',
+    fileName: data.fileName ?? '',
+    uploadedAt: data.uploadedAt?.toDate?.() ?? new Date(),
+    vendor: data.vendor ?? undefined,
+    amount: data.amount ?? undefined,
+    date: data.date?.toDate?.() ?? undefined,
+    category: data.category ?? undefined,
+    lineItems: data.lineItems ?? undefined,
+    rawText: data.rawText ?? undefined,
+    transactionId: data.transactionId ?? undefined,
+    matchConfidence: data.matchConfidence ?? undefined,
+    matchMethod: data.matchMethod ?? undefined,
+    createdAt: data.createdAt?.toDate?.() ?? new Date(),
+    updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+  };
+}
+
+export function subscribeReceipts(
+  callback: (receipts: Receipt[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const q = query(
+    collection(db, 'receipts'),
+    where('ownerId', '==', user.uid)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const receipts = snapshot.docs
+        .map((doc) => docToReceipt(doc.id, doc.data()))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      callback(receipts);
+    },
+    (error) => {
+      console.error('receipts subscription error:', error);
+      callback([]);
+    }
+  );
+}
+
+export async function uploadReceiptFile(file: File): Promise<{ imageUrl: string; receiptId: string }> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const timestamp = Date.now();
+  const storageRef = ref(storage, `receipts/${user.uid}/${timestamp}-${file.name}`);
+  await uploadBytes(storageRef, file);
+  const imageUrl = await getDownloadURL(storageRef);
+
+  const docRef = await addDoc(collection(db, 'receipts'), {
+    ownerId: user.uid,
+    status: 'processing',
+    imageUrl,
+    fileName: file.name,
+    uploadedAt: Timestamp.now(),
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+
+  return { imageUrl, receiptId: docRef.id };
+}
+
+export async function confirmReceiptMatch(receiptId: string): Promise<void> {
+  await updateDoc(doc(db, 'receipts', receiptId), {
+    status: 'confirmed',
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function reassignReceipt(
+  receiptId: string,
+  oldTransactionId: string | undefined,
+  newTransactionId: string
+): Promise<void> {
+  const batch = writeBatch(db);
+  const now = Timestamp.now();
+
+  batch.update(doc(db, 'receipts', receiptId), {
+    transactionId: newTransactionId,
+    matchMethod: 'manual',
+    matchConfidence: 1.0,
+    status: 'confirmed',
+    updatedAt: now,
+  });
+
+  if (oldTransactionId) {
+    const oldTxRef = doc(db, 'transactions', oldTransactionId);
+    const oldTxSnap = await getDoc(oldTxRef);
+    if (oldTxSnap.exists()) {
+      const oldIds: string[] = oldTxSnap.data().receiptIds ?? [];
+      batch.update(oldTxRef, {
+        receiptIds: oldIds.filter((id) => id !== receiptId),
+        updatedAt: now,
+      });
+    }
+  }
+
+  const newTxRef = doc(db, 'transactions', newTransactionId);
+  const newTxSnap = await getDoc(newTxRef);
+  if (newTxSnap.exists()) {
+    const newIds: string[] = newTxSnap.data().receiptIds ?? [];
+    batch.update(newTxRef, {
+      receiptIds: [...newIds, receiptId],
+      updatedAt: now,
+    });
+  }
+
+  await batch.commit();
+}
+
+export async function createExpenseFromReceipt(receiptId: string, receipt: Receipt): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const now = Timestamp.now();
+
+  const txRef = await addDoc(collection(db, 'transactions'), {
+    ownerId: user.uid,
+    provider: 'manual',
+    externalId: null,
+    date: receipt.date ? Timestamp.fromDate(receipt.date) : now,
+    amount: -(receipt.amount ?? 0),
+    description: receipt.vendor ?? 'Receipt expense',
+    category: receipt.category ?? 'Uncategorized',
+    type: 'expense',
+    matchStatus: 'unmatched',
+    isManual: true,
+    taxDeductible: false,
+    receiptIds: [receiptId],
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await updateDoc(doc(db, 'receipts', receiptId), {
+    transactionId: txRef.id,
+    matchMethod: 'manual',
+    matchConfidence: 1.0,
+    status: 'confirmed',
+    updatedAt: now,
+  });
+
+  return txRef.id;
+}
+
+export async function deleteReceipt(receiptId: string, imageUrl: string): Promise<void> {
+  const storageRef = ref(storage, imageUrl);
+  try {
+    await deleteObject(storageRef);
+  } catch {
+    // Storage file may already be deleted
+  }
+  await deleteDoc(doc(db, 'receipts', receiptId));
+}
+
 export async function updateTransactionCategory(
   transactionId: string,
   category: string
@@ -879,6 +1151,7 @@ export async function confirmMatch(transactionId: string, workItemId: string): P
   batch.update(doc(db, 'workItems', workItemId), {
     invoiceStatus: 'paid',
     invoicePaidDate: Timestamp.fromDate(new Date()),
+    ownerId: user.uid,
     updatedAt: Timestamp.now(),
   });
   await batch.commit();
