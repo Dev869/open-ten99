@@ -250,9 +250,9 @@ export async function buildChangeOrderPdf(
   // Column positions — keep everything within MARGIN to rightX
   const colNum   = MARGIN;
   const colDesc  = MARGIN + 32;
-  const colHrs   = MARGIN + CONTENT_W - 190;
-  const colRate  = MARGIN + CONTENT_W - 120;
-  const colAmt   = rightX;  // right-align amounts flush to right margin
+  const colHrs   = MARGIN + CONTENT_W - 200;
+  const colRate  = MARGIN + CONTENT_W - 130;
+  const colAmt   = rightX;      // right-align amounts to content edge
   const rowH     = 24;      // enough height to prevent row bleed
 
   // Right-align positions for numeric columns (right edge of each zone)
@@ -303,7 +303,7 @@ export async function buildChangeOrderPdf(
     const lineNum = String(i + 1);
     const desc = truncateText(item.description, font, 9, descMaxW);
     const hrs  = item.hours.toFixed(1);
-    const rate = fmtCurrency(settings.hourlyRate);
+    const rate = fmtCurrency(item.hours > 0 ? item.cost / item.hours : item.cost);
     const amt  = fmtCurrency(item.cost);
 
     page.drawText(lineNum, { x: colNum + 8, y, size: 9, font, color: GRAY });
