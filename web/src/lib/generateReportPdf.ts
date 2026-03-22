@@ -88,6 +88,14 @@ function formatDateShort(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// ---- Color Palette ----
+
+const TEAL = rgb(0.29, 0.66, 0.66);       // #4BA8A8 — revenue/accent
+const CORAL = rgb(0.91, 0.30, 0.24);      // #E84D3D — expenses
+const CHARCOAL = rgb(0.15, 0.15, 0.15);   // text
+const GRAY = rgb(0.45, 0.45, 0.45);       // labels
+const LIGHT_GRAY = rgb(0.85, 0.85, 0.85); // gridlines
+
 // ---- Report Builders ----
 
 const COL_RIGHT = PAGE_WIDTH - MARGIN; // 562
@@ -473,6 +481,342 @@ function buildExpenseReport(ctx: PdfContext, range: DateRange, transactions?: Tr
   drawFooter(ctx);
 }
 
+function buildChartsSummary(
+  ctx: PdfContext,
+  workItems: WorkItem[],
+  clients: Client[],
+  range: DateRange,
+  transactions?: Transaction[]
+): void {
+  drawHeader(ctx, 'Financial Summary', `${formatDateShort(range.start)} — ${formatDateShort(range.end)}`);
+
+  // ── 1. Compute Data ──────────────────────────────────────────────────────
+
+  const monthly = getMonthlyRevenue(workItems, 12, range.end);
+
+  // Monthly expenses aligned to the monthly revenue months
+  const monthlyExpenses: number[] = monthly.map((m) => {
+    if (!transactions) return 0;
+    const monthDate = new Date(m.month + ' 01');
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    return transactions
+      .filter((t) => t.type === 'expense' && t.date >= monthStart && t.date <= monthEnd)
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  });
+
+  const byClient = getRevenueByClient(workItems, clients, range);
+
+  // Expense categories
+  const expenseCategoryMap = new Map<string, number>();
+  if (transactions) {
+    for (const t of transactions) {
+      if (t.type === 'expense') {
+        const cat = t.category || 'Uncategorized';
+        expenseCategoryMap.set(cat, (expenseCategoryMap.get(cat) ?? 0) + Math.abs(t.amount));
+      }
+    }
+  }
+  const expenseCategories = Array.from(expenseCategoryMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  // KPI totals
+  const totalRevenue = monthly.reduce((s, m) => s + m.revenue, 0);
+  const totalExpenses = monthlyExpenses.reduce((s, e) => s + e, 0);
+  const netIncome = totalRevenue - totalExpenses;
+  const workOrderCount = workItems.filter((w) => {
+    const d = w.invoicePaidDate ?? w.updatedAt ?? w.createdAt;
+    return d && d >= range.start && d <= range.end;
+  }).length;
+  const avgValue = workOrderCount > 0 ? totalRevenue / workOrderCount : 0;
+
+  // ── 2. KPI Row ────────────────────────────────────────────────────────────
+
+  const KPI_BOX_W = (PAGE_WIDTH - MARGIN * 2) / 5;
+  const KPI_BOX_H = 48;
+  const KPI_Y = ctx.y - KPI_BOX_H;
+
+  const kpis = [
+    { label: 'Total Revenue', value: formatCurrency(totalRevenue) },
+    { label: 'Total Expenses', value: formatCurrency(totalExpenses) },
+    { label: 'Net Income', value: formatCurrency(netIncome) },
+    { label: 'Work Orders', value: String(workOrderCount) },
+    { label: 'Avg Value', value: formatCurrency(avgValue) },
+  ];
+
+  for (let i = 0; i < kpis.length; i++) {
+    const boxX = MARGIN + i * KPI_BOX_W;
+    const kpi = kpis[i];
+    // Box border
+    ctx.page.drawRectangle({
+      x: boxX + 2,
+      y: KPI_Y,
+      width: KPI_BOX_W - 4,
+      height: KPI_BOX_H,
+      borderColor: LIGHT_GRAY,
+      borderWidth: 0.75,
+      color: rgb(0.97, 0.97, 0.97),
+    });
+    // Label
+    ctx.page.drawText(kpi.label.toUpperCase(), {
+      x: boxX + 8,
+      y: KPI_Y + KPI_BOX_H - 14,
+      font: ctx.font,
+      size: 6.5,
+      color: GRAY,
+    });
+    // Value
+    const valueColor = kpi.label === 'Net Income'
+      ? (netIncome >= 0 ? TEAL : CORAL)
+      : CHARCOAL;
+    ctx.page.drawText(kpi.value, {
+      x: boxX + 8,
+      y: KPI_Y + 10,
+      font: ctx.bold,
+      size: 10,
+      color: valueColor,
+    });
+  }
+
+  ctx.y = KPI_Y - 18;
+
+  // ── 3. Revenue vs Expenses Bar Chart ──────────────────────────────────────
+
+  checkSpace(ctx, 160);
+  ctx.page.drawText('REVENUE VS EXPENSES', {
+    x: MARGIN, y: ctx.y, font: ctx.bold, size: 9, color: CHARCOAL,
+  });
+  ctx.y -= 10;
+
+  const CHART_X = MARGIN + 48; // space for Y-axis labels
+  const CHART_W = PAGE_WIDTH - MARGIN * 2 - 48;
+  const CHART_H = 110;
+  const CHART_BOTTOM = ctx.y - CHART_H;
+
+  // Gridlines & Y-axis
+  const maxBarVal = Math.max(...monthly.map((m, i) => Math.max(m.revenue, monthlyExpenses[i])), 1);
+  const gridCount = 4;
+  for (let g = 0; g <= gridCount; g++) {
+    const gy = CHART_BOTTOM + (g / gridCount) * CHART_H;
+    ctx.page.drawLine({
+      start: { x: CHART_X, y: gy },
+      end: { x: CHART_X + CHART_W, y: gy },
+      thickness: 0.3,
+      color: LIGHT_GRAY,
+    });
+    const gridVal = (maxBarVal * g) / gridCount;
+    const label = gridVal >= 1000 ? `$${(gridVal / 1000).toFixed(0)}k` : `$${gridVal.toFixed(0)}`;
+    ctx.page.drawText(label, {
+      x: MARGIN,
+      y: gy - 3.5,
+      font: ctx.font,
+      size: 6,
+      color: GRAY,
+    });
+  }
+
+  // X-axis baseline
+  ctx.page.drawLine({
+    start: { x: CHART_X, y: CHART_BOTTOM },
+    end: { x: CHART_X + CHART_W, y: CHART_BOTTOM },
+    thickness: 0.5,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+
+  // Bars
+  const barGroupW = CHART_W / monthly.length;
+  const BAR_GAP = 1.5;
+  const barW = Math.max(2, barGroupW * 0.35);
+
+  for (let i = 0; i < monthly.length; i++) {
+    const gx = CHART_X + i * barGroupW;
+    const rev = monthly[i].revenue;
+    const exp = monthlyExpenses[i];
+
+    const revH = maxBarVal > 0 ? (rev / maxBarVal) * CHART_H : 0;
+    const expH = maxBarVal > 0 ? (exp / maxBarVal) * CHART_H : 0;
+
+    // Revenue bar (teal)
+    if (revH > 0) {
+      ctx.page.drawRectangle({
+        x: gx + (barGroupW / 2) - barW - BAR_GAP,
+        y: CHART_BOTTOM,
+        width: barW,
+        height: revH,
+        color: TEAL,
+      });
+    }
+
+    // Expense bar (coral)
+    if (expH > 0) {
+      ctx.page.drawRectangle({
+        x: gx + (barGroupW / 2) + BAR_GAP,
+        y: CHART_BOTTOM,
+        width: barW,
+        height: expH,
+        color: CORAL,
+      });
+    }
+
+    // Month label — use abbreviated month only (first 3 chars)
+    const shortLabel = monthly[i].month.slice(0, 3);
+    const labelW = ctx.font.widthOfTextAtSize(shortLabel, 5.5);
+    ctx.page.drawText(shortLabel, {
+      x: gx + barGroupW / 2 - labelW / 2,
+      y: CHART_BOTTOM - 9,
+      font: ctx.font,
+      size: 5.5,
+      color: GRAY,
+    });
+  }
+
+  // Legend
+  const legendY = CHART_BOTTOM - 20;
+  ctx.page.drawRectangle({ x: CHART_X, y: legendY, width: 8, height: 6, color: TEAL });
+  ctx.page.drawText('Revenue', { x: CHART_X + 11, y: legendY, font: ctx.font, size: 7, color: GRAY });
+  ctx.page.drawRectangle({ x: CHART_X + 60, y: legendY, width: 8, height: 6, color: CORAL });
+  ctx.page.drawText('Expenses', { x: CHART_X + 71, y: legendY, font: ctx.font, size: 7, color: GRAY });
+
+  ctx.y = legendY - 16;
+
+  // ── 4. Two-column: Expense Breakdown + Revenue by Client ──────────────────
+
+  const HALF_W = (PAGE_WIDTH - MARGIN * 2 - 12) / 2;
+  const LEFT_X = MARGIN;
+  const RIGHT_X = MARGIN + HALF_W + 12;
+
+  checkSpace(ctx, 160);
+  const sectionTopY = ctx.y;
+
+  // Section headers
+  ctx.page.drawText('EXPENSE BREAKDOWN', {
+    x: LEFT_X, y: sectionTopY, font: ctx.bold, size: 9, color: CHARCOAL,
+  });
+  ctx.page.drawText('REVENUE BY CLIENT', {
+    x: RIGHT_X, y: sectionTopY, font: ctx.bold, size: 9, color: CHARCOAL,
+  });
+
+  const HBAR_START_Y = sectionTopY - 14;
+  const HBAR_H = 9;
+  const HBAR_GAP = 6;
+  const HBAR_LABEL_W = 70;
+  const HBAR_AMT_W = 48;
+  const HBAR_MAX_W = HALF_W - HBAR_LABEL_W - HBAR_AMT_W - 6;
+
+  // Expense breakdown bars (left column)
+  const maxExpCat = expenseCategories.length > 0 ? expenseCategories[0][1] : 1;
+  let rowY = HBAR_START_Y;
+  for (const [cat, amount] of expenseCategories) {
+    const barFrac = maxExpCat > 0 ? amount / maxExpCat : 0;
+    const filledW = barFrac * HBAR_MAX_W;
+
+    // Background track
+    ctx.page.drawRectangle({
+      x: LEFT_X + HBAR_LABEL_W + 4,
+      y: rowY - HBAR_H,
+      width: HBAR_MAX_W,
+      height: HBAR_H,
+      color: LIGHT_GRAY,
+    });
+    // Filled bar
+    if (filledW > 0) {
+      ctx.page.drawRectangle({
+        x: LEFT_X + HBAR_LABEL_W + 4,
+        y: rowY - HBAR_H,
+        width: filledW,
+        height: HBAR_H,
+        color: CORAL,
+      });
+    }
+    // Category name (truncated)
+    const catLabel = cat.length > 12 ? cat.slice(0, 11) + '…' : cat;
+    ctx.page.drawText(catLabel, {
+      x: LEFT_X,
+      y: rowY - HBAR_H + 1.5,
+      font: ctx.font,
+      size: 6.5,
+      color: CHARCOAL,
+    });
+    // Amount
+    const amtText = formatCurrency(amount);
+    ctx.page.drawText(amtText, {
+      x: LEFT_X + HBAR_LABEL_W + HBAR_MAX_W + 7,
+      y: rowY - HBAR_H + 1.5,
+      font: ctx.font,
+      size: 6.5,
+      color: GRAY,
+    });
+
+    rowY -= HBAR_H + HBAR_GAP;
+  }
+
+  if (expenseCategories.length === 0) {
+    ctx.page.drawText('No expenses recorded.', {
+      x: LEFT_X, y: HBAR_START_Y - HBAR_H, font: ctx.font, size: 7, color: GRAY,
+    });
+  }
+
+  // Revenue by client bars (right column)
+  const topClients = byClient.slice(0, 8);
+  const maxClientRev = topClients.length > 0 ? topClients[0].revenue : 1;
+  rowY = HBAR_START_Y;
+  for (const c of topClients) {
+    const barFrac = maxClientRev > 0 ? c.revenue / maxClientRev : 0;
+    const filledW = barFrac * HBAR_MAX_W;
+
+    // Background track
+    ctx.page.drawRectangle({
+      x: RIGHT_X + HBAR_LABEL_W + 4,
+      y: rowY - HBAR_H,
+      width: HBAR_MAX_W,
+      height: HBAR_H,
+      color: LIGHT_GRAY,
+    });
+    // Filled bar
+    if (filledW > 0) {
+      ctx.page.drawRectangle({
+        x: RIGHT_X + HBAR_LABEL_W + 4,
+        y: rowY - HBAR_H,
+        width: filledW,
+        height: HBAR_H,
+        color: TEAL,
+      });
+    }
+    // Client name (truncated)
+    const clientLabel = c.clientName.length > 12 ? c.clientName.slice(0, 11) + '…' : c.clientName;
+    ctx.page.drawText(clientLabel, {
+      x: RIGHT_X,
+      y: rowY - HBAR_H + 1.5,
+      font: ctx.font,
+      size: 6.5,
+      color: CHARCOAL,
+    });
+    // Amount
+    ctx.page.drawText(formatCurrency(c.revenue), {
+      x: RIGHT_X + HBAR_LABEL_W + HBAR_MAX_W + 7,
+      y: rowY - HBAR_H + 1.5,
+      font: ctx.font,
+      size: 6.5,
+      color: GRAY,
+    });
+
+    rowY -= HBAR_H + HBAR_GAP;
+  }
+
+  if (topClients.length === 0) {
+    ctx.page.drawText('No revenue data.', {
+      x: RIGHT_X, y: HBAR_START_Y - HBAR_H, font: ctx.font, size: 7, color: GRAY,
+    });
+  }
+
+  // Update ctx.y to below the tallest column
+  const maxRows = Math.max(expenseCategories.length, topClients.length, 1);
+  ctx.y = HBAR_START_Y - maxRows * (HBAR_H + HBAR_GAP) - 12;
+
+  drawFooter(ctx);
+}
+
 // ---- Public API ----
 
 export type ReportType = 'profit_loss' | 'income_by_client' | 'tax_summary' | 'hours_billing' | 'aging' | 'expense';
@@ -482,7 +826,8 @@ export async function generateReportPdf(
   workItems: WorkItem[],
   clients: Client[],
   range: DateRange,
-  transactions?: Transaction[]
+  transactions?: Transaction[],
+  includeCharts?: boolean
 ): Promise<void> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -490,6 +835,11 @@ export async function generateReportPdf(
   const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
   const ctx: PdfContext = { doc, page, font, bold, y: PAGE_HEIGHT - MARGIN };
+
+  if (includeCharts) {
+    buildChartsSummary(ctx, workItems, clients, range, transactions);
+    newPage(ctx);
+  }
 
   switch (reportType) {
     case 'profit_loss':
@@ -532,26 +882,30 @@ export async function generateCombinedReportPdf(
 
   const ctx: PdfContext = { doc, page, font, bold, y: PAGE_HEIGHT - MARGIN };
 
-  // 1. Profit & Loss
+  // 1. Charts Summary (first page)
+  buildChartsSummary(ctx, workItems, clients, range, transactions);
+
+  // 2. Profit & Loss
+  newPage(ctx);
   buildProfitLoss(ctx, workItems, range, transactions);
 
-  // 2. Income by Client — new page
+  // 3. Income by Client — new page
   newPage(ctx);
   buildIncomeByClient(ctx, workItems, clients, range);
 
-  // 3. Tax Summary — new page
+  // 4. Tax Summary — new page
   newPage(ctx);
   buildTaxSummary(ctx, workItems, clients, range, transactions);
 
-  // 4. Hours & Billing — new page
+  // 5. Hours & Billing — new page
   newPage(ctx);
   buildHoursBilling(ctx, workItems, range);
 
-  // 5. Aging Report — new page
+  // 6. Aging Report — new page
   newPage(ctx);
   buildAging(ctx, workItems);
 
-  // 6. Expense Report — new page
+  // 7. Expense Report — new page
   newPage(ctx);
   buildExpenseReport(ctx, range, transactions);
 
