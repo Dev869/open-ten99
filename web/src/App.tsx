@@ -1,20 +1,59 @@
 import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
 import { updateSettings } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
-import { TimeTracker } from './components/TimeTracker';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { TimeTrackerProvider, TimeTrackerNavButton, TimeTrackerBar } from './components/TimeTracker';
 import { ToastContainer } from './components/ToastContainer';
 import { ToastContext, useToastState } from './hooks/useToast';
 import { useTheme } from './hooks/useTheme';
 import { GlobalSearch } from './components/GlobalSearch';
 import { computeNotifications, NotificationPanel, MobileNotificationBell } from './components/NotificationCenter';
-import { IconMenu, IconSearch } from './components/icons';
+import { IconSearch, IconSettings, IconUser } from './components/icons';
 import { BrandWordmark } from './components/Brand';
 import { auth } from './lib/firebase';
 import Login from './routes/Login';
+
+/* ── Mobile page name mapping ─────────────────────────── */
+
+const pageNames: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/dashboard/work-items': 'Work Items',
+  '/dashboard/calendar': 'Calendar',
+  '/dashboard/clients': 'Clients',
+  '/dashboard/apps': 'Apps',
+  '/dashboard/finance': 'Finance',
+  '/dashboard/finance/invoices': 'Invoices',
+  '/dashboard/finance/transactions': 'Transactions',
+  '/dashboard/finance/expenses': 'Expenses',
+  '/dashboard/finance/receipts': 'Receipts',
+  '/dashboard/finance/reports': 'Reports',
+  '/dashboard/finance/accounts': 'Accounts',
+  '/dashboard/finance/mileage': 'Mileage',
+  '/dashboard/team': 'Team',
+  '/dashboard/vault': 'Vault',
+  '/dashboard/settings': 'Settings',
+  '/dashboard/profile': 'Profile',
+};
+
+function getPageName(pathname: string): string {
+  // Exact match first
+  if (pageNames[pathname]) return pageNames[pathname];
+  // Try matching detail pages (e.g. /dashboard/clients/123 -> "Clients")
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length >= 2) {
+    const parentPath = '/' + segments.slice(0, 2).join('/');
+    if (pageNames[parentPath]) return pageNames[parentPath];
+  }
+  if (segments.length >= 3) {
+    const parentPath = '/' + segments.slice(0, 3).join('/');
+    if (pageNames[parentPath]) return pageNames[parentPath];
+  }
+  return 'Ten99';
+}
 
 // Lazy-loaded contractor routes
 const Dashboard = lazy(() => import('./routes/contractor/Dashboard'));
@@ -30,6 +69,7 @@ const Expenses = lazy(() => import('./routes/contractor/Expenses'));
 const Receipts = lazy(() => import('./routes/contractor/Receipts'));
 const Reports = lazy(() => import('./routes/contractor/Reports'));
 const Accounts = lazy(() => import('./routes/contractor/Accounts'));
+const Mileage = lazy(() => import('./routes/contractor/Mileage'));
 const Team = lazy(() => import('./routes/contractor/Team'));
 const Settings = lazy(() => import('./routes/contractor/Settings'));
 const Profile = lazy(() => import('./routes/contractor/Profile'));
@@ -52,7 +92,6 @@ function Loading() {
 }
 
 function ContractorLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(() => {
     const stored = localStorage.getItem('oc-sidebar-expanded');
@@ -62,8 +101,10 @@ function ContractorLayout() {
   const { user } = useAuth();
   const { workItems } = useWorkItems();
   const { clients } = useClients();
+  const { apps } = useApps();
   const { settings } = useSettings(user?.uid);
   const toastState = useToastState();
+  const location = useLocation();
   const pendingCount = workItems.filter(
     (i) => i.status === 'draft' || i.status === 'inReview'
   ).length;
@@ -176,77 +217,93 @@ function ContractorLayout() {
 
   return (
     <ToastContext.Provider value={toastState}>
-      <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden">
-        <Sidebar
-          pendingCount={pendingCount}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          sidebarOrder={settings.sidebarOrder}
-          sidebarHidden={settings.sidebarHidden}
-          onUpdateSidebar={handleUpdateSidebar}
-          dark={dark}
-          onToggleTheme={toggle}
-          expanded={sidebarExpanded}
-          onToggleExpanded={handleToggleExpanded}
-          notificationCount={notifCount}
-          notificationBellRef={notifBellRef}
-          onNotificationsClick={handleNotifToggle}
-        />
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile header */}
-          <header className="md:hidden flex items-center h-14 px-4 bg-[var(--bg-card)] border-b border-[var(--border)] flex-shrink-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
-            >
-              <IconMenu size={22} />
-            </button>
-            <div className="flex-1 flex items-center justify-center">
-              <BrandWordmark size={16} />
-            </div>
-            <div className="flex items-center gap-1">
-              <MobileNotificationBell
-                count={notifCount}
-                onClick={handleNotifToggle}
-                buttonRef={mobileBellRef}
-              />
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 -mr-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
-              >
-                <IconSearch size={20} />
-              </button>
-            </div>
-          </header>
+      <TimeTrackerProvider clients={clients} apps={apps}>
+        <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden">
+          <Sidebar
+            pendingCount={pendingCount}
+            sidebarOrder={settings.sidebarOrder}
+            sidebarHidden={settings.sidebarHidden}
+            onUpdateSidebar={handleUpdateSidebar}
+            dark={dark}
+            onToggleTheme={toggle}
+            expanded={sidebarExpanded}
+            onToggleExpanded={handleToggleExpanded}
+            notificationCount={notifCount}
+            notificationBellRef={notifBellRef}
+            onNotificationsClick={handleNotifToggle}
+          />
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Mobile header — Strava-style centered title with notch gap */}
+            <header className="md:hidden sticky top-0 z-30 bg-[var(--bg-page)] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+              <div className="flex items-center justify-between h-12 px-4">
+                <div className="flex items-center gap-0.5 min-w-[88px]">
+                  <Link
+                    to="/dashboard/settings"
+                    className="p-2 -ml-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                  >
+                    <IconSettings size={24} />
+                  </Link>
+                  <button
+                    onClick={() => setSearchOpen(true)}
+                    className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                  >
+                    <IconSearch size={24} />
+                  </button>
+                </div>
+                <h1 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+                  {getPageName(location.pathname)}
+                </h1>
+                <div className="flex items-center gap-0.5 min-w-[88px] justify-end">
+                  <TimeTrackerNavButton />
+                  <MobileNotificationBell
+                    count={notifCount}
+                    onClick={handleNotifToggle}
+                    buttonRef={mobileBellRef}
+                  />
+                  <Link
+                    to="/dashboard/profile"
+                    className="p-2 -mr-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                  >
+                    <IconUser size={24} />
+                  </Link>
+                </div>
+              </div>
+            </header>
 
-          {/* Main content */}
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">
-            <Suspense fallback={<Loading />}>
-              <Outlet />
-            </Suspense>
-          </main>
+            <TimeTrackerBar />
+
+            {/* Main content */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+              <Suspense fallback={<Loading />}>
+                <Outlet />
+              </Suspense>
+            </main>
+          </div>
+
+          {/* Mobile bottom tab bar */}
+          <MobileBottomNav dark={dark} onToggleTheme={toggle} />
+
+          {notifOpen && (
+            <NotificationPanel
+              notifications={notifications}
+              onDismiss={handleNotifDismiss}
+              onDismissAll={handleNotifDismissAll}
+              onClose={() => setNotifOpen(false)}
+              isMobile={isMobileView}
+              panelRef={notifPanelRef}
+              sidebarExpanded={sidebarExpanded}
+            />
+          )}
+          <ToastContainer />
+          {searchOpen && (
+            <GlobalSearch
+              workItems={workItems}
+              clients={clients}
+              onClose={() => setSearchOpen(false)}
+            />
+          )}
         </div>
-        <TimeTracker clients={clients} />
-        {notifOpen && (
-          <NotificationPanel
-            notifications={notifications}
-            onDismiss={handleNotifDismiss}
-            onDismissAll={handleNotifDismissAll}
-            onClose={() => setNotifOpen(false)}
-            isMobile={isMobileView}
-            panelRef={notifPanelRef}
-            sidebarExpanded={sidebarExpanded}
-          />
-        )}
-        <ToastContainer />
-        {searchOpen && (
-          <GlobalSearch
-            workItems={workItems}
-            clients={clients}
-            onClose={() => setSearchOpen(false)}
-          />
-        )}
-      </div>
+      </TimeTrackerProvider>
     </ToastContext.Provider>
   );
 }
@@ -311,7 +368,7 @@ function ContractorRoutes() {
       />
       <Route
         path="finance/invoices"
-        element={<Invoices workItems={workItems} clients={clients} hourlyRate={settings.hourlyRate} taxRate={settings.invoiceTaxRate} />}
+        element={<Invoices workItems={workItems} clients={clients} settings={settings} hourlyRate={settings.hourlyRate} taxRate={settings.invoiceTaxRate} />}
       />
       <Route path="finance/transactions" element={<Transactions />} />
       <Route path="finance/expenses" element={<Expenses />} />
@@ -321,6 +378,7 @@ function ContractorRoutes() {
         element={<Reports workItems={workItems} clients={clients} />}
       />
       <Route path="finance/accounts" element={<Accounts />} />
+      <Route path="finance/mileage" element={<Mileage clients={clients} />} />
       <Route
         path="team"
         element={user ? <Team user={user} settings={settings} /> : null}
