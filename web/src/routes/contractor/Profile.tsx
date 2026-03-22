@@ -106,7 +106,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
 
   return (
     <div className="max-w-2xl animate-fade-in-up">
-      <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
+      <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
         Profile
       </h1>
 

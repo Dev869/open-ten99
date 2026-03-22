@@ -63,24 +63,31 @@ export default function ReceiptUploader({ onUploadComplete, onError }: ReceiptUp
 
   if (uploading) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--bg-card)] p-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
-        <p className="mt-3 text-sm text-[var(--text-secondary)]">Uploading...</p>
+      <div className="flex flex-col items-center justify-center rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4 min-h-[160px]">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+        <p className="mt-2 text-xs text-[var(--text-secondary)]">Uploading...</p>
       </div>
     );
   }
 
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors cursor-pointer ${
+      className={`flex flex-col items-center justify-center rounded-xl p-4 min-h-[160px] transition-colors cursor-pointer ${
         dragActive
-          ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-          : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)]/50'
+          ? 'border-2 border-[var(--accent)] bg-[var(--accent)]/10'
+          : 'bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)]/50'
       }`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onClick={() => fileInputRef.current?.click()}
+      onClick={() => {
+        // On mobile, prefer camera; on desktop, file picker
+        if ('ontouchstart' in window) {
+          scanInputRef.current?.click();
+        } else {
+          fileInputRef.current?.click();
+        }
+      }}
     >
       <input
         ref={scanInputRef}
@@ -99,20 +106,11 @@ export default function ReceiptUploader({ onUploadComplete, onError }: ReceiptUp
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
 
-      <p className="text-2xl">+</p>
-      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">Upload Receipt</p>
-      <p className="text-xs text-[var(--text-secondary)]">Drop files or click to browse</p>
-
-      {/* Mobile: show scan button */}
-      <button
-        className="mt-3 rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white sm:hidden"
-        onClick={(e) => {
-          e.stopPropagation();
-          scanInputRef.current?.click();
-        }}
-      >
-        Scan Receipt
-      </button>
+      <div className="w-10 h-10 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-2">
+        <span className="text-lg text-[var(--accent)] font-bold">+</span>
+      </div>
+      <p className="text-xs font-semibold text-[var(--text-primary)]">Add Receipt</p>
+      <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">Tap or drop file</p>
     </div>
   );
 }

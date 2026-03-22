@@ -558,6 +558,39 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </p>
         </div>
 
+        {/* Dev Tools */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Dev Tools
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                const { seedSampleData } = await import('../../lib/seedData');
+                await seedSampleData();
+                addToast('Sample data created!', 'success');
+              }}
+              className="px-4 py-2 rounded-lg bg-[var(--bg-input)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors"
+            >
+              Seed Sample Data
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm('This will delete ALL your data (clients, work items, time entries, expenses, mileage). Are you sure?')) return;
+                const { clearAllData } = await import('../../lib/seedData');
+                await clearAllData();
+                addToast('All data cleared', 'success');
+              }}
+              className="px-4 py-2 rounded-lg bg-[var(--color-red)]/10 text-sm font-medium text-[var(--color-red)] hover:bg-[var(--color-red)]/20 transition-colors"
+            >
+              Clear All Data
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-2">
+            Seed populates sample data. Clear removes everything.
+          </p>
+        </div>
+
         {/* Credits / Attribution */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
           <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">

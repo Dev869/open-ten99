@@ -1377,7 +1377,42 @@ export function IconInfo({ size = 16, className, color }: IconProps) {
   );
 }
 
+/** Pixel three-dot "more" / ellipsis icon (horizontal) */
+export function IconMore({ size = 22, className, color }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <g fill={color || 'currentColor'}>
+        {/* Left dot */}
+        <rect x="2" y="13" width="6" height="6" />
+        {/* Center dot */}
+        <rect x="13" y="13" width="6" height="6" />
+        {/* Right dot */}
+        <rect x="24" y="13" width="6" height="6" />
+      </g>
+    </svg>
+  );
+}
+
 /** Pixel thumbs up / like (Streamline Pixel) */
+export function IconCamera({ size = 22, className, color }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z" stroke={color || 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="13" r="4" stroke={color || 'currentColor'} strokeWidth="2" />
+    </svg>
+  );
+}
+
+export function IconCar({ size = 22, className, color }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M5 17h14M5 17a2 2 0 0 1-2-2v-3h18v3a2 2 0 0 1-2 2M5 17v2a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2m10 0v2a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2M3 12l2.3-6.13A2 2 0 0 1 7.16 4h9.68a2 2 0 0 1 1.86 1.27L21 12" stroke={color || 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7" cy="15" r="1" fill={color || 'currentColor'} />
+      <circle cx="17" cy="15" r="1" fill={color || 'currentColor'} />
+    </svg>
+  );
+}
+
 export function IconThumbsUp({ size = 22, className, color }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>

@@ -117,39 +117,39 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
 
       {/* Client Header */}
       <div className="bg-gradient-to-br from-[#1A1A2E] to-[#444] rounded-2xl p-6 mb-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
             {client.name.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-white">{client.name}</h1>
-            <div className="text-sm text-white/70">{client.email}</div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-white truncate">{client.name}</h1>
+            <div className="text-sm text-white/70 truncate">{client.email}</div>
             {client.company && (
-              <div className="text-sm text-white/50">{client.company}</div>
+              <div className="text-sm text-white/50 truncate">{client.company}</div>
             )}
           </div>
-          <button
-            onClick={() => setEditing(!editing)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white/70 hover:text-white border border-white/20 hover:border-white/40 hover:bg-[var(--bg-card)]/10 rounded-xl active:scale-[0.97] transition-all min-h-[44px]"
-          >
-            {editing ? (
-              <>
-                <IconClose size={14} />
-                Cancel
-              </>
-            ) : (
-              <>
-                <IconEdit size={14} />
-                Edit
-              </>
-            )}
-          </button>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-white/50">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50 mt-3">
           <span>{clientItems.length} work items</span>
           <span>Client since {formatDate(client.createdAt)}</span>
           {client.phone && <span>{client.phone}</span>}
         </div>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="inline-flex items-center gap-2 px-4 py-2 mt-4 text-xs font-medium text-white/70 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/5 rounded-xl active:scale-[0.97] transition-all min-h-[44px]"
+        >
+          {editing ? (
+            <>
+              <IconClose size={14} />
+              Cancel
+            </>
+          ) : (
+            <>
+              <IconEdit size={14} />
+              Edit
+            </>
+          )}
+        </button>
       </div>
 
       {/* Retainer Summary */}
@@ -376,7 +376,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
           />
           <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-sm animate-scale-in">
             <div className="p-6 text-center">
-              <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+              <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center">
                 <IconTrash size={24} className="text-red-500" />
               </div>
               <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">Delete this client?</h3>

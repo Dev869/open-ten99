@@ -211,7 +211,7 @@ export function MobileNotificationBell({ count, onClick, buttonRef }: MobileBell
       className="relative p-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
       title="Notifications"
     >
-      <IconBell />
+      <IconBell size={24} />
       {count > 0 && (
         <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--bg-card)]" />
       )}

@@ -4,8 +4,9 @@
   "description": "Work order management for independent contractors",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
+  "scope": "/",
+  "background_color": "#2C2417",
+  "theme_color": "#2C2417",
   "icons": [
     {
       "src": "/icon-192.png",

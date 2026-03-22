@@ -1,11 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import type { AppSettings } from '../lib/types';
-import { createClient } from '../services/firestore';
-import { updateSettings } from '../services/firestore';
-import { IconUser, IconDollar, IconSun, IconPlus, IconCalendar, IconGear } from './icons';
+import { createClient, updateSettings } from '../services/firestore';
 import { BrandWordmark } from './Brand';
+import { IconUser, IconDollar, IconPaintBrush, IconCheck } from './icons';
 
 interface OnboardingProps {
   user: User;
@@ -13,27 +11,112 @@ interface OnboardingProps {
   onComplete: () => void;
 }
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 6;
+
+const COLOR_PRESETS = [
+  '#4BA8A8',
+  '#27AE60',
+  '#E74C3C',
+  '#E67E22',
+  '#8E44AD',
+  '#2C3E50',
+];
 
 export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
-  const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [animating, setAnimating] = useState(false);
+
+  // Form state
+  const [companyName, setCompanyName] = useState(
+    () => user.displayName ?? ''
+  );
+  const [hourlyRate, setHourlyRate] = useState(settings.hourlyRate || 150);
+  const [accentColor, setAccentColor] = useState(settings.accentColor || '#4BA8A8');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+
+  // Status
   const [clientError, setClientError] = useState('');
   const [clientSaving, setClientSaving] = useState(false);
-  const [hourlyRate, setHourlyRate] = useState(settings.hourlyRate || 150);
-  const [rateSaving, setRateSaving] = useState(false);
-  const [, setSkippedClient] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const firstName = user.displayName?.split(' ')[0] ?? 'there';
+  // Track what was configured for the summary
+  const [configured, setConfigured] = useState({
+    companyName: false,
+    hourlyRate: false,
+    accentColor: false,
+    client: false,
+  });
+
+  const goTo = useCallback((nextStep: number) => {
+    if (animating) return;
+    setAnimating(true);
+    // Brief delay for exit animation, then switch step
+    setTimeout(() => {
+      setStep(nextStep);
+      setAnimating(false);
+    }, 150);
+  }, [animating]);
 
   function handleNext() {
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+    goTo(Math.min(step + 1, TOTAL_STEPS - 1));
   }
 
-  function handleBack() {
-    setStep((s) => Math.max(s - 1, 0));
+  function handleSkip() {
+    handleNext();
+  }
+
+  async function handleSaveCompanyName() {
+    if (!user.uid) return;
+    const trimmed = companyName.trim();
+    if (trimmed) {
+      setSaving(true);
+      try {
+        await updateSettings(user.uid, { companyName: trimmed });
+        setConfigured((prev) => ({ ...prev, companyName: true }));
+      } catch {
+        // Continue even if save fails
+      } finally {
+        setSaving(false);
+      }
+    }
+    handleNext();
+  }
+
+  async function handleSaveHourlyRate() {
+    if (!user.uid) return;
+    if (hourlyRate > 0) {
+      setSaving(true);
+      try {
+        await updateSettings(user.uid, { hourlyRate });
+        setConfigured((prev) => ({ ...prev, hourlyRate: true }));
+      } catch {
+        // Continue even if save fails
+      } finally {
+        setSaving(false);
+      }
+    }
+    handleNext();
+  }
+
+  function handleSelectColor(color: string) {
+    setAccentColor(color);
+    // Apply immediately so the user sees the change
+    document.documentElement.style.setProperty('--accent', color);
+  }
+
+  async function handleSaveAccentColor() {
+    if (!user.uid) return;
+    setSaving(true);
+    try {
+      await updateSettings(user.uid, { accentColor });
+      setConfigured((prev) => ({ ...prev, accentColor: true }));
+    } catch {
+      // Continue even if save fails
+    } finally {
+      setSaving(false);
+    }
+    handleNext();
   }
 
   async function handleCreateClient() {
@@ -43,14 +126,15 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
       setClientError('Client name is required.');
       return;
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setClientError('A valid email is required.');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setClientError('Please enter a valid email address.');
       return;
     }
     setClientError('');
     setClientSaving(true);
     try {
-      await createClient({ name, email });
+      await createClient({ name, email: email || '' });
+      setConfigured((prev) => ({ ...prev, client: true }));
       handleNext();
     } catch {
       setClientError('Failed to create client. Please try again.');
@@ -59,82 +143,215 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
     }
   }
 
-  async function handleSaveRate() {
-    if (!user.uid) return;
-    setRateSaving(true);
-    try {
-      await updateSettings(user.uid, { hourlyRate });
-      handleNext();
-    } catch {
-      // Silently continue — settings will use default
-      handleNext();
-    } finally {
-      setRateSaving(false);
-    }
-  }
-
   function handleFinish() {
     localStorage.setItem('oc-onboarded', 'true');
     onComplete();
   }
 
-  return (
-    <div className="flex items-center justify-center min-h-[70vh]">
-      <div className="w-full max-w-md">
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-            <div
-              key={i}
-              className="w-2.5 h-2.5 rounded-full transition-all duration-300"
-              style={{
-                backgroundColor: i <= step ? 'var(--accent)' : 'var(--border)',
-                transform: i === step ? 'scale(1.3)' : 'scale(1)',
-              }}
-            />
-          ))}
-        </div>
+  const progressPercent = ((step + 1) / TOTAL_STEPS) * 100;
 
-        {/* Step content */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-8">
+  const animationClass = animating
+    ? 'opacity-0 translate-y-2'
+    : 'opacity-100 translate-y-0';
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] bg-[var(--bg-page)] flex flex-col"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {/* Progress bar */}
+      <div className="w-full h-1 bg-[var(--border)]">
+        <div
+          className="h-full transition-all duration-500 ease-out"
+          style={{
+            width: `${progressPercent}%`,
+            backgroundColor: 'var(--accent)',
+          }}
+        />
+      </div>
+
+      {/* Step indicator dots */}
+      <div className="flex items-center justify-center gap-2 pt-8 pb-4">
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full transition-all duration-300"
+            style={{
+              backgroundColor: i <= step ? 'var(--accent)' : 'var(--border)',
+              transform: i === step ? 'scale(1.4)' : 'scale(1)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div
+          className={`w-full max-w-md transition-all duration-300 ease-out ${animationClass}`}
+        >
+          {/* Step 0: Welcome */}
           {step === 0 && (
             <div className="animate-fade-in-up text-center">
-              {/* Brand */}
-              <div className="flex justify-center mb-5">
-                <BrandWordmark size={32} />
+              <div className="flex justify-center mb-8">
+                <BrandWordmark size={36} />
               </div>
-              <h1 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
-                Welcome!
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
+                Welcome to Ten99
               </h1>
-              <p className="text-sm text-[var(--text-secondary)] mb-1">
-                Hey {firstName}, glad you're here.
-              </p>
-              <p className="text-sm text-[var(--text-secondary)] mb-8 leading-relaxed">
-                TEN99 helps you track work orders, manage clients, and get paid faster. Let's get your workspace set up in a few quick steps.
+              <p className="text-sm text-[var(--text-secondary)] mb-10 leading-relaxed max-w-sm mx-auto">
+                Let's set up your workspace in a few quick steps
               </p>
               <button
                 onClick={handleNext}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
+                className="w-full min-h-[48px] py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
-                Let's get you set up
+                Get Started
               </button>
             </div>
           )}
 
+          {/* Step 1: Company Name */}
           {step === 1 && (
             <div className="animate-fade-in-up">
-              {/* Client icon */}
-              <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <IconUser size={22} color="var(--accent)" />
+              <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-6">
+                <IconUser size={26} color="var(--accent)" />
               </div>
-              <h2 className="text-lg font-extrabold text-[var(--text-primary)] text-center mb-1">
-                Add Your First Client
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)] text-center mb-6">
-                Who are you doing work for? You can always add more later.
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mb-2">
+                What's your business name?
+              </h1>
+              <p className="text-sm text-[var(--text-secondary)] text-center mb-8">
+                This will appear on your invoices and work orders
               </p>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Your business name"
+                autoFocus
+                className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
+              />
+              <button
+                onClick={handleSaveCompanyName}
+                disabled={saving}
+                className="w-full min-h-[48px] mt-4 py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)' }}
+              >
+                {saving ? 'Saving...' : 'Continue'}
+              </button>
+              <button
+                onClick={handleSkip}
+                className="w-full mt-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-center"
+              >
+                Skip
+              </button>
+            </div>
+          )}
 
+          {/* Step 2: Hourly Rate */}
+          {step === 2 && (
+            <div className="animate-fade-in-up">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-6">
+                <IconDollar size={26} color="var(--accent)" />
+              </div>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mb-2">
+                What's your hourly rate?
+              </h1>
+              <p className="text-sm text-[var(--text-secondary)] text-center mb-8">
+                Used for cost estimates and invoicing
+              </p>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-[var(--text-secondary)]">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={5}
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(Number(e.target.value))}
+                  autoFocus
+                  className="w-full min-h-[48px] pl-9 pr-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
+                />
+              </div>
+              <button
+                onClick={handleSaveHourlyRate}
+                disabled={saving}
+                className="w-full min-h-[48px] mt-4 py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)' }}
+              >
+                {saving ? 'Saving...' : 'Continue'}
+              </button>
+              <button
+                onClick={handleSkip}
+                className="w-full mt-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-center"
+              >
+                Skip
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: Accent Color */}
+          {step === 3 && (
+            <div className="animate-fade-in-up">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-6">
+                <IconPaintBrush size={26} color="var(--accent)" />
+              </div>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mb-2">
+                Pick your brand color
+              </h1>
+              <p className="text-sm text-[var(--text-secondary)] text-center mb-8">
+                This sets the accent color throughout the app
+              </p>
+              <div className="flex items-center justify-center gap-4 mb-8">
+                {COLOR_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => handleSelectColor(color)}
+                    className="w-12 h-12 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+                    style={{
+                      backgroundColor: color,
+                      outline: accentColor === color
+                        ? '3px solid var(--text-primary)'
+                        : '2px solid transparent',
+                      outlineOffset: '3px',
+                    }}
+                    aria-label={`Select color ${color}`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={handleSaveAccentColor}
+                disabled={saving}
+                className="w-full min-h-[48px] py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)' }}
+              >
+                {saving ? 'Saving...' : 'Continue'}
+              </button>
+              <button
+                onClick={handleSkip}
+                className="w-full mt-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-center"
+              >
+                Skip
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Add First Client */}
+          {step === 4 && (
+            <div className="animate-fade-in-up">
+              <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-6">
+                <IconUser size={26} color="var(--accent)" />
+              </div>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mb-2">
+                Add your first client
+              </h1>
+              <p className="text-sm text-[var(--text-secondary)] text-center mb-8">
+                You can always add more clients later
+              </p>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
@@ -143,9 +360,13 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
                   <input
                     type="text"
                     value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
+                    onChange={(e) => {
+                      setClientName(e.target.value);
+                      setClientError('');
+                    }}
                     placeholder="Acme Corp"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
+                    autoFocus
+                    className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
                   />
                 </div>
                 <div>
@@ -155,151 +376,126 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
                   <input
                     type="email"
                     value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
+                    onChange={(e) => {
+                      setClientEmail(e.target.value);
+                      setClientError('');
+                    }}
                     placeholder="contact@acme.com"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
+                    className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
                   />
                 </div>
                 {clientError && (
-                  <p className="text-xs text-red-400">{clientError}</p>
+                  <p className="text-xs text-red-400 mt-1">{clientError}</p>
                 )}
               </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleBack}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-[var(--text-secondary)] bg-[var(--bg-input)] border border-[var(--border)] transition-all duration-200 hover:bg-[var(--bg-page)] active:scale-[0.98]"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleCreateClient}
-                  disabled={clientSaving}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--accent)' }}
-                >
-                  {clientSaving ? 'Saving...' : 'Add Client'}
-                </button>
-              </div>
               <button
-                onClick={() => {
-                  setSkippedClient(true);
-                  handleNext();
-                }}
-                className="w-full mt-3 py-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-center"
+                onClick={handleCreateClient}
+                disabled={clientSaving}
+                className="w-full min-h-[48px] mt-4 py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)' }}
+              >
+                {clientSaving ? 'Saving...' : 'Add Client'}
+              </button>
+              <button
+                onClick={handleSkip}
+                className="w-full mt-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-center"
               >
                 Skip for now
               </button>
             </div>
           )}
 
-          {step === 2 && (
-            <div className="animate-fade-in-up">
-              {/* Rate icon */}
-              <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <IconDollar size={22} color="var(--accent)" />
-              </div>
-              <h2 className="text-lg font-extrabold text-[var(--text-primary)] text-center mb-1">
-                Set Your Hourly Rate
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)] text-center mb-6">
-                This is your default rate for new work orders. You can change it anytime in Settings.
-              </p>
-
-              <div>
-                <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                  Hourly Rate (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)] font-semibold">$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={5}
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleBack}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-[var(--text-secondary)] bg-[var(--bg-input)] border border-[var(--border)] transition-all duration-200 hover:bg-[var(--bg-page)] active:scale-[0.98]"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSaveRate}
-                  disabled={rateSaving}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98] disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--accent)' }}
-                >
-                  {rateSaving ? 'Saving...' : 'Save Rate'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
+          {/* Step 5: All Set */}
+          {step === 5 && (
             <div className="animate-fade-in-up text-center">
-              {/* Confetti/celebration icon */}
-              <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-5">
-                <IconSun size={30} color="var(--accent)" />
+              <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-6">
+                <IconCheck size={32} color="var(--accent)" />
               </div>
-              <h2 className="text-2xl font-extrabold text-[var(--text-primary)] mb-2">
-                You're All Set!
-              </h2>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
+                You're all set!
+              </h1>
               <p className="text-sm text-[var(--text-secondary)] mb-8 leading-relaxed">
-                Your workspace is ready. Here are some things you can do next.
+                Your workspace is ready to go
               </p>
 
-              {/* Quick links */}
-              <div className="space-y-2 mb-8">
-                <button
-                  onClick={() => { handleFinish(); navigate('/dashboard/work-items'); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <IconPlus size={16} color="var(--accent)" />
+              {/* Summary of configured items */}
+              <div className="space-y-2 mb-8 text-left">
+                {configured.companyName && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                      <IconCheck size={14} color="var(--accent)" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">
+                        Business name
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        {companyName.trim()}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">Create Work Order</div>
-                    <div className="text-xs text-[var(--text-secondary)]">Start tracking billable work</div>
+                )}
+                {configured.hourlyRate && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                      <IconCheck size={14} color="var(--accent)" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">
+                        Hourly rate
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        ${hourlyRate}/hr
+                      </div>
+                    </div>
                   </div>
-                </button>
-
-                <button
-                  onClick={() => { handleFinish(); navigate('/dashboard/calendar'); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <IconCalendar size={16} color="var(--accent)" />
+                )}
+                {configured.accentColor && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: accentColor }}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">
+                        Brand color
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        {accentColor}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">View Calendar</div>
-                    <div className="text-xs text-[var(--text-secondary)]">See your scheduled work</div>
+                )}
+                {configured.client && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                      <IconCheck size={14} color="var(--accent)" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">
+                        First client
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        {clientName.trim()}
+                      </div>
+                    </div>
                   </div>
-                </button>
-
-                <button
-                  onClick={() => { handleFinish(); navigate('/dashboard/settings'); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border)] text-left hover:bg-[var(--bg-page)] transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
-                    <IconGear size={16} color="var(--accent)" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">Manage Settings</div>
-                    <div className="text-xs text-[var(--text-secondary)]">Customize your workspace</div>
-                  </div>
-                </button>
+                )}
+                {!configured.companyName &&
+                  !configured.hourlyRate &&
+                  !configured.accentColor &&
+                  !configured.client && (
+                    <p className="text-sm text-[var(--text-secondary)] text-center py-2">
+                      You can customize everything from Settings anytime.
+                    </p>
+                  )}
               </div>
 
               <button
                 onClick={handleFinish}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
+                className="w-full min-h-[48px] py-3 px-6 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
                 Go to Dashboard

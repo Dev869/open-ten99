@@ -197,11 +197,12 @@ function MobileMonthAgenda({
       {/* Agenda list */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {daysWithItems.length === 0 && (
-          <div className="flex-1 flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="mx-auto mb-2"><IconCalendarIcon size={32} color="var(--border)" /></div>
-              <p className="text-xs text-[var(--text-secondary)] font-medium">No items this month</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-4">
+            <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-3">
+              <IconCalendarIcon size={28} color="var(--accent)" />
             </div>
+            <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">No items this month</p>
+            <p className="text-xs text-[var(--text-secondary)]">Work items scheduled for this month will appear here</p>
           </div>
         )}
         {daysWithItems.map(({ day, items }) => {
@@ -442,23 +443,42 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
   /* ── Day header letters ─────────────────────────── */
   const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+  // Make <main> a non-scrolling flex container so the calendar fills it
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (!main) return;
+    main.style.overflow = 'hidden';
+    main.style.display = 'flex';
+    main.style.flexDirection = 'column';
+    main.style.paddingBottom = '0.5rem';
+    return () => {
+      main.style.overflow = '';
+      main.style.display = '';
+      main.style.flexDirection = '';
+      main.style.paddingBottom = '';
+    };
+  }, []);
+
+  // Global empty state when no work items exist at all
+  if (workItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
+        <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+          <IconCalendarIcon size={32} color="var(--accent)" />
+        </div>
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">Your calendar is empty</h2>
+        <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs">
+          Work items with due dates will appear here
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        height: 'calc(100vh - 7.5rem)',
-      }}
-    >
-      {/* Use a media query via a wrapper to set desktop height */}
-      <style>{`
-        @media (min-width: 768px) {
-          .cal-root { height: calc(100vh - 4rem) !important; }
-        }
-      `}</style>
+    <div className="flex flex-col flex-1 min-h-0 pb-14 md:pb-0">
 
       {/* ══ Header Bar ══════════════════════════════════ */}
-      <div className="cal-root flex flex-col" style={{ height: 'inherit' }}>
-        <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 pb-3">
+      <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 pb-3">
           {/* Left: nav + month label */}
           <div className="flex items-center gap-1.5">
             <button
@@ -729,11 +749,12 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
           {view === 'list' && (
             <div className="flex flex-col h-full overflow-y-auto">
               {listItems.length === 0 && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="mx-auto mb-2"><IconCalendarIcon size={32} color="var(--border)" /></div>
-                    <p className="text-xs text-[var(--text-secondary)] font-medium">No items this month</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-12 px-4">
+                  <div className="w-14 h-14 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-3">
+                    <IconCalendarIcon size={28} color="var(--accent)" />
                   </div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">No items this month</p>
+                  <p className="text-xs text-[var(--text-secondary)]">Work items scheduled for this month will appear here</p>
                 </div>
               )}
               {listItems.map((ci, idx) => {
@@ -816,6 +837,5 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
           )}
         </div>
       </div>
-    </div>
   );
 }

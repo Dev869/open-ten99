@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 :root {
+  /* iOS safe areas */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bg-page: #F4F1EC;
   --bg-card: #FFFDF9;
   --bg-sidebar: #FFFDF9;
@@ -44,12 +47,38 @@
   --color-gray: #A0A0A8;
 }
 
+/* ── iOS / Mobile optimizations ──────────────────────── */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: 'Space Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-page);
+  /* Safe area support for notched devices */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: max(16px, 1em);
+  }
+}
+
+main {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 /* ── Animations ───────────────────────────────────────── */
@@ -97,6 +126,11 @@ body {
   to   { transform: translateX(0); }
 }
 
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -135,6 +169,25 @@ body {
 
 .animate-slide-in-right {
   animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes glide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-glide-up {
+  animation: glide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-skeleton-pulse {

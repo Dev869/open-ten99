@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import type { Receipt, Transaction } from '../../lib/types';
-import { confirmReceiptMatch, reassignReceipt, createExpenseFromReceipt, fetchTransactions } from '../../services/firestore';
+import { confirmReceiptMatch, reassignReceipt, createExpenseFromReceipt, fetchTransactions, deleteReceipt } from '../../services/firestore';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import TransactionPicker from './TransactionPicker';
 
 interface ReceiptDetailProps {
   receipt: Receipt;
   onClose: () => void;
+  onDeleted?: () => void;
 }
 
-export default function ReceiptDetail({ receipt, onClose }: ReceiptDetailProps) {
+export default function ReceiptDetail({ receipt, onClose, onDeleted }: ReceiptDetailProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [matchedTx, setMatchedTx] = useState<Transaction | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showImage, setShowImage] = useState(false);
 
   useEffect(() => {
@@ -41,6 +43,17 @@ export default function ReceiptDetail({ receipt, onClose }: ReceiptDetailProps) 
   const handleCreateExpense = async () => {
     await createExpenseFromReceipt(receipt.id, receipt);
     setShowPicker(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this receipt? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await deleteReceipt(receipt.id, receipt.imageUrl);
+      onDeleted?.();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (showPicker) {
@@ -204,6 +217,14 @@ export default function ReceiptDetail({ receipt, onClose }: ReceiptDetailProps) 
               </button>
             </div>
           )}
+
+          <button
+            className="w-full mt-3 rounded-lg border border-red-500/30 py-2.5 text-sm text-red-500 hover:bg-red-500/10 disabled:opacity-50 transition-colors"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete Receipt'}
+          </button>
         </div>
       </div>
     </div>

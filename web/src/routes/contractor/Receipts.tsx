@@ -4,6 +4,7 @@ import type { Receipt } from '../../lib/types';
 import ReceiptGrid from '../../components/finance/ReceiptGrid';
 import ReceiptDetail from '../../components/finance/ReceiptDetail';
 import { uploadReceiptFile } from '../../services/firestore';
+import { IconDocument } from '../../components/icons';
 
 export default function Receipts() {
   const { receipts, loading } = useReceipts();
@@ -51,7 +52,7 @@ export default function Receipts() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Receipts</h1>
+        <h1 className="hidden md:block text-2xl font-bold text-[var(--text-primary)]">Receipts</h1>
         <div className="flex gap-2 text-xs text-[var(--text-secondary)]">
           <span>{receipts.filter((r) => r.status === 'unmatched').length} unmatched</span>
           <span>·</span>
@@ -66,6 +67,18 @@ export default function Receipts() {
         </div>
       )}
 
+      {receipts.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+            <IconDocument size={32} color="var(--accent)" />
+          </div>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No receipts yet</h2>
+          <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs">
+            Upload or scan receipts to track expenses
+          </p>
+        </div>
+      )}
+
       <ReceiptGrid
         receipts={receipts}
         onReceiptClick={setSelectedReceipt}
@@ -76,10 +89,11 @@ export default function Receipts() {
       {currentReceipt && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedReceipt(null)} />
-          <div className="relative ml-auto w-full max-w-2xl bg-[var(--bg-card)] shadow-xl">
+          <div className="relative ml-auto w-full sm:max-w-2xl bg-[var(--bg-card)] shadow-xl">
             <ReceiptDetail
               receipt={currentReceipt}
               onClose={() => setSelectedReceipt(null)}
+              onDeleted={() => setSelectedReceipt(null)}
             />
           </div>
         </div>

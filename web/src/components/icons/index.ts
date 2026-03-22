@@ -59,4 +59,7 @@ export {
   IconAlertCircle,
   IconInfo,
   IconThumbsUp,
+  IconMore,
+  IconCamera,
+  IconCar,
 } from './Icons';

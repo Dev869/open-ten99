@@ -202,7 +202,7 @@ export default function Reports({ workItems, clients }: { workItems: WorkItem[];
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Reports</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-0.5">
             Export financial data for accounting and tax purposes

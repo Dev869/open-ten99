@@ -119,7 +119,7 @@ export default function Accounts() {
   return (
     <div className="max-w-2xl">
       {/* Page header */}
-      <div className="mb-6">
+      <div className="hidden md:block mb-6">
         <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Connected Accounts
         </h1>
