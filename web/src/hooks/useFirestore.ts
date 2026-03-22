@@ -13,8 +13,10 @@ import {
   subscribeGitHubActivity,
   subscribeConnectedAccounts,
   subscribeReceipts,
+  subscribeTimeEntries,
+  subscribeMileageTrips,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -105,6 +107,7 @@ export function useSettings(userId: string | undefined) {
     companyName: 'DW Tailored',
     sidebarOrder: undefined,
     sidebarHidden: undefined,
+    mileageRate: 0.70,
   });
   const [loading, setLoading] = useState(true);
 
@@ -243,4 +246,36 @@ export function useReceipts() {
   }, []);
 
   return { receipts, loading };
+}
+
+export function useTimeEntries() {
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = whenAuthReady(() =>
+      subscribeTimeEntries((items) => {
+        setEntries(items);
+        setLoading(false);
+      }),
+    );
+    return unsubscribe;
+  }, []);
+
+  return { entries, loading };
+}
+
+export function useMileageTrips() {
+  const [trips, setTrips] = useState<MileageTrip[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const unsubscribe = whenAuthReady(() =>
+      subscribeMileageTrips((items) => {
+        setTrips(items);
+        setLoading(false);
+      }),
+    );
+    return unsubscribe;
+  }, []);
+  return { trips, loading };
 }
