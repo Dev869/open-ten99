@@ -20,7 +20,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt, TimeEntry, MileageTrip } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights } from '../lib/types';
 
 // --- Converters ---
 
@@ -893,6 +893,73 @@ function docToReceipt(id: string, data: DocumentData): Receipt {
   };
 }
 
+function docToMileageTrip(id: string, data: DocumentData): MileageTrip {
+  return {
+    id,
+    ownerId: data.ownerId ?? '',
+    date: data.date?.toDate?.() ?? new Date(),
+    description: data.description ?? '',
+    miles: data.miles ?? 0,
+    purpose: data.purpose ?? 'business',
+    clientId: data.clientId ?? undefined,
+    roundTrip: data.roundTrip ?? false,
+    rate: data.rate ?? 0.70,
+    deduction: data.deduction ?? 0,
+    transactionId: data.transactionId ?? undefined,
+    createdAt: data.createdAt?.toDate?.() ?? new Date(),
+    updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+  };
+}
+
+function docToInsights(data: DocumentData): Insights {
+  return {
+    generatedAt: data.generatedAt?.toDate?.() ?? new Date(),
+    status: data.status ?? 'generating',
+    errors: data.errors ?? undefined,
+    expenses: {
+      anomalies: data.expenses?.anomalies ?? [],
+      categoryTrends: data.expenses?.categoryTrends ?? [],
+    },
+    tax: {
+      estimatedSavings: data.tax?.estimatedSavings ?? 0,
+      effectiveRate: data.tax?.effectiveRate ?? 0,
+      missedDeductions: data.tax?.missedDeductions ?? [],
+      deductionsByCategory: data.tax?.deductionsByCategory ?? {},
+      totalDeductible: data.tax?.totalDeductible ?? 0,
+    },
+    forecast: {
+      revenue: data.forecast?.revenue ?? [],
+      expenses: data.forecast?.expenses ?? [],
+      confidence: data.forecast?.confidence ?? 0,
+    },
+    payments: {
+      invoiceRisks: data.payments?.invoiceRisks ?? [],
+      clientPatterns: data.payments?.clientPatterns ?? {},
+    },
+    clients: {
+      scores: data.clients?.scores ?? [],
+      concentrationRisk: data.clients?.concentrationRisk ?? {
+        level: 'healthy',
+        topClientShare: 0,
+        recommendation: '',
+      },
+    },
+    cashFlow: {
+      projections: data.cashFlow?.projections ?? [],
+      runway: data.cashFlow?.runway ?? { months: 0, status: 'comfortable' },
+    },
+    projects: {
+      completionEstimates: data.projects?.completionEstimates ?? [],
+      scopeCreep: data.projects?.scopeCreep ?? [],
+      utilization: data.projects?.utilization ?? {
+        currentRate: 0,
+        trend: 'stable',
+        recommendation: '',
+      },
+    },
+  };
+}
+
 export function subscribeReceipts(
   callback: (receipts: Receipt[]) => void
 ): () => void {
@@ -1358,4 +1425,35 @@ export async function updateMileageTrip(
 
   batch.update(doc(db, 'mileageTrips', tripId), tripUpdate);
   await batch.commit();
+}
+
+// === Insights Service Functions ===
+
+export function subscribeInsights(
+  callback: (insights: Insights | null) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const docRef = doc(db, 'insights', user.uid);
+
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(docToInsights(snapshot.data()));
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      console.error('insights subscription error:', error);
+      callback(null);
+    }
+  );
+}
+
+export async function callGenerateInsights(force = false): Promise<void> {
+  const fn = httpsCallable(functions, 'onGenerateInsights');
+  await fn({ force });
 }
