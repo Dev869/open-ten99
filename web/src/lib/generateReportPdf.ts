@@ -96,6 +96,132 @@ const CHARCOAL = rgb(0.15, 0.15, 0.15);   // text
 const GRAY = rgb(0.45, 0.45, 0.45);       // labels
 const LIGHT_GRAY = rgb(0.85, 0.85, 0.85); // gridlines
 
+// ---- Chart Helpers ----
+
+function drawHorizontalBarChart(
+  ctx: PdfContext,
+  title: string,
+  data: Array<{ label: string; value: number }>,
+  barColor: ReturnType<typeof rgb>,
+  maxBars = 8,
+): void {
+  const items = data.slice(0, maxBars);
+  if (items.length === 0) return;
+
+  const chartHeight = items.length * 22 + 40;
+  checkSpace(ctx, chartHeight);
+
+  ctx.y -= 10;
+  ctx.page.drawText(title, { x: MARGIN, y: ctx.y, font: ctx.bold, size: 10, color: CHARCOAL });
+  ctx.y -= 20;
+
+  const maxVal = Math.max(...items.map((d) => d.value), 1);
+  const barAreaX = MARGIN + 140;
+  const barAreaW = PAGE_WIDTH - MARGIN - barAreaX - 10;
+
+  for (const item of items) {
+    const barW = (item.value / maxVal) * barAreaW;
+    const labelText = item.label.length > 22 ? item.label.slice(0, 20) + '...' : item.label;
+
+    ctx.page.drawText(labelText, { x: MARGIN, y: ctx.y, font: ctx.font, size: 8, color: GRAY });
+
+    if (barW > 0) {
+      ctx.page.drawRectangle({
+        x: barAreaX, y: ctx.y - 2, width: Math.max(barW, 2), height: 12,
+        color: barColor,
+      });
+    }
+
+    const valText = formatCurrency(item.value);
+    ctx.page.drawText(valText, {
+      x: barAreaX + barW + 4, y: ctx.y, font: ctx.font, size: 7, color: CHARCOAL,
+    });
+
+    ctx.y -= 22;
+  }
+}
+
+function drawVerticalBarChart(
+  ctx: PdfContext,
+  title: string,
+  data: Array<{ label: string; value1: number; value2?: number }>,
+  color1: ReturnType<typeof rgb>,
+  color2?: ReturnType<typeof rgb>,
+  legend?: [string, string],
+): void {
+  if (data.length === 0) return;
+
+  const chartH = 140;
+  const chartW = PAGE_WIDTH - MARGIN * 2;
+  checkSpace(ctx, chartH + 60);
+
+  ctx.y -= 10;
+  ctx.page.drawText(title, { x: MARGIN, y: ctx.y, font: ctx.bold, size: 10, color: CHARCOAL });
+  ctx.y -= 20;
+
+  const chartBottom = ctx.y - chartH;
+  const maxVal = Math.max(...data.flatMap((d) => [d.value1, d.value2 ?? 0]), 1);
+
+  // Y-axis gridlines (4 lines)
+  for (let i = 0; i <= 4; i++) {
+    const lineY = chartBottom + (chartH * i) / 4;
+    ctx.page.drawLine({
+      start: { x: MARGIN, y: lineY },
+      end: { x: MARGIN + chartW, y: lineY },
+      thickness: 0.3, color: LIGHT_GRAY,
+    });
+    const labelVal = (maxVal * i) / 4;
+    const label = labelVal >= 1000 ? `$${(labelVal / 1000).toFixed(0)}k` : `$${labelVal.toFixed(0)}`;
+    ctx.page.drawText(label, { x: MARGIN - 2, y: lineY + 2, font: ctx.font, size: 6, color: GRAY });
+  }
+
+  const barGroupW = chartW / data.length;
+  const hasTwo = color2 !== undefined;
+  const barW = hasTwo ? barGroupW * 0.35 : barGroupW * 0.6;
+  const gap = hasTwo ? barGroupW * 0.05 : 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i];
+    const groupX = MARGIN + i * barGroupW;
+
+    // Bar 1
+    const h1 = (d.value1 / maxVal) * chartH;
+    const x1 = groupX + (barGroupW - (hasTwo ? barW * 2 + gap : barW)) / 2;
+    if (h1 > 0) {
+      ctx.page.drawRectangle({ x: x1, y: chartBottom, width: barW, height: h1, color: color1 });
+    }
+
+    // Bar 2
+    if (hasTwo && d.value2 !== undefined) {
+      const h2 = (d.value2 / maxVal) * chartH;
+      if (h2 > 0) {
+        ctx.page.drawRectangle({ x: x1 + barW + gap, y: chartBottom, width: barW, height: h2, color: color2! });
+      }
+    }
+
+    // X-axis label
+    const label = d.label.length > 6 ? d.label.slice(0, 3) : d.label;
+    const labelW = ctx.font.widthOfTextAtSize(label, 7);
+    ctx.page.drawText(label, {
+      x: groupX + barGroupW / 2 - labelW / 2,
+      y: chartBottom - 12,
+      font: ctx.font, size: 7, color: GRAY,
+    });
+  }
+
+  ctx.y = chartBottom - 20;
+
+  // Legend
+  if (legend && hasTwo) {
+    const legendY = ctx.y;
+    ctx.page.drawRectangle({ x: MARGIN, y: legendY, width: 8, height: 8, color: color1 });
+    ctx.page.drawText(legend[0], { x: MARGIN + 12, y: legendY + 1, font: ctx.font, size: 7, color: GRAY });
+    ctx.page.drawRectangle({ x: MARGIN + 80, y: legendY, width: 8, height: 8, color: color2! });
+    ctx.page.drawText(legend[1], { x: MARGIN + 92, y: legendY + 1, font: ctx.font, size: 7, color: GRAY });
+    ctx.y -= 14;
+  }
+}
+
 // ---- Report Builders ----
 
 const COL_RIGHT = PAGE_WIDTH - MARGIN; // 562
@@ -179,6 +305,18 @@ function buildProfitLoss(ctx: PdfContext, workItems: WorkItem[], range: DateRang
     ]);
   }
 
+  ctx.y -= 20;
+  const chartData = monthly.map((m) => {
+    const monthDate = new Date(m.month + ' 01');
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    const monthExp = transactions
+      ? transactions.filter((t) => t.type === 'expense' && t.date >= monthStart && t.date <= monthEnd).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      : 0;
+    return { label: m.month, value1: m.revenue, value2: monthExp };
+  });
+  drawVerticalBarChart(ctx, 'Revenue vs Expenses Trend', chartData, TEAL, CORAL, ['Revenue', 'Expenses']);
+
   drawFooter(ctx);
 }
 
@@ -210,6 +348,10 @@ function buildIncomeByClient(ctx: PdfContext, workItems: WorkItem[], clients: Cl
     { text: '', x: COL_ORD_X, width: COL_ORD_W },
     { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
+
+  ctx.y -= 20;
+  drawHorizontalBarChart(ctx, 'Revenue Distribution', byClient.map((c) => ({ label: c.clientName, value: c.revenue })), TEAL);
+
   drawFooter(ctx);
 }
 
@@ -292,6 +434,11 @@ function buildTaxSummary(ctx: PdfContext, workItems: WorkItem[], clients: Client
         { text: 'Net Income (Revenue - Expenses)', x: MARGIN, width: 300, bold: true },
         { text: formatCurrency(totalIncome - totalExpenses), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
       ]);
+
+      if (categories.length > 0) {
+        ctx.y -= 20;
+        drawHorizontalBarChart(ctx, 'Expense Categories', categories.map(([cat, amount]) => ({ label: cat, value: amount })), CORAL);
+      }
     }
   }
 
@@ -334,6 +481,10 @@ function buildHoursBilling(ctx: PdfContext, workItems: WorkItem[], range: DateRa
       { text: formatCurrency(t.revenue), x: COL_AMT_X, width: COL_AMT_W, align: 'right' },
     ]);
   }
+
+  ctx.y -= 20;
+  drawHorizontalBarChart(ctx, 'Revenue by Type', byType.map((t) => ({ label: typeLabels[t.type] ?? t.type, value: t.revenue })), TEAL);
+
   drawFooter(ctx);
 }
 
@@ -369,6 +520,12 @@ function buildAging(ctx: PdfContext, workItems: WorkItem[]): void {
     { text: 'Total Outstanding', x: MARGIN, width: 300, bold: true },
     { text: formatCurrency(total), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
+
+  ctx.y -= 10;
+  const agingData = bucketRows.filter(([, amount]) => amount > 0).map(([label, amount]) => ({ label: label as string, value: amount as number }));
+  if (agingData.length > 0) {
+    drawHorizontalBarChart(ctx, 'Aging Distribution', agingData, CORAL);
+  }
 
   // Detail: individual invoices
   ctx.y -= 20;
@@ -477,6 +634,9 @@ function buildExpenseReport(ctx: PdfContext, range: DateRange, transactions?: Tr
     { text: 'Grand Total', x: MARGIN, width: 300, bold: true },
     { text: formatCurrency(grandTotal), x: COL_AMT_X, width: COL_AMT_W, align: 'right', bold: true },
   ]);
+
+  ctx.y -= 10;
+  drawHorizontalBarChart(ctx, 'Spending by Category', sortedCategories.map(([cat, amount]) => ({ label: cat, value: amount })), CORAL);
 
   drawFooter(ctx);
 }
