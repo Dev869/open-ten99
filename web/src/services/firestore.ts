@@ -20,7 +20,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt, TimeEntry, MileageTrip } from '../lib/types';
 
 // --- Converters ---
 
@@ -1169,3 +1169,193 @@ export async function rejectMatch(transactionId: string): Promise<void> {
   });
 }
 
+// --- Time Entries ---
+
+function docToTimeEntry(id: string, data: DocumentData): TimeEntry {
+  return {
+    id,
+    ownerId: data.ownerId ?? '',
+    clientId: data.clientId ?? '',
+    appId: data.appId ?? undefined,
+    description: data.description ?? '',
+    durationSeconds: data.durationSeconds ?? 0,
+    isBillable: data.isBillable ?? true,
+    startedAt: toDate(data.startedAt),
+    endedAt: toDate(data.endedAt),
+    createdAt: toDate(data.createdAt),
+  };
+}
+
+export function subscribeTimeEntries(
+  callback: (entries: TimeEntry[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const q = query(
+    collection(db, 'timeEntries'),
+    where('ownerId', '==', user.uid),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const entries = snapshot.docs.map((d) => docToTimeEntry(d.id, d.data()));
+      callback(entries);
+    },
+    (error) => {
+      console.error('timeEntries subscription error:', error);
+      callback([]);
+    }
+  );
+}
+
+export async function createTimeEntry(
+  entry: Omit<TimeEntry, 'id' | 'ownerId' | 'createdAt'>
+): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = await addDoc(collection(db, 'timeEntries'), {
+    ownerId: user.uid,
+    clientId: entry.clientId,
+    ...(entry.appId ? { appId: entry.appId } : {}),
+    description: entry.description,
+    durationSeconds: entry.durationSeconds,
+    isBillable: entry.isBillable,
+    startedAt: Timestamp.fromDate(entry.startedAt),
+    endedAt: Timestamp.fromDate(entry.endedAt),
+    createdAt: Timestamp.now(),
+  });
+
+  return docRef.id;
+}
+
+// === Mileage Trip Service Functions ===
+
+export function subscribeMileageTrips(
+  callback: (trips: MileageTrip[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+  const q = query(
+    collection(db, 'mileageTrips'),
+    where('ownerId', '==', user.uid)
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const trips = snapshot.docs
+        .map((d) => docToMileageTrip(d.id, d.data()))
+        .sort((a, b) => b.date.getTime() - a.date.getTime());
+      callback(trips);
+    },
+    (error) => {
+      console.error('mileageTrips subscription error:', error);
+      callback([]);
+    }
+  );
+}
+
+export async function createMileageTrip(data: {
+  date: Date;
+  description: string;
+  miles: number;
+  purpose: MileagePurpose;
+  clientId?: string;
+  roundTrip: boolean;
+  rate: number;
+}): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const effectiveMiles = data.roundTrip ? data.miles * 2 : data.miles;
+  const deduction = data.purpose === 'business' ? effectiveMiles * data.rate : 0;
+  const tripRef = doc(collection(db, 'mileageTrips'));
+  const now = Timestamp.now();
+
+  if (data.purpose === 'business') {
+    const txnRef = doc(collection(db, 'transactions'));
+    const batch = writeBatch(db);
+    batch.set(tripRef, {
+      ownerId: user.uid, date: Timestamp.fromDate(data.date), description: data.description,
+      miles: data.miles, purpose: data.purpose, clientId: data.clientId ?? null,
+      roundTrip: data.roundTrip, rate: data.rate, deduction, transactionId: txnRef.id,
+      createdAt: now, updatedAt: now,
+    });
+    batch.set(txnRef, {
+      ownerId: user.uid, provider: 'manual', externalId: null,
+      date: Timestamp.fromDate(data.date), amount: -Math.abs(deduction),
+      description: data.description, category: 'Vehicle & Fuel', type: 'expense',
+      matchStatus: 'unmatched', isManual: true, taxDeductible: true, receiptUrl: null,
+      createdAt: now, updatedAt: now,
+    });
+    await batch.commit();
+  } else {
+    const batch = writeBatch(db);
+    batch.set(tripRef, {
+      ownerId: user.uid, date: Timestamp.fromDate(data.date), description: data.description,
+      miles: data.miles, purpose: data.purpose, clientId: data.clientId ?? null,
+      roundTrip: data.roundTrip, rate: data.rate, deduction: 0, transactionId: null,
+      createdAt: now, updatedAt: now,
+    });
+    await batch.commit();
+  }
+  return tripRef.id;
+}
+
+export async function deleteMileageTrip(tripId: string, transactionId?: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'mileageTrips', tripId));
+  if (transactionId) {
+    batch.delete(doc(db, 'transactions', transactionId));
+  }
+  await batch.commit();
+}
+
+export async function updateMileageTrip(
+  tripId: string,
+  current: { purpose: MileagePurpose; transactionId?: string },
+  data: {
+    date: Date; description: string; miles: number; purpose: MileagePurpose;
+    clientId?: string; roundTrip: boolean; rate: number;
+  }
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const effectiveMiles = data.roundTrip ? data.miles * 2 : data.miles;
+  const deduction = data.purpose === 'business' ? effectiveMiles * data.rate : 0;
+  const now = Timestamp.now();
+  const batch = writeBatch(db);
+
+  const tripUpdate: Record<string, unknown> = {
+    date: Timestamp.fromDate(data.date), description: data.description, miles: data.miles,
+    purpose: data.purpose, clientId: data.clientId ?? null, roundTrip: data.roundTrip,
+    rate: data.rate, deduction, updatedAt: now,
+  };
+
+  if (current.purpose === 'business' && data.purpose === 'personal') {
+    if (current.transactionId) batch.delete(doc(db, 'transactions', current.transactionId));
+    tripUpdate.transactionId = null;
+  } else if (current.purpose === 'personal' && data.purpose === 'business') {
+    const txnRef = doc(collection(db, 'transactions'));
+    batch.set(txnRef, {
+      ownerId: user.uid, provider: 'manual', externalId: null,
+      date: Timestamp.fromDate(data.date), amount: -Math.abs(deduction),
+      description: data.description, category: 'Vehicle & Fuel', type: 'expense',
+      matchStatus: 'unmatched', isManual: true, taxDeductible: true, receiptUrl: null,
+      createdAt: now, updatedAt: now,
+    });
+    tripUpdate.transactionId = txnRef.id;
+  } else if (data.purpose === 'business' && current.transactionId) {
+    batch.update(doc(db, 'transactions', current.transactionId), {
+      date: Timestamp.fromDate(data.date), amount: -Math.abs(deduction),
+      description: data.description, updatedAt: now,
+    });
+  }
+
+  batch.update(doc(db, 'mileageTrips', tripId), tripUpdate);
+  await batch.commit();
+}
