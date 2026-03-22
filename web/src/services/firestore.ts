@@ -143,13 +143,23 @@ function snapshotWithRetry(
 
   function subscribe() {
     unsub = onSnapshot(target, onNext, (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
       console.warn(`Firestore listener error (attempt ${attempt + 1}/${maxRetries + 1}):`, err);
-      if (!cancelled && attempt < maxRetries) {
+
+      // Don't retry on index-building or permission errors — retrying won't help
+      // and can corrupt the Firestore SDK's internal watch stream state.
+      const nonRetryable = msg.includes('requires an index') || msg.includes('PERMISSION_DENIED');
+      if (nonRetryable || cancelled) {
+        if (!cancelled) options?.onExhausted?.();
+        return;
+      }
+
+      if (attempt < maxRetries) {
         attempt++;
         unsub?.();
         unsub = null;
         setTimeout(() => { if (!cancelled) subscribe(); }, 1000 * attempt);
-      } else if (!cancelled) {
+      } else {
         options?.onExhausted?.();
       }
     });
@@ -164,10 +174,18 @@ export function subscribeWorkItems(
   clientId?: string,
   onError?: () => void,
 ) {
+  const user = auth.currentUser;
+  if (!user) { callback([]); return () => {}; }
+
   const ref = collection(db, 'workItems');
-  const q = clientId
-    ? query(ref, where('clientId', '==', clientId), orderBy('updatedAt', 'desc'))
-    : query(ref, orderBy('updatedAt', 'desc'));
+  const constraints: QueryConstraint[] = [
+    where('ownerId', '==', user.uid),
+    orderBy('updatedAt', 'desc'),
+  ];
+  if (clientId) {
+    constraints.splice(1, 0, where('clientId', '==', clientId));
+  }
+  const q = query(ref, ...constraints);
 
   return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
     const items = snapshot.docs.map((d: DocumentSnapshot) => docToWorkItem(d.id, d.data()!));
@@ -176,8 +194,11 @@ export function subscribeWorkItems(
 }
 
 export function subscribeClients(callback: (clients: Client[]) => void, onError?: () => void) {
+  const user = auth.currentUser;
+  if (!user) { callback([]); return () => {}; }
+
   const ref = collection(db, 'clients');
-  const q = query(ref, orderBy('name', 'asc'));
+  const q = query(ref, where('ownerId', '==', user.uid), orderBy('name', 'asc'));
 
   return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
     const clients = snapshot.docs.map((d: DocumentSnapshot) => docToClient(d.id, d.data()!));
@@ -186,8 +207,11 @@ export function subscribeClients(callback: (clients: Client[]) => void, onError?
 }
 
 export function subscribeApps(callback: (apps: App[]) => void, onError?: () => void) {
+  const user = auth.currentUser;
+  if (!user) { callback([]); return () => {}; }
+
   const ref = collection(db, 'apps');
-  const q = query(ref, orderBy('createdAt', 'desc'));
+  const q = query(ref, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
   return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
     const apps = snapshot.docs.map((d: DocumentSnapshot) => docToApp(d.id, d.data()!));
     callback(apps);
