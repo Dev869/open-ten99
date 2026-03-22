@@ -18,6 +18,7 @@ interface WorkItemDetailProps {
   hourlyRate: number;
   paymentTerms?: string;
   taxRate?: number;
+  pdfLogoUrl?: string;
 }
 
 export default function WorkItemDetail({
@@ -26,6 +27,7 @@ export default function WorkItemDetail({
   hourlyRate,
   paymentTerms,
   taxRate,
+  pdfLogoUrl,
 }: WorkItemDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -107,6 +109,7 @@ export default function WorkItemDetail({
         companyName: 'DW Tailored',
         hourlyRate,
         taxRate,
+        pdfLogoUrl,
       });
       setPreviewUrl(blobUrl);
       setShowPdfPreview(true);
@@ -125,7 +128,6 @@ export default function WorkItemDetail({
   function handleSendToClient() {
     if (!client?.email) return;
     try {
-      const portalUrl = `${window.location.origin}/portal/${item!.id}`;
       const subject = encodeURIComponent(
         `DW Tailored Systems — Work Order: ${item!.subject}`
       );
@@ -157,8 +159,7 @@ export default function WorkItemDetail({
         `Total Cost:   ${formatCurrency(item!.totalCost)}\n` +
         `————————————————————————————————\n` +
         `${billingNote}\n` +
-        `Please review and approve this work order at the link below:\n\n` +
-        `${portalUrl}\n\n\n` +
+        `Please reply to approve or request changes.\n\n\n` +
         `Thank you for choosing DW Tailored Systems.\n\n` +
         `Best regards,\n` +
         `DW Tailored Systems\n` +
