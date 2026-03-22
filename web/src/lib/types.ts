@@ -87,6 +87,9 @@ export interface AppSettings {
   teamId?: string;
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys
+  pushNotificationsEnabled?: boolean;
+  fcmToken?: string;
+  mileageRate?: number;
 }
 
 export const PAYMENT_TERMS_OPTIONS = [
@@ -362,6 +365,41 @@ export interface Receipt {
   transactionId?: string;
   matchConfidence?: number;
   matchMethod?: 'auto' | 'manual';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/* ── Time Tracking ─────────────────────────────────── */
+
+export interface TimeEntry {
+  id: string;
+  ownerId: string;
+  clientId: string;
+  appId?: string;
+  description: string;
+  durationSeconds: number;
+  isBillable: boolean;
+  startedAt: Date;
+  endedAt: Date;
+  createdAt: Date;
+}
+
+/* ── Mileage Tracking ─────────────────────────────── */
+
+export type MileagePurpose = 'business' | 'personal';
+
+export interface MileageTrip {
+  id: string;
+  ownerId: string;
+  date: Date;
+  description: string;
+  miles: number;          // Always one-way input value
+  purpose: MileagePurpose;
+  clientId?: string;
+  roundTrip: boolean;
+  rate: number;           // IRS rate at time of entry (e.g. 0.70)
+  deduction: number;      // effectiveMiles × rate (0 if personal)
+  transactionId?: string; // Linked auto-created expense (business only)
   createdAt: Date;
   updatedAt: Date;
 }
