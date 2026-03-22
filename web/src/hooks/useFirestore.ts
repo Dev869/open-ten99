@@ -15,8 +15,10 @@ import {
   subscribeReceipts,
   subscribeTimeEntries,
   subscribeMileageTrips,
+  subscribeInsights,
+  callGenerateInsights,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -278,4 +280,29 @@ export function useMileageTrips() {
     return unsubscribe;
   }, []);
   return { trips, loading };
+}
+
+export function useInsights() {
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = whenAuthReady(() =>
+      subscribeInsights((data) => {
+        setInsights(data);
+        setLoading(false);
+      }),
+    );
+    return unsubscribe;
+  }, []);
+
+  const isGenerating = insights?.status === 'generating';
+  const lastGenerated = insights?.generatedAt ?? null;
+  const errors = insights?.errors ?? [];
+
+  const refreshInsights = async () => {
+    await callGenerateInsights(true);
+  };
+
+  return { insights, loading, isGenerating, lastGenerated, errors, refreshInsights };
 }

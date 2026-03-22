@@ -1,9 +1,10 @@
-import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef, Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
-import { updateSettings } from './services/firestore';
+import { updateSettings, callGenerateInsights } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { TimeTrackerProvider, TimeTrackerNavButton, TimeTrackerBar } from './components/TimeTracker';
@@ -82,6 +83,48 @@ const GitHubCallback = lazy(() => import('./routes/contractor/GitHubCallback'));
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
 const PortalHome = lazy(() => import('./routes/portal/PortalHome'));
 const PortalDetail = lazy(() => import('./routes/portal/PortalDetail'));
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null; errorInfo: ErrorInfo | null }
+> {
+  state: { error: Error | null; errorInfo: ErrorInfo | null } = { error: null, errorInfo: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    this.setState({ errorInfo });
+    console.error('[ErrorBoundary]', error.message, errorInfo.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'monospace', maxWidth: 700, margin: '0 auto' }}>
+          <h1 style={{ color: '#EF4444', fontSize: 18 }}>Something went wrong</h1>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 12, color: '#888' }}>
+            {this.state.error.message}
+          </pre>
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, color: '#888' }}>Component stack</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, marginTop: 8, color: '#666' }}>
+              {this.state.errorInfo?.componentStack}
+            </pre>
+          </details>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ marginTop: 16, padding: '8px 16px', borderRadius: 8, border: '1px solid #444', cursor: 'pointer' }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function Loading() {
   return (
@@ -440,6 +483,13 @@ function PortalRoutes() {
 export default function App() {
   const { user, loading, authError, signInWithGoogle } = useAuth();
 
+  // Trigger AI insight generation on contractor login
+  useEffect(() => {
+    if (user && isContractorUser(user)) {
+      callGenerateInsights().catch(console.error);
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
@@ -460,6 +510,7 @@ export default function App() {
   const isPortalUser = user != null && !isContractorUser(user);
 
   return (
+    <ErrorBoundary>
     <Suspense fallback={<Loading />}>
       <Routes>
         {/* Portal auth (public) */}
@@ -517,5 +568,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 }
