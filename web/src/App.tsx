@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
 import { updateSettings } from './services/firestore';
@@ -12,6 +13,7 @@ import { GlobalSearch } from './components/GlobalSearch';
 import { computeNotifications, NotificationPanel, MobileNotificationBell } from './components/NotificationCenter';
 import { IconMenu, IconSearch } from './components/icons';
 import { BrandWordmark } from './components/Brand';
+import { auth } from './lib/firebase';
 import Login from './routes/Login';
 
 // Lazy-loaded contractor routes
@@ -68,7 +70,12 @@ function ContractorLayout() {
 
   // Notification center state
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifDismissed, setNotifDismissed] = useState<Set<string>>(new Set());
+  const [notifDismissed, setNotifDismissed] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('oc-notif-dismissed');
+      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [isMobileView, setIsMobileView] = useState(false);
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const notifBellRef = useRef<HTMLButtonElement>(null);
@@ -123,11 +130,17 @@ function ContractorLayout() {
   }, [notifOpen]);
 
   const handleNotifDismiss = useCallback((id: string) => {
-    setNotifDismissed((prev) => new Set(prev).add(id));
+    setNotifDismissed((prev) => {
+      const next = new Set(prev).add(id);
+      localStorage.setItem('oc-notif-dismissed', JSON.stringify([...next]));
+      return next;
+    });
   }, []);
 
   const handleNotifDismissAll = useCallback(() => {
-    setNotifDismissed(new Set(allNotifications.map((n) => n.id)));
+    const next = new Set(allNotifications.map((n) => n.id));
+    localStorage.setItem('oc-notif-dismissed', JSON.stringify([...next]));
+    setNotifDismissed(next);
   }, [allNotifications]);
 
   const handleNotifToggle = useCallback(() => {
@@ -263,6 +276,8 @@ function ContractorRoutes() {
             workItems={workItems}
             clients={clients}
             hourlyRate={settings.hourlyRate}
+            paymentTerms={settings.invoicePaymentTerms}
+            taxRate={settings.invoiceTaxRate}
           />
         }
       />
@@ -296,7 +311,7 @@ function ContractorRoutes() {
       />
       <Route
         path="finance/invoices"
-        element={<Invoices workItems={workItems} clients={clients} hourlyRate={settings.hourlyRate} />}
+        element={<Invoices workItems={workItems} clients={clients} hourlyRate={settings.hourlyRate} taxRate={settings.invoiceTaxRate} />}
       />
       <Route path="finance/transactions" element={<Transactions />} />
       <Route path="finance/expenses" element={<Expenses />} />
@@ -327,8 +342,24 @@ function ContractorRoutes() {
   );
 }
 
+const PORTAL_SESSION_MAX_DAYS = 7;
+
 function PortalRoutes() {
   const { user, claims } = useAuth();
+
+  // Sign out portal clients whose session is older than 7 days
+  useEffect(() => {
+    if (!user) return;
+    const lastSignIn = user.metadata.lastSignInTime;
+    if (lastSignIn) {
+      const signInDate = new Date(lastSignIn);
+      const daysSinceSignIn = (Date.now() - signInDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceSignIn > PORTAL_SESSION_MAX_DAYS) {
+        signOut(auth).then(() => { window.location.href = '/portal/auth'; });
+      }
+    }
+  }, [user]);
+
   // Portal users have a clientId custom claim on their ID token
   const clientId = typeof claims.clientId === 'string' ? claims.clientId : undefined;
   const { workItems } = useWorkItems(clientId);

@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '../../lib/utils';
 interface InvoicePreviewProps {
   workItem: WorkItem;
   client: Client | undefined;
+  taxRate?: number;
   onClose: () => void;
   onNavigate: (id: string) => void;
   onDelete: (id: string) => void;
@@ -16,7 +17,7 @@ const STATUS_COLORS: Record<string, { color: string }> = {
   overdue: { color: 'var(--color-red)' },
 };
 
-export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete }: InvoicePreviewProps) {
+export function InvoicePreview({ workItem, client, taxRate, onClose, onNavigate, onDelete }: InvoicePreviewProps) {
   const status = workItem.invoiceStatus ?? 'draft';
   const statusColor = STATUS_COLORS[status] ?? STATUS_COLORS.draft!;
   const now = new Date().getTime();
@@ -138,10 +139,22 @@ export function InvoicePreview({ workItem, client, onClose, onNavigate, onDelete
               <span className="text-[var(--text-secondary)]">Total Hours</span>
               <span className="font-mono text-[var(--text-primary)]">{workItem.totalHours.toFixed(1)} hrs</span>
             </div>
+            {taxRate != null && taxRate > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--text-secondary)]">Tax ({taxRate}%)</span>
+                <span className="font-mono text-[var(--text-primary)]">
+                  {formatCurrency(workItem.totalCost * (taxRate / 100))}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm pt-2 border-t border-[var(--border)]">
               <span className="font-semibold text-[var(--text-primary)]">Total</span>
               <span className="font-bold text-lg" style={{ color: statusColor.color }}>
-                {formatCurrency(workItem.totalCost)}
+                {formatCurrency(
+                  taxRate != null && taxRate > 0
+                    ? workItem.totalCost + workItem.totalCost * (taxRate / 100)
+                    : workItem.totalCost
+                )}
               </span>
             </div>
           </div>

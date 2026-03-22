@@ -13,5 +13,7 @@ createRoot(document.getElementById('root')!).render(
 );
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    // SW registration may fail on custom domains while SSL cert provisions
+  });
 }

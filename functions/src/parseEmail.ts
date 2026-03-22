@@ -78,6 +78,7 @@ export const onEmailReceived = onRequest(
       const senderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
+      const messageId = payload.MessageID || "";
 
       if (!senderEmail) {
         logger.error("No sender email found in payload");
@@ -104,6 +105,23 @@ export const onEmailReceived = onRequest(
         );
         res.status(200).send("OK"); // return 200 so Postmark does not retry
         return;
+      }
+
+      // --- Step 0.5: Dedup — skip if we already processed this email ---
+      if (messageId) {
+        const existing = await db
+          .collection("workItems")
+          .where("postmarkMessageId", "==", messageId)
+          .limit(1)
+          .get();
+        if (!existing.empty) {
+          logger.info("Duplicate email skipped — work item already exists", {
+            messageId,
+            existingWorkItemId: existing.docs[0].id,
+          });
+          res.status(200).json({ success: true, duplicate: true });
+          return;
+        }
       }
 
       // --- Step 1: Look up or create client ---
@@ -152,6 +170,7 @@ export const onEmailReceived = onRequest(
         totalHours,
         totalCost,
         isBillable: true,
+        ...(messageId ? { postmarkMessageId: messageId } : {}),
         createdAt: now,
         updatedAt: now,
       });

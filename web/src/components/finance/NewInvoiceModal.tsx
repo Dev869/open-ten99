@@ -1,27 +1,28 @@
 import { useState } from 'react';
 import type { Client, LineItem, WorkItemType, RecurrenceFrequency } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, paymentTermsToDays } from '../../lib/utils';
 import { createWorkItem } from '../../services/firestore';
 
 interface NewInvoiceModalProps {
   clients: Client[];
   hourlyRate: number;
+  paymentTerms?: string;
   onClose: () => void;
 }
 
-function defaultDueDate(): string {
+function defaultDueDate(paymentTerms?: string): string {
   const date = new Date();
-  date.setDate(date.getDate() + 30);
+  date.setDate(date.getDate() + paymentTermsToDays(paymentTerms));
   return date.toISOString().split('T')[0];
 }
 
-export function NewInvoiceModal({ clients, hourlyRate, onClose }: NewInvoiceModalProps) {
+export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: NewInvoiceModalProps) {
   const [invoiceType, setInvoiceType] = useState<WorkItemType>('changeRequest');
   const [clientId, setClientId] = useState('');
   const [subject, setSubject] = useState('');
   const [notes, setNotes] = useState('');
-  const [dueDate, setDueDate] = useState(defaultDueDate);
+  const [dueDate, setDueDate] = useState(() => defaultDueDate(paymentTerms));
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency | ''>('');
   const [customDays, setCustomDays] = useState<number>(30);
   const [deductFromRetainer, setDeductFromRetainer] = useState(false);

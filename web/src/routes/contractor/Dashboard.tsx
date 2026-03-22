@@ -68,9 +68,10 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
   const monthRevenue = workItems
     .filter(
       (i) =>
-        i.createdAt >= monthStart &&
-        i.status !== 'archived' &&
-        i.isBillable
+        i.isBillable &&
+        i.invoiceStatus === 'paid' &&
+        i.invoicePaidDate != null &&
+        i.invoicePaidDate >= monthStart
     )
     .reduce((s, i) => s + i.totalCost, 0);
 

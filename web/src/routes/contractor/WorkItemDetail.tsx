@@ -4,10 +4,10 @@ import type { WorkItem, Client, LineItem, RecurrenceFrequency } from '../../lib/
 import { RECURRENCE_LABELS } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
-import { formatCurrency, formatDate, addBusinessDays } from '../../lib/utils';
+import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays } from '../../lib/utils';
 import {
   updateWorkItem,
-  archiveWorkItem,
+  discardWorkItem,
   updateInvoiceStatus,
 } from '../../services/firestore';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
@@ -16,12 +16,16 @@ interface WorkItemDetailProps {
   workItems: WorkItem[];
   clients: Client[];
   hourlyRate: number;
+  paymentTerms?: string;
+  taxRate?: number;
 }
 
 export default function WorkItemDetail({
   workItems,
   clients,
   hourlyRate,
+  paymentTerms,
+  taxRate,
 }: WorkItemDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,6 +40,11 @@ export default function WorkItemDetail({
   useEffect(() => {
     if (source) setItem({ ...source });
   }, [source]);
+
+  // Clean up blob URL on unmount
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   if (!item) {
     return (
@@ -75,8 +84,13 @@ export default function WorkItemDetail({
 
   async function handleSave() {
     setSaving(true);
-    await updateWorkItem(item!);
-    setSaving(false);
+    try {
+      await updateWorkItem(item!);
+    } catch (err) {
+      console.error('Failed to save work item:', err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleApproveAndGenerate() {
@@ -92,6 +106,7 @@ export default function WorkItemDetail({
       const blobUrl = await buildChangeOrderPdf(updated, client, {
         companyName: 'DW Tailored',
         hourlyRate,
+        taxRate,
       });
       setPreviewUrl(blobUrl);
       setShowPdfPreview(true);
@@ -102,8 +117,8 @@ export default function WorkItemDetail({
   }
 
   async function handleDiscard() {
-    if (!confirm('Archive this work order?')) return;
-    await archiveWorkItem(item!.id!);
+    if (!confirm('Discard this work order? It will be moved to trash and permanently deleted after 30 days.')) return;
+    await discardWorkItem(item!.id!, item!.status);
     navigate('/dashboard/work-items');
   }
 
@@ -423,10 +438,22 @@ export default function WorkItemDetail({
           <span className="text-sm text-[var(--text-secondary)]">Hourly Rate</span>
           <span className="text-sm font-semibold">{formatCurrency(hourlyRate)}</span>
         </div>
+        {taxRate != null && taxRate > 0 && (
+          <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
+            <span className="text-sm text-[var(--text-secondary)]">Tax ({taxRate}%)</span>
+            <span className="text-sm font-semibold">
+              {formatCurrency(item.totalCost * (taxRate / 100))}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between items-center border-t border-[var(--border)] pt-2">
           <span className="font-bold text-[var(--text-primary)]">Total Cost</span>
           <span className="text-xl font-extrabold text-[var(--accent)]">
-            {formatCurrency(item.totalCost)}
+            {formatCurrency(
+              taxRate != null && taxRate > 0
+                ? item.totalCost + item.totalCost * (taxRate / 100)
+                : item.totalCost
+            )}
           </span>
         </div>
         <div className="flex justify-between items-center border-t border-[var(--border)] pt-2 mt-2">
@@ -465,7 +492,7 @@ export default function WorkItemDetail({
                 if (!item.id) return;
                 const now = new Date();
                 const due = new Date(now);
-                due.setDate(due.getDate() + 30);
+                due.setDate(due.getDate() + paymentTermsToDays(paymentTerms));
                 await updateInvoiceStatus(item.id, {
                   invoiceStatus: 'sent',
                   invoiceSentDate: now,
@@ -616,9 +643,11 @@ export default function WorkItemDetail({
         <button
           onClick={async () => {
             if (!client) return;
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             const blobUrl = await buildChangeOrderPdf(item, client, {
               companyName: 'DW Tailored',
               hourlyRate,
+              taxRate,
             });
             setPreviewUrl(blobUrl);
             setShowPdfPreview(true);

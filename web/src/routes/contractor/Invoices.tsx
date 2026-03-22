@@ -5,14 +5,16 @@ import { getInvoicesByStatus, getInvoiceStatusCounts, getAgingBuckets } from '..
 import { AgingSummary } from '../../components/finance/AgingSummary';
 import { InvoiceTable } from '../../components/finance/InvoiceTable';
 import { InvoicePreview } from '../../components/finance/InvoicePreview';
-import { updateInvoiceStatus, archiveWorkItem } from '../../services/firestore';
-import { formatCurrency, formatDate, exportToCsv } from '../../lib/utils';
+import { updateInvoiceStatus, discardWorkItem } from '../../services/firestore';
+import { formatCurrency, formatDate, exportToCsv, paymentTermsToDays } from '../../lib/utils';
 import { NewInvoiceModal } from '../../components/finance/NewInvoiceModal';
 
 interface InvoicesProps {
   workItems: WorkItem[];
   clients: Client[];
   hourlyRate: number;
+  paymentTerms?: string;
+  taxRate?: number;
 }
 
 type InvoiceStatusFilter = 'all' | 'draft' | 'sent' | 'overdue' | 'paid';
@@ -25,7 +27,7 @@ const STATUS_TABS: { key: InvoiceStatusFilter; label: string }[] = [
   { key: 'paid', label: 'Paid' },
 ];
 
-export default function Invoices({ workItems, clients, hourlyRate }: InvoicesProps) {
+export default function Invoices({ workItems, clients, hourlyRate, paymentTerms, taxRate }: InvoicesProps) {
   const navigate = useNavigate();
   const [activeStatus, setActiveStatus] = useState<InvoiceStatusFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -59,7 +61,7 @@ export default function Invoices({ workItems, clients, hourlyRate }: InvoicesPro
     if (selectedIds.size === 0) return;
     setBulkLoading(true);
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
+    dueDate.setDate(dueDate.getDate() + paymentTermsToDays(paymentTerms));
     try {
       await Promise.all(
         Array.from(selectedIds).map(id =>
@@ -96,11 +98,14 @@ export default function Invoices({ workItems, clients, hourlyRate }: InvoicesPro
 
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Archive ${selectedIds.size} work order${selectedIds.size !== 1 ? 's' : ''}?`)) return;
+    if (!window.confirm(`Discard ${selectedIds.size} invoice${selectedIds.size !== 1 ? 's' : ''}? They will be permanently deleted after 30 days.`)) return;
     setBulkLoading(true);
     try {
       await Promise.all(
-        Array.from(selectedIds).map(id => archiveWorkItem(id)),
+        Array.from(selectedIds).map(id => {
+          const item = workItems.find(i => i.id === id);
+          return discardWorkItem(id, item?.status);
+        }),
       );
       setSelectedIds(new Set());
     } finally {
@@ -109,7 +114,8 @@ export default function Invoices({ workItems, clients, hourlyRate }: InvoicesPro
   }
 
   async function handleDelete(id: string) {
-    await archiveWorkItem(id);
+    const item = workItems.find(i => i.id === id);
+    await discardWorkItem(id, item?.status);
     setPreviewItem(null);
   }
 
@@ -241,6 +247,7 @@ export default function Invoices({ workItems, clients, hourlyRate }: InvoicesPro
         <InvoicePreview
           workItem={previewItem}
           client={clients.find(c => c.id === previewItem.clientId)}
+          taxRate={taxRate}
           onClose={() => setPreviewItem(null)}
           onNavigate={(id) => {
             setPreviewItem(null);
@@ -254,6 +261,7 @@ export default function Invoices({ workItems, clients, hourlyRate }: InvoicesPro
         <NewInvoiceModal
           clients={clients}
           hourlyRate={hourlyRate}
+          paymentTerms={paymentTerms}
           onClose={() => setShowNewInvoice(false)}
         />
       )}

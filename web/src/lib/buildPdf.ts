@@ -5,6 +5,7 @@ import { WORK_ITEM_STATUS_LABELS } from './types';
 interface PdfSettings {
   companyName: string;
   hourlyRate: number;
+  taxRate?: number;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -353,7 +354,23 @@ export async function buildChangeOrderPdf(
   page.drawText('Total Hours', { x: totalsLabelX, y, size: 10, font, color: GRAY });
   const totalHrsW = font.widthOfTextAtSize(totalHrsStr, 10);
   page.drawText(totalHrsStr, { x: rightX - totalHrsW, y, size: 10, font, color: CHARCOAL });
-  y -= 22;
+  y -= 18;
+
+  // Tax
+  const taxAmount = settings.taxRate && settings.taxRate > 0
+    ? workItem.totalCost * (settings.taxRate / 100)
+    : 0;
+
+  if (settings.taxRate && settings.taxRate > 0) {
+    const taxLabel = `Tax (${settings.taxRate}%)`;
+    const taxStr = fmtCurrency(taxAmount);
+    page.drawText(taxLabel, { x: totalsLabelX, y, size: 10, font, color: GRAY });
+    const taxW = font.widthOfTextAtSize(taxStr, 10);
+    page.drawText(taxStr, { x: rightX - taxW, y, size: 10, font, color: CHARCOAL });
+    y -= 18;
+  }
+
+  y -= 4;
 
   // Separator above total
   page.drawRectangle({
@@ -362,7 +379,7 @@ export async function buildChangeOrderPdf(
   y -= 8;
 
   // TOTAL — large, bold, prominent
-  const totalStr = fmtCurrency(workItem.totalCost);
+  const totalStr = fmtCurrency(workItem.totalCost + taxAmount);
   page.drawText('TOTAL', { x: totalsLabelX, y, size: 14, font: fontBold, color: CHARCOAL });
   const totalW = fontBold.widthOfTextAtSize(totalStr, 14);
   page.drawText(totalStr, { x: rightX - totalW, y, size: 14, font: fontBold, color: DARK_TEAL });

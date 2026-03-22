@@ -25,3 +25,4 @@ export { onTransactionCreated } from './matchTransaction';
 export { onSmartCategorize } from './smartCategorize';
 export { onReceiptUploaded } from './processReceipt';
 export { onReceiptMatchOnTransaction } from './receiptMatchOnTransaction';
+export { purgeDiscarded } from './purgeDiscarded';
