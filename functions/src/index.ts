@@ -26,3 +26,4 @@ export { onSmartCategorize } from './smartCategorize';
 export { onReceiptUploaded } from './processReceipt';
 export { onReceiptMatchOnTransaction } from './receiptMatchOnTransaction';
 export { purgeDiscarded } from './purgeDiscarded';
+export { onGenerateInsights } from './generateInsights';
