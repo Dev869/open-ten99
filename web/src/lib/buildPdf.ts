@@ -252,7 +252,7 @@ export async function buildChangeOrderPdf(
   const colDesc  = MARGIN + 32;
   const colHrs   = MARGIN + CONTENT_W - 200;
   const colRate  = MARGIN + CONTENT_W - 130;
-  const colAmt   = rightX;      // right-align amounts to content edge
+  const colAmt   = rightX - 8;  // right-align amounts with inner padding
   const rowH     = 24;      // enough height to prevent row bleed
 
   // Right-align positions for numeric columns (right edge of each zone)
