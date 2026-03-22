@@ -125,7 +125,7 @@ export default function WorkItemDetail({
   function handleSendToClient() {
     if (!client?.email) return;
     try {
-      const portalUrl = `https://openchanges.web.app/portal/${item!.id}`;
+      const portalUrl = `${window.location.origin}/portal/${item!.id}`;
       const subject = encodeURIComponent(
         `DW Tailored Systems — Work Order: ${item!.subject}`
       );

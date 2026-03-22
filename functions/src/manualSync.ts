@@ -39,7 +39,7 @@ function getPlaidClient(clientId: string, secret: string, env: string): PlaidApi
 // ---------------------------------------------------------------------------
 
 export const onManualSync = onCall(
-  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
+  { cors: true, maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to sync an account.');
@@ -104,7 +104,7 @@ export const onManualSync = onCall(
 // ---------------------------------------------------------------------------
 
 export const onDeleteConnectedAccount = onCall(
-  { maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to delete an account.');
@@ -157,7 +157,7 @@ export const onDeleteConnectedAccount = onCall(
 // ---------------------------------------------------------------------------
 
 export const onPlaidUpdateLinkToken = onCall(
-  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
+  { cors: true, maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to re-authenticate.');
@@ -216,7 +216,7 @@ export const onPlaidUpdateLinkToken = onCall(
     try {
       const response = await plaidClient.linkTokenCreate({
         user: { client_user_id: ownerId },
-        client_name: 'OpenChanges',
+        client_name: 'TEN99',
         access_token: decryptedToken,
         country_codes: [CountryCode.Us],
         language: 'en',
