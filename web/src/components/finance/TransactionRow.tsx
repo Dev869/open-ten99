@@ -10,6 +10,7 @@ interface TransactionRowProps {
   onCategoryChange: (id: string, category: string) => void;
   onRowClick?: (id: string) => void;
   onReceiptClick?: (id: string) => void;
+  insightBadge?: React.ReactNode;
 }
 
 function SourceBadge({ transaction, accounts }: { transaction: Transaction; accounts: ConnectedAccount[] }) {
@@ -73,7 +74,7 @@ function MatchStatusBadge({ matchStatus }: { matchStatus: Transaction['matchStat
   return null;
 }
 
-export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick, onReceiptClick }: TransactionRowProps) {
+export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick, onReceiptClick, insightBadge }: TransactionRowProps) {
   const [localCategory, setLocalCategory] = useState(transaction.category);
 
   const isIncome = transaction.amount > 0;
@@ -112,11 +113,12 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
 
       {/* Description */}
       <td className="px-4 py-3 text-sm text-[var(--text-primary)] max-w-xs">
-        <span className="inline-flex items-center gap-0 max-w-full">
+        <span className="inline-flex items-center gap-1 max-w-full flex-wrap">
           <span className="line-clamp-1 shrink min-w-0" title={transaction.description}>
             {transaction.description}
           </span>
           <MatchStatusBadge matchStatus={transaction.matchStatus} />
+          {insightBadge}
         </span>
       </td>
 
