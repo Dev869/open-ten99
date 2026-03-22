@@ -16,17 +16,42 @@ async function getMessagingInstance() {
   return messagingInstance;
 }
 
+/**
+ * Returns true when running as an installed PWA on Safari iOS (home screen).
+ * Safari iOS 16.4+ supports web push only in standalone (home screen) mode.
+ */
+export function isSafariIOSPWA(): boolean {
+  return (
+    'standalone' in window.navigator &&
+    (window.navigator as { standalone?: boolean }).standalone === true &&
+    /iPad|iPhone/.test(navigator.userAgent)
+  );
+}
+
+/**
+ * Returns true if the current context can receive push notifications.
+ * On Safari iOS, push is only available when the app is installed to the home screen.
+ */
+export function canReceivePush(): boolean {
+  const isIOS = /iPad|iPhone/.test(navigator.userAgent);
+  if (isIOS && !isSafariIOSPWA()) {
+    // Running in Safari browser (not installed), push not supported
+    return false;
+  }
+  return 'Notification' in window && 'serviceWorker' in navigator;
+}
+
 export type PushPermissionState = 'granted' | 'denied' | 'default' | 'unsupported';
 
 export function getPushPermissionState(): PushPermissionState {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+  if (!canReceivePush()) {
     return 'unsupported';
   }
   return Notification.permission;
 }
 
 export async function requestPushPermissionAndGetToken(): Promise<string | null> {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+  if (!canReceivePush()) {
     return null;
   }
 

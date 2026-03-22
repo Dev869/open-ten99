@@ -11,6 +11,7 @@ import { useToast } from '../../hooks/useToast';
 import {
   getPushPermissionState,
   requestPushPermissionAndGetToken,
+  isSafariIOSPWA,
   type PushPermissionState,
 } from '../../lib/notifications';
 
@@ -74,6 +75,10 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [pushState, setPushState] = useState<PushPermissionState>(getPushPermissionState);
   const [pushEnabled, setPushEnabled] = useState(settings.pushNotificationsEnabled ?? false);
   const [togglingPush, setTogglingPush] = useState(false);
+
+  // True on iPhone/iPad when not installed to home screen (Safari iOS browser)
+  const isIOSNotInPWA =
+    /iPad|iPhone/.test(navigator.userAgent) && !isSafariIOSPWA();
 
   useEffect(() => {
     setCompanyName(settings.companyName);
@@ -146,6 +151,69 @@ export default function Settings({ settings, userId }: SettingsProps) {
           />
           <p className="text-[10px] text-[var(--text-secondary)] mt-1">
             Used in PDF headers and branding.
+          </p>
+        </div>
+
+        {/* Invoice Logo */}
+        <div>
+          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+            Invoice Logo
+          </label>
+          <div className="flex items-center gap-3 mt-1.5">
+            {settings.pdfLogoUrl ? (
+              <img
+                src={settings.pdfLogoUrl}
+                alt="Invoice logo"
+                className="h-10 max-w-[160px] object-contain rounded border border-[var(--border)] bg-white p-1"
+              />
+            ) : (
+              <div className="h-10 px-4 flex items-center rounded border border-dashed border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                No logo
+              </div>
+            )}
+            <label className="px-3 py-2 rounded-lg bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer">
+              Upload
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 2 * 1024 * 1024) {
+                    addToast('Logo must be under 2MB', 'error');
+                    return;
+                  }
+                  try {
+                    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                    const { storage } = await import('../../lib/firebase');
+                    const storageRef = ref(storage, `logos/${userId}/${file.name}`);
+                    await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(storageRef);
+                    await updateSettings(userId, { pdfLogoUrl: url });
+                    addToast('Logo uploaded', 'success');
+                  } catch (err) {
+                    console.error('Logo upload failed:', err);
+                    addToast('Upload failed', 'error');
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {settings.pdfLogoUrl && (
+              <button
+                onClick={async () => {
+                  await updateSettings(userId, { pdfLogoUrl: '' });
+                  addToast('Logo removed', 'info');
+                }}
+                className="text-xs text-[var(--color-red)] hover:underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1">
+            PNG or JPG, max 2MB. Replaces company name on invoices.
           </p>
         </div>
 
@@ -252,8 +320,15 @@ export default function Settings({ settings, userId }: SettingsProps) {
           {pushState === 'unsupported' ? (
             <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
               <p className="text-sm text-[var(--text-secondary)]">
-                Push notifications are not supported on this browser.
+                {isIOSNotInPWA
+                  ? 'Add Ten99 to your Home Screen to enable push notifications.'
+                  : 'Push notifications are not supported on this browser.'}
               </p>
+              {isIOSNotInPWA && (
+                <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">
+                  Tap the Share button in Safari, then select &ldquo;Add to Home Screen&rdquo;.
+                </p>
+              )}
             </div>
           ) : pushState === 'denied' ? (
             <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
@@ -565,10 +640,17 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </h3>
           <div className="flex gap-2">
             <button
-              onClick={async () => {
-                const { seedSampleData } = await import('../../lib/seedData');
-                await seedSampleData();
-                addToast('Sample data created!', 'success');
+              onClick={() => {
+                if (!confirm('This will populate sample clients, work items, time entries, expenses, and mileage trips. Continue?')) return;
+                addToast('Seeding data...', 'info');
+                import('../../lib/seedData').then(({ seedSampleData }) =>
+                  seedSampleData()
+                    .then(() => addToast('Sample data created!', 'success'))
+                    .catch((err) => {
+                      console.error('Seed failed:', err);
+                      addToast(`Seed failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+                    })
+                );
               }}
               className="px-4 py-2 rounded-lg bg-[var(--bg-input)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors"
             >
@@ -590,6 +672,8 @@ export default function Settings({ settings, userId }: SettingsProps) {
             Seed populates sample data. Clear removes everything.
           </p>
         </div>
+
+        <div className="h-4" />
 
         {/* Credits / Attribution */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">

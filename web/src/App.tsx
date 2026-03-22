@@ -66,6 +66,7 @@ const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
 const FinanceOverview = lazy(() => import('./routes/contractor/FinanceOverview'));
 const Invoices = lazy(() => import('./routes/contractor/Invoices'));
 const Transactions = lazy(() => import('./routes/contractor/Transactions'));
+const TransactionDetail = lazy(() => import('./routes/contractor/TransactionDetail'));
 const Expenses = lazy(() => import('./routes/contractor/Expenses'));
 const Receipts = lazy(() => import('./routes/contractor/Receipts'));
 const Reports = lazy(() => import('./routes/contractor/Reports'));
@@ -276,8 +277,8 @@ function ContractorLayout() {
             onNotificationsClick={handleNotifToggle}
           />
           <div className="flex-1 flex flex-col min-w-0">
-            {/* Mobile header — Strava-style centered title with notch gap */}
-            <header className="md:hidden sticky top-0 z-30 bg-[var(--bg-page)] flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+            {/* Mobile header — fixed at top so it stays anchored while main scrolls */}
+            <header className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[var(--bg-page)]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
               <div className="flex items-center justify-between h-12 px-4">
                 <div className="flex items-center gap-0.5 min-w-[88px]">
                   <Link
@@ -312,6 +313,8 @@ function ContractorLayout() {
                 </div>
               </div>
             </header>
+            {/* Spacer to push content below the fixed mobile header */}
+            <div className="md:hidden flex-shrink-0 h-12" style={{ height: 'calc(3rem + env(safe-area-inset-top))' }} />
 
             <TimeTrackerBar />
 
@@ -378,6 +381,7 @@ function ContractorRoutes() {
             hourlyRate={settings.hourlyRate}
             paymentTerms={settings.invoicePaymentTerms}
             taxRate={settings.invoiceTaxRate}
+            pdfLogoUrl={settings.pdfLogoUrl}
           />
         }
       />
@@ -414,6 +418,7 @@ function ContractorRoutes() {
         element={<Invoices workItems={workItems} clients={clients} settings={settings} hourlyRate={settings.hourlyRate} taxRate={settings.invoiceTaxRate} />}
       />
       <Route path="finance/transactions" element={<Transactions />} />
+      <Route path="finance/transactions/:id" element={<TransactionDetail />} />
       <Route path="finance/expenses" element={<Expenses />} />
       <Route path="finance/receipts" element={<Receipts />} />
       <Route
