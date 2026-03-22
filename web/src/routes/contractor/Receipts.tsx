@@ -3,6 +3,7 @@ import { useReceipts } from '../../hooks/useFirestore';
 import type { Receipt } from '../../lib/types';
 import ReceiptGrid from '../../components/finance/ReceiptGrid';
 import ReceiptDetail from '../../components/finance/ReceiptDetail';
+import ReceiptUploader from '../../components/finance/ReceiptUploader';
 import { uploadReceiptFile } from '../../services/firestore';
 import { IconDocument } from '../../components/icons';
 
@@ -67,23 +68,26 @@ export default function Receipts() {
         </div>
       )}
 
-      {receipts.length === 0 && (
+      {receipts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
           <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
             <IconDocument size={32} color="var(--accent)" />
           </div>
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No receipts yet</h2>
-          <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs">
+          <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
             Upload or scan receipts to track expenses
           </p>
+          <div className="w-56">
+            <ReceiptUploader onError={setError} />
+          </div>
         </div>
+      ) : (
+        <ReceiptGrid
+          receipts={receipts}
+          onReceiptClick={setSelectedReceipt}
+          onUploadError={setError}
+        />
       )}
-
-      <ReceiptGrid
-        receipts={receipts}
-        onReceiptClick={setSelectedReceipt}
-        onUploadError={setError}
-      />
 
       {/* Detail slide-over */}
       {currentReceipt && (
