@@ -62,4 +62,6 @@ export {
   IconMore,
   IconCamera,
   IconCar,
+  // AI
+  IconSparkle,
 } from './Icons';

@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { type CashFlowProjection } from '../../lib/types';
+import { IconSparkle } from '../icons';
 
 interface CashFlowChartProps {
   projections: CashFlowProjection[];
@@ -13,8 +14,8 @@ export function CashFlowChart({ projections }: CashFlowChartProps) {
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
     }}>
-      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-3">
-        Cash Flow Forecast
+      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-3 flex items-center gap-1">
+        <IconSparkle size={10} /> Cash Flow Forecast
       </div>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={projections}>

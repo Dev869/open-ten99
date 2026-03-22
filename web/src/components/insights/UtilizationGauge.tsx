@@ -1,4 +1,5 @@
 import { type Utilization } from '../../lib/types';
+import { IconSparkle } from '../icons';
 
 interface UtilizationGaugeProps {
   utilization: Utilization;
@@ -15,7 +16,7 @@ export function UtilizationGauge({ utilization }: UtilizationGaugeProps) {
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
     }}>
-      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-2">Utilization</div>
+      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-2 flex items-center gap-1"><IconSparkle size={10} /> Utilization</div>
       <svg width="100" height="100" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" strokeWidth="8" />
         <circle

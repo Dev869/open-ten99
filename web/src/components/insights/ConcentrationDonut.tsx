@@ -1,5 +1,6 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { type ClientScore } from '../../lib/types';
+import { IconSparkle } from '../icons';
 
 interface ConcentrationDonutProps {
   scores: ClientScore[];
@@ -26,8 +27,8 @@ export function ConcentrationDonut({ scores }: ConcentrationDonutProps) {
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
     }}>
-      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-3">
-        Revenue Concentration
+      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] mb-3 flex items-center gap-1">
+        <IconSparkle size={10} /> Revenue Concentration
       </div>
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>

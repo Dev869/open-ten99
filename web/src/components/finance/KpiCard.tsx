@@ -1,7 +1,7 @@
 import { formatCurrency } from '../../lib/utils';
 
 interface KpiCardProps {
-  label: string;
+  label: React.ReactNode;
   value: number;
   trend?: number;
   subtitle?: string;

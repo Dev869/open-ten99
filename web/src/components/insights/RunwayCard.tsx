@@ -1,4 +1,5 @@
 import { type RunwayEstimate } from '../../lib/types';
+import { IconSparkle } from '../icons';
 
 interface RunwayCardProps {
   runway: RunwayEstimate;
@@ -18,7 +19,7 @@ export function RunwayCard({ runway }: RunwayCardProps) {
       background: `color-mix(in srgb, ${color} 10%, transparent)`,
       border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
     }}>
-      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)]">Cash Runway</div>
+      <div className="text-[0.65rem] uppercase tracking-wide text-[var(--text-secondary)] flex items-center gap-1"><IconSparkle size={10} /> Cash Runway</div>
       <div className="text-2xl font-bold mt-1" style={{ color }}>
         {runway.months} mo
       </div>

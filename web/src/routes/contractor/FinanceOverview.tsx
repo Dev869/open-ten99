@@ -19,6 +19,7 @@ import { useInsights } from '../../hooks/useFirestore';
 import { CashFlowChart } from '../../components/insights/CashFlowChart';
 import { RunwayCard } from '../../components/insights/RunwayCard';
 import { InsightShimmer } from '../../components/insights/InsightShimmer';
+import { IconSparkle } from '../../components/icons';
 
 export default function FinanceOverview({ workItems, clients }: { workItems: WorkItem[]; clients: Client[] }) {
   const now = useMemo(() => new Date(), []);
@@ -108,7 +109,7 @@ export default function FinanceOverview({ workItems, clients }: { workItems: Wor
             <InsightShimmer label="Tax savings loading..." />
           ) : insights?.tax ? (
             <KpiCard
-              label="Est. Tax Savings"
+              label={<span className="flex items-center gap-1"><IconSparkle size={10} /> Est. Tax Savings</span>}
               value={insights.tax.estimatedSavings}
               subtitle={`$${insights.tax.totalDeductible.toLocaleString()} deductible`}
               color="green"

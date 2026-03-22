@@ -1,4 +1,5 @@
 import { type RiskLevel } from '../../lib/types';
+import { IconSparkle } from '../icons';
 
 interface InsightBadgeProps {
   label: string;
@@ -26,9 +27,7 @@ export function InsightBadge({ label, level, tooltip }: InsightBadgeProps) {
       }}
       title={tooltip}
     >
-      {level === 'high' && '!'}
-      {level === 'warning' && '!'}
-      {level === 'deductible' && '$'}
+      <IconSparkle size={10} />
       {label}
     </span>
   );

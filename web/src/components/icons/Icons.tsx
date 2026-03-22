@@ -1437,3 +1437,39 @@ export function IconThumbsUp({ size = 22, className, color }: IconProps) {
     </svg>
   );
 }
+
+/** Pixel sparkle / AI indicator — four-pointed star with small accent dots */
+export function IconSparkle({ size = 14, className, color }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <g fill={color || 'currentColor'}>
+        {/* Main four-pointed star */}
+        <path d="M14 0h4v2h-4z" />
+        <path d="M14 2h2v4h-2z" />
+        <path d="M16 2h2v4h-2z" />
+        <path d="M12 6h2v2h-2z" />
+        <path d="M18 6h2v2h-2z" />
+        <path d="M10 8h2v2h-2z" />
+        <path d="M20 8h2v2h-2z" />
+        <path d="M8 10h2v2h-2z" />
+        <path d="M22 10h2v2h-2z" />
+        <path d="M6 12h2v2h-2z" />
+        <path d="M24 12h2v2h-2z" />
+        <path d="M4 14h2v4h-2z" />
+        <path d="M26 14h2v4h-2z" />
+        <path d="M0 14h4v4H0z" />
+        <path d="M28 14h4v4h-4z" />
+        <path d="M6 18h2v2h-2z" />
+        <path d="M24 18h2v2h-2z" />
+        <path d="M8 20h2v2h-2z" />
+        <path d="M22 20h2v2h-2z" />
+        <path d="M10 22h2v2h-2z" />
+        <path d="M20 22h2v2h-2z" />
+        <path d="M12 24h2v2h-2z" />
+        <path d="M18 24h2v2h-2z" />
+        <path d="M14 26h4v4h-4z" />
+        <path d="M14 30h4v2h-4z" />
+      </g>
+    </svg>
+  );
+}
