@@ -1,17 +1,21 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { WorkItem, Client } from '../../lib/types';
+import { useNavigate, Link } from 'react-router-dom';
+import type { WorkItem, Client, AppSettings } from '../../lib/types';
 import { getInvoicesByStatus, getInvoiceStatusCounts, getAgingBuckets } from '../../lib/finance';
 import { AgingSummary } from '../../components/finance/AgingSummary';
 import { InvoiceTable } from '../../components/finance/InvoiceTable';
+import { useInsights } from '../../hooks/useFirestore';
 import { InvoicePreview } from '../../components/finance/InvoicePreview';
+import { InvoiceCard } from '../../components/finance/InvoiceCard';
 import { updateInvoiceStatus, discardWorkItem } from '../../services/firestore';
 import { formatCurrency, formatDate, exportToCsv, paymentTermsToDays } from '../../lib/utils';
 import { NewInvoiceModal } from '../../components/finance/NewInvoiceModal';
+import { IconDollar } from '../../components/icons';
 
 interface InvoicesProps {
   workItems: WorkItem[];
   clients: Client[];
+  settings: AppSettings;
   hourlyRate: number;
   paymentTerms?: string;
   taxRate?: number;
@@ -27,13 +31,15 @@ const STATUS_TABS: { key: InvoiceStatusFilter; label: string }[] = [
   { key: 'paid', label: 'Paid' },
 ];
 
-export default function Invoices({ workItems, clients, hourlyRate, paymentTerms, taxRate }: InvoicesProps) {
+export default function Invoices({ workItems, clients, settings, hourlyRate, paymentTerms, taxRate }: InvoicesProps) {
   const navigate = useNavigate();
   const [activeStatus, setActiveStatus] = useState<InvoiceStatusFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [previewItem, setPreviewItem] = useState<WorkItem | null>(null);
   const [showNewInvoice, setShowNewInvoice] = useState(false);
+
+  const { insights } = useInsights();
 
   const clientMap = useMemo(
     () => new Map(clients.map(c => [c.id, c.name])),
@@ -51,6 +57,8 @@ export default function Invoices({ workItems, clients, hourlyRate, paymentTerms,
   );
 
   const agingBuckets = useMemo(() => getAgingBuckets(workItems), [workItems]);
+
+  const allBillableItems = useMemo(() => getInvoicesByStatus(workItems), [workItems]);
 
   function handleTabChange(key: InvoiceStatusFilter) {
     setActiveStatus(key);
@@ -133,11 +141,41 @@ export default function Invoices({ workItems, clients, hourlyRate, paymentTerms,
     exportToCsv('Invoice_Register.csv', headers, rows);
   }
 
+  if (allBillableItems.length === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="hidden md:block">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Invoices</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              Manage and track billable work orders
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+            <IconDollar size={32} color="var(--accent)" />
+          </div>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No invoices yet</h2>
+          <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
+            Mark work orders as billable to start invoicing clients
+          </p>
+          <Link
+            to="/dashboard/work-items"
+            className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all inline-flex items-center"
+          >
+            Go to Work Items
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Invoices</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             Manage and track billable work orders
@@ -233,28 +271,88 @@ export default function Invoices({ workItems, clients, hourlyRate, paymentTerms,
         </div>
       )}
 
-      {/* Invoice table */}
-      <InvoiceTable
-        workItems={filteredItems}
-        clients={clients}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        onRowClick={setPreviewItem}
-      />
+      {/* Invoice table + inline preview layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Table column */}
+        <div className={previewItem ? 'lg:w-1/2 xl:w-3/5' : 'w-full'}>
+          <InvoiceTable
+            workItems={filteredItems}
+            clients={clients}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onRowClick={setPreviewItem}
+            invoiceRisks={insights?.payments?.invoiceRisks}
+          />
+        </div>
 
-      {/* Invoice preview slide-over */}
+        {/* Inline invoice card preview (desktop) */}
+        {previewItem && (
+          <div className="hidden lg:block lg:w-1/2 xl:w-2/5">
+            <div className="sticky top-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+                  Invoice Preview
+                </h3>
+                <button
+                  onClick={() => setPreviewItem(null)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  aria-label="Close preview"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+              <InvoiceCard
+                workItem={previewItem}
+                client={clients.find(c => c.id === previewItem.clientId)}
+                settings={settings}
+                invoiceNumber={(() => {
+                  const baseNumber = settings.invoiceNextNumber ?? 1001;
+                  const allSorted = [...workItems].sort(
+                    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+                  );
+                  const idx = allSorted.findIndex(i => i.id === previewItem.id);
+                  return idx >= 0 ? baseNumber + idx : baseNumber;
+                })()}
+              />
+              <div className="flex items-center gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    navigate(`/dashboard/work-items/${previewItem.id}`);
+                    setPreviewItem(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all"
+                >
+                  Open Full Detail
+                </button>
+                <button
+                  onClick={() => setPreviewItem(null)}
+                  className="px-4 py-2.5 min-h-[44px] rounded-lg border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Invoice preview slide-over (mobile/tablet) */}
       {previewItem && (
-        <InvoicePreview
-          workItem={previewItem}
-          client={clients.find(c => c.id === previewItem.clientId)}
-          taxRate={taxRate}
-          onClose={() => setPreviewItem(null)}
-          onNavigate={(id) => {
-            setPreviewItem(null);
-            navigate(`/dashboard/work-items/${id}`);
-          }}
-          onDelete={handleDelete}
-        />
+        <div className="lg:hidden">
+          <InvoicePreview
+            workItem={previewItem}
+            client={clients.find(c => c.id === previewItem.clientId)}
+            taxRate={taxRate}
+            onClose={() => setPreviewItem(null)}
+            onNavigate={(id) => {
+              setPreviewItem(null);
+              navigate(`/dashboard/work-items/${id}`);
+            }}
+            onDelete={handleDelete}
+          />
+        </div>
       )}
 
       {showNewInvoice && (
