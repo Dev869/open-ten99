@@ -3,7 +3,7 @@ import type { User } from 'firebase/auth';
 import type { UserProfile } from '../../lib/types';
 import { subscribeProfile, updateProfile } from '../../services/firestore';
 import { useWorkItems } from '../../hooks/useFirestore';
-import { formatCurrency, formatHours, sanitizeUrl } from '../../lib/utils';
+import { formatHours, sanitizeUrl } from '../../lib/utils';
 
 interface ProfileProps {
   user: User;
@@ -157,17 +157,9 @@ export default function Profile({ user, onLogout }: ProfileProps) {
               <p className="text-sm text-[var(--text-secondary)] mt-0.5">{resolvedCompany}</p>
             )}
           </div>
-
-          {/* Edit Toggle */}
-          <button
-            onClick={() => setEditing(!editing)}
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] px-4 py-2 rounded-xl transition-colors flex-shrink-0 font-medium hover:bg-[var(--bg-input)]"
-          >
-            {editing ? 'Cancel' : 'Edit'}
-          </button>
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-xs text-[var(--text-secondary)]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 text-xs text-[var(--text-secondary)]">
           <span>Member since {memberSince}</span>
           {resolvedPhone && <span>{resolvedPhone}</span>}
           {resolvedWebsite && sanitizeUrl(resolvedWebsite) && (
@@ -175,6 +167,12 @@ export default function Profile({ user, onLogout }: ProfileProps) {
               {resolvedWebsite.replace(/^https?:\/\//, '')}
             </a>
           )}
+          <button
+            onClick={() => setEditing(!editing)}
+            className="ml-auto text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] px-4 py-1.5 rounded-xl transition-colors font-medium hover:bg-[var(--bg-input)]"
+          >
+            {editing ? 'Cancel' : 'Edit'}
+          </button>
         </div>
       </div>
 
@@ -366,7 +364,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
           </div>
           <div className="bg-[var(--bg-page)] rounded-xl p-4">
             <div className="text-2xl font-extrabold text-[var(--accent)]">
-              {formatCurrency(stats.totalRevenue)}
+              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stats.totalRevenue)}
             </div>
             <div className="text-xs text-[var(--text-secondary)] mt-1">Revenue</div>
           </div>
