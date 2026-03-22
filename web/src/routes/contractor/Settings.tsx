@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
-import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock } from '../../components/icons';
+import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell } from '../../components/icons';
 import { BrandIcon } from '../../components/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useIntegration } from '../../hooks/useFirestore';
 import { useToast } from '../../hooks/useToast';
+import {
+  getPushPermissionState,
+  requestPushPermissionAndGetToken,
+  type PushPermissionState,
+} from '../../lib/notifications';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -53,6 +58,7 @@ function formatRelativeTime(date: Date): string {
 export default function Settings({ settings, userId }: SettingsProps) {
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [hourlyRate, setHourlyRate] = useState(String(settings.hourlyRate));
+  const [mileageRate, setMileageRate] = useState(String(settings.mileageRate ?? 0.70));
   const [accentColor, setAccentColor] = useState(settings.accentColor);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -65,10 +71,16 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  const [pushState, setPushState] = useState<PushPermissionState>(getPushPermissionState);
+  const [pushEnabled, setPushEnabled] = useState(settings.pushNotificationsEnabled ?? false);
+  const [togglingPush, setTogglingPush] = useState(false);
+
   useEffect(() => {
     setCompanyName(settings.companyName);
     setHourlyRate(String(settings.hourlyRate));
+    setMileageRate(String(settings.mileageRate ?? 0.70));
     setAccentColor(settings.accentColor);
+    setPushEnabled(settings.pushNotificationsEnabled ?? false);
   }, [settings]);
 
   async function handleSave() {
@@ -77,6 +89,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
       companyName: companyName.trim(),
       hourlyRate: Number(hourlyRate) || 0,
       accentColor,
+      mileageRate: Number(mileageRate) || 0.70,
     });
     setSaving(false);
     setSaved(true);
@@ -86,7 +99,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
   return (
     <div className="max-w-lg">
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Settings
         </h1>
         <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full tracking-wide">
@@ -157,6 +170,27 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </p>
         </div>
 
+        {/* Mileage Rate */}
+        <div>
+          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+            IRS Mileage Rate
+          </label>
+          <div className="relative mt-1.5">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)]">$</span>
+            <input
+              type="number"
+              value={mileageRate}
+              onChange={(e) => setMileageRate(e.target.value)}
+              step="0.01"
+              min="0"
+              className="w-full pl-7 pr-3 py-2.5 min-h-[44px] bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            />
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1">
+            Per-mile rate for business mileage deductions (2025 IRS rate: $0.70).
+          </p>
+        </div>
+
         {/* Accent Color */}
         <div>
           <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
@@ -197,6 +231,103 @@ export default function Settings({ settings, userId }: SettingsProps) {
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
           </button>
+        </div>
+      </div>
+
+      {/* ── Notifications ── */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          Notifications
+        </h2>
+
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <IconBell size={18} color="var(--text-primary)" />
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">Push Notifications</h3>
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] mb-4">
+            Get notified about overdue work orders, retainer renewals, and other important updates on this device.
+          </p>
+
+          {pushState === 'unsupported' ? (
+            <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Push notifications are not supported on this browser.
+              </p>
+            </div>
+          ) : pushState === 'denied' ? (
+            <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Notifications are blocked. To enable them, update your browser or device notification settings for this site.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {pushEnabled ? 'Enabled' : 'Disabled'}
+                </p>
+                <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                  {pushEnabled
+                    ? 'You\u2019ll receive push notifications on this device.'
+                    : 'Enable to receive alerts even when the app is closed.'}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  setTogglingPush(true);
+                  try {
+                    if (pushEnabled) {
+                      // Disable
+                      await updateSettings(userId, {
+                        pushNotificationsEnabled: false,
+                        fcmToken: undefined,
+                      });
+                      setPushEnabled(false);
+                      addToast('Push notifications disabled.', 'info');
+                    } else {
+                      // Enable — request permission + get token
+                      const token = await requestPushPermissionAndGetToken();
+                      setPushState(getPushPermissionState());
+
+                      if (!token) {
+                        if (getPushPermissionState() === 'denied') {
+                          addToast('Notification permission was denied.', 'error');
+                        } else {
+                          addToast('Could not enable push notifications.', 'error');
+                        }
+                        return;
+                      }
+
+                      await updateSettings(userId, {
+                        pushNotificationsEnabled: true,
+                        fcmToken: token,
+                      });
+                      setPushEnabled(true);
+                      addToast('Push notifications enabled!', 'success');
+                    }
+                  } catch (err) {
+                    console.error('Push toggle error:', err);
+                    addToast('Something went wrong. Please try again.', 'error');
+                  } finally {
+                    setTogglingPush(false);
+                  }
+                }}
+                disabled={togglingPush}
+                role="switch"
+                aria-checked={pushEnabled}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:opacity-50 ${
+                  pushEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                    pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -327,9 +458,9 @@ export default function Settings({ settings, userId }: SettingsProps) {
               <button
                 onClick={async () => {
                   try {
-                    const getGitHubAuthUrl = httpsCallable<object, { url: string }>(functions, 'getGitHubAuthUrl');
+                    const getGitHubAuthUrl = httpsCallable<object, { authUrl: string }>(functions, 'getGitHubAuthUrl');
                     const result = await getGitHubAuthUrl({});
-                    const url = result.data.url;
+                    const url = result.data.authUrl;
                     try {
                       const parsed = new URL(url);
                       if (parsed.origin !== 'https://github.com') {
