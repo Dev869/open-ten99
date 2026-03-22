@@ -439,3 +439,142 @@ export interface Transaction {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// --- AI Insights ---
+
+export type InsightStatus = 'generating' | 'ready' | 'error';
+export type RiskLevel = 'low' | 'medium' | 'high';
+export type TrendDirection = 'up' | 'down' | 'stable';
+
+export interface ExpenseAnomaly {
+  transactionId: string;
+  description: string;
+  amount: number;
+  category: string;
+  reason: string;
+  severity: 'info' | 'warning';
+}
+
+export interface CategoryTrend {
+  category: string;
+  currentMonth: number;
+  previousMonth: number;
+  trend: TrendDirection;
+  percentChange: number;
+}
+
+export interface MissedDeduction {
+  transactionId: string;
+  description: string;
+  amount: number;
+  suggestedCategory: string;
+  reason: string;
+}
+
+export interface InvoiceRisk {
+  workItemId: string;
+  clientName: string;
+  amount: number;
+  risk: RiskLevel;
+  reason: string;
+  predictedPayDate: string;
+}
+
+export interface ClientPaymentPattern {
+  avgDaysToPayment: number;
+  onTimeRate: number;
+  trend: 'improving' | 'worsening' | 'stable';
+}
+
+export interface ClientScore {
+  clientId: string;
+  clientName: string;
+  lifetimeValue: number;
+  churnRisk: RiskLevel;
+  revenueShare: number;
+  reason: string;
+}
+
+export interface ConcentrationRisk {
+  level: 'healthy' | 'moderate' | 'dangerous';
+  topClientShare: number;
+  recommendation: string;
+}
+
+export interface CashFlowProjection {
+  month: string;
+  inflow: number;
+  outflow: number;
+  netCash: number;
+}
+
+export interface RunwayEstimate {
+  months: number;
+  status: 'comfortable' | 'caution' | 'critical';
+}
+
+export interface CompletionEstimate {
+  workItemId: string;
+  title: string;
+  estimatedDays: number;
+  confidence: number;
+}
+
+export interface ScopeCreepAlert {
+  workItemId: string;
+  title: string;
+  reason: string;
+  severity: 'warning' | 'info';
+}
+
+export interface Utilization {
+  currentRate: number;
+  trend: TrendDirection;
+  recommendation: string;
+}
+
+export interface Insights {
+  generatedAt: Date;
+  status: InsightStatus;
+  errors?: string[];
+
+  expenses: {
+    anomalies: ExpenseAnomaly[];
+    categoryTrends: CategoryTrend[];
+  };
+
+  tax: {
+    estimatedSavings: number;
+    effectiveRate: number;
+    missedDeductions: MissedDeduction[];
+    deductionsByCategory: Record<string, number>;
+    totalDeductible: number;
+  };
+
+  forecast: {
+    revenue: Array<{ month: string; amount: number }>;
+    expenses: Array<{ month: string; amount: number }>;
+    confidence: number;
+  };
+
+  payments: {
+    invoiceRisks: InvoiceRisk[];
+    clientPatterns: Record<string, ClientPaymentPattern>;
+  };
+
+  clients: {
+    scores: ClientScore[];
+    concentrationRisk: ConcentrationRisk;
+  };
+
+  cashFlow: {
+    projections: CashFlowProjection[];
+    runway: RunwayEstimate;
+  };
+
+  projects: {
+    completionEstimates: CompletionEstimate[];
+    scopeCreep: ScopeCreepAlert[];
+    utilization: Utilization;
+  };
+}
