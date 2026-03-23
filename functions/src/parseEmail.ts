@@ -42,7 +42,7 @@ interface GeminiParseResult {
  * 6. Create a workItems doc in Firestore
  */
 export const onEmailReceived = onRequest(
-  { maxInstances: 10, timeoutSeconds: 120 },
+  { maxInstances: 10, timeoutSeconds: 120, invoker: "public" },
   async (req, res) => {
     // Only accept POST requests
     if (req.method !== "POST") {
