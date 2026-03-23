@@ -269,6 +269,33 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </p>
         </div>
 
+        {/* Time Rounding */}
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="block text-sm font-semibold text-[var(--text-primary)]">
+              Round time to quarter hour
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Rounds tracked time: 1-7 min down, 8-14 min up to nearest 15 min
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.roundTimeToQuarterHour ?? false}
+            onClick={() => updateSettings(userId, { roundTimeToQuarterHour: !(settings.roundTimeToQuarterHour ?? false) })}
+            className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+              (settings.roundTimeToQuarterHour ?? false) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                (settings.roundTimeToQuarterHour ?? false) ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
         {/* Accent Color */}
         <div>
           <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
