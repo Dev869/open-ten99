@@ -1,11 +1,12 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
+import { defineString, defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
 
 const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
+const encryptionKey = defineSecret("POSTMARK_ENCRYPTION_KEY");
 
 interface PostmarkInboundPayload {
   From: string;
@@ -31,6 +32,22 @@ interface GeminiParseResult {
 }
 
 /**
+ * Decrypts a Postmark webhook secret stored as AES-256-GCM ciphertext.
+ * The ciphertext includes the 16-byte auth tag appended.
+ */
+function decryptSecret(ciphertextHex: string, ivHex: string, keyHex: string): string {
+  const key = Buffer.from(keyHex, "hex");
+  const iv = Buffer.from(ivHex, "hex");
+  const raw = Buffer.from(ciphertextHex, "hex");
+  // Last 16 bytes are the GCM auth tag
+  const authTag = raw.subarray(raw.length - 16);
+  const encrypted = raw.subarray(0, raw.length - 16);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+}
+
+/**
  * HTTP function that receives Postmark inbound email webhooks.
  *
  * Flow:
@@ -42,7 +59,7 @@ interface GeminiParseResult {
  * 6. Create a workItems doc in Firestore
  */
 export const onEmailReceived = onRequest(
-  { maxInstances: 10, timeoutSeconds: 120 },
+  { maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
   async (req, res) => {
     // Only accept POST requests
     if (req.method !== "POST") {
@@ -50,22 +67,92 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    // Validate webhook secret via header only (never accept via query param to
-    // avoid secrets appearing in server logs and URL history).
-    const providedSecret = req.headers["x-postmark-secret"];
-    const expectedSecret = webhookSecret.value();
-    let secretValid = false;
-    if (typeof providedSecret === "string" && expectedSecret.length > 0) {
-      try {
-        const provided = Buffer.from(providedSecret);
-        const expected = Buffer.from(expectedSecret);
-        secretValid =
-          provided.length === expected.length &&
-          crypto.timingSafeEqual(provided, expected);
-      } catch {
-        secretValid = false;
-      }
+    // --- Resolve contractor first (needed for Firestore secret lookup) ---
+    let contractorUid: string | null;
+    try {
+      contractorUid = await resolveContractorUid();
+    } catch (err) {
+      logger.error("Failed to resolve contractor uid", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      res.status(503).send("Service Unavailable");
+      return;
     }
+    if (!contractorUid) {
+      logger.warn(
+        "Could not resolve a single contractor uid — skipping email processing"
+      );
+      res.status(200).send("OK");
+      return;
+    }
+
+    // --- Validate webhook secret ---
+    const providedSecret = req.headers["x-postmark-secret"];
+    if (typeof providedSecret !== "string" || providedSecret.length === 0) {
+      logger.warn("Missing webhook secret header");
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    let expectedSecret: string | null = null;
+
+    // Try Firestore first
+    try {
+      const integrationSnap = await admin
+        .firestore()
+        .doc(`integrations/${contractorUid}`)
+        .get();
+      const pmWebhook = integrationSnap.data()?.postmarkWebhook;
+
+      if (pmWebhook?.ciphertext && pmWebhook?.iv) {
+        const keyHex = encryptionKey.value();
+        if (!keyHex || keyHex.length !== 64) {
+          logger.error("POSTMARK_ENCRYPTION_KEY not configured or invalid");
+          res.status(503).send("Service Unavailable");
+          return;
+        }
+        try {
+          expectedSecret = decryptSecret(pmWebhook.ciphertext, pmWebhook.iv, keyHex);
+        } catch (decryptErr) {
+          logger.error("Failed to decrypt Postmark webhook secret", {
+            error: decryptErr instanceof Error ? decryptErr.message : String(decryptErr),
+          });
+          res.status(503).send("Service Unavailable");
+          return;
+        }
+      } else {
+        // Field absent — fall back to env var
+        const envSecret = webhookSecret.value();
+        if (envSecret && envSecret.length > 0) {
+          expectedSecret = envSecret;
+        }
+      }
+    } catch (firestoreErr) {
+      logger.error("Failed to read integration doc", {
+        error: firestoreErr instanceof Error ? firestoreErr.message : String(firestoreErr),
+      });
+      res.status(503).send("Service Unavailable");
+      return;
+    }
+
+    if (!expectedSecret) {
+      logger.warn("No webhook secret configured (Firestore or env)");
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    // Timing-safe comparison with padding to prevent length leakage
+    const provided = Buffer.from(providedSecret);
+    const expected = Buffer.from(expectedSecret);
+    const safeLen = Math.max(provided.length, expected.length);
+    const paddedProvided = Buffer.alloc(safeLen);
+    const paddedExpected = Buffer.alloc(safeLen);
+    provided.copy(paddedProvided);
+    expected.copy(paddedExpected);
+    const secretValid =
+      crypto.timingSafeEqual(paddedProvided, paddedExpected) &&
+      provided.length === expected.length;
+
     if (!secretValid) {
       logger.warn("Invalid webhook secret received");
       res.status(401).send("Unauthorized");
@@ -93,20 +180,6 @@ export const onEmailReceived = onRequest(
 
       const db = admin.firestore();
 
-      // --- Step 0: Resolve contractor uid ---
-      // Inbound emails don't carry a contractor identifier, so we identify the
-      // target contractor by finding Firebase Auth users whose sign-in provider
-      // is google.com (the only contractor auth method). If exactly one exists
-      // we proceed; otherwise we cannot safely scope the data.
-      const contractorUid = await resolveContractorUid();
-      if (!contractorUid) {
-        logger.warn(
-          "Could not resolve a single contractor uid — skipping email processing"
-        );
-        res.status(200).send("OK"); // return 200 so Postmark does not retry
-        return;
-      }
-
       // --- Step 0.5: Dedup — skip if we already processed this email ---
       if (messageId) {
         const existing = await db
@@ -133,15 +206,10 @@ export const onEmailReceived = onRequest(
       );
 
       // --- Step 2: Get user settings for hourly rate (scoped to contractor) ---
-      const settingsSnap = await db
-        .collection("settings")
-        .where("ownerId", "==", contractorUid)
-        .limit(1)
-        .get();
-      let hourlyRate = 150; // sensible default
-      if (!settingsSnap.empty) {
-        const settingsData = settingsSnap.docs[0].data();
-        hourlyRate = settingsData.hourlyRate ?? hourlyRate;
+      const settingsSnap = await db.doc(`settings/${contractorUid}`).get();
+      let hourlyRate = 150;
+      if (settingsSnap.exists) {
+        hourlyRate = settingsSnap.data()?.hourlyRate ?? hourlyRate;
       }
 
       // --- Step 3: Call Gemini to extract change items ---
