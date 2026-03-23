@@ -457,6 +457,7 @@ export interface Transaction {
   receiptUrl?: string;    // Legacy — migrate to receiptIds
   receiptIds?: string[];  // Linked Receipt document IDs
   taxDeductible?: boolean;
+  isRecurring?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -38,6 +38,7 @@ export default function TransactionDetail() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [taxDeductible, setTaxDeductible] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export default function TransactionDetail() {
         setDescription(txn.description);
         setCategory(txn.category);
         setTaxDeductible(txn.taxDeductible ?? false);
+        setIsRecurring(txn.isRecurring ?? false);
       }
       setLoading(false);
     });
@@ -67,8 +69,9 @@ export default function TransactionDetail() {
         description,
         category,
         taxDeductible,
+        isRecurring,
       });
-      setTransaction({ ...transaction, description, category, taxDeductible });
+      setTransaction({ ...transaction, description, category, taxDeductible, isRecurring });
       setDirty(false);
     } catch (err) {
       console.error('Failed to update transaction:', err);
@@ -205,6 +208,19 @@ export default function TransactionDetail() {
           />
           <label htmlFor="txn-deductible" className="text-sm text-[var(--text-primary)]">
             Tax deductible
+          </label>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <input
+            id="txn-recurring"
+            type="checkbox"
+            checked={isRecurring}
+            onChange={(e) => { setIsRecurring(e.target.checked); markDirty(); }}
+            className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+          />
+          <label htmlFor="txn-recurring" className="text-sm text-[var(--text-primary)]">
+            Recurring
           </label>
         </div>
 

@@ -121,6 +121,11 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
           <span className="line-clamp-1 shrink min-w-0" title={transaction.description}>
             {transaction.description}
           </span>
+          {transaction.isRecurring && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Recurring
+            </span>
+          )}
           <MatchStatusBadge matchStatus={transaction.matchStatus} />
           {insightBadge}
         </span>

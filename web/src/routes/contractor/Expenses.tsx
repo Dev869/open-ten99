@@ -150,6 +150,11 @@ function ExpenseRow({ expense, anomaly }: { expense: Transaction; anomaly?: Expe
       {/* Badges + Receipt */}
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2 flex-wrap">
+          {expense.isRecurring && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Recurring
+            </span>
+          )}
           {expense.isManual && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
               Manual

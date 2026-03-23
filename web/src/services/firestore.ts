@@ -868,7 +868,9 @@ function docToTransaction(id: string, data: Record<string, unknown>): Transactio
     matchStatus: data.matchStatus as MatchStatus ?? 'unmatched',
     isManual: data.isManual as boolean ?? false,
     receiptUrl: data.receiptUrl as string | undefined,
+    receiptIds: data.receiptIds as string[] | undefined,
     taxDeductible: data.taxDeductible as boolean | undefined,
+    isRecurring: data.isRecurring as boolean | undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -1150,7 +1152,7 @@ export async function updateTransactionCategory(
 
 export async function updateTransaction(
   transactionId: string,
-  fields: Partial<Pick<Transaction, 'description' | 'category' | 'taxDeductible' | 'type'>>
+  fields: Partial<Pick<Transaction, 'description' | 'category' | 'taxDeductible' | 'type' | 'isRecurring'>>
 ): Promise<void> {
   await updateDoc(doc(db, 'transactions', transactionId), {
     ...fields,
