@@ -72,10 +72,39 @@ export const verifyMagicLink = onCall(
       throw new HttpsError("deadline-exceeded", "This link has expired.");
     }
 
+    // Fetch the work item data so the portal doesn't need direct Firestore access
+    const workItemSnap = await db.doc(`workItems/${data.workItemId}`).get();
+    const workItemData = workItemSnap.exists ? workItemSnap.data() : null;
+
+    // Fetch client data if available
+    let clientData = null;
+    if (data.clientId && data.clientId !== 'unassigned') {
+      const clientSnap = await db.doc(`clients/${data.clientId}`).get();
+      clientData = clientSnap.exists ? clientSnap.data() : null;
+    }
+
     return {
       clientId: data.clientId,
       workItemId: data.workItemId,
       email: data.email,
+      workItem: workItemData ? {
+        id: data.workItemId,
+        subject: workItemData.subject,
+        type: workItemData.type,
+        status: workItemData.status,
+        lineItems: workItemData.lineItems,
+        totalHours: workItemData.totalHours,
+        totalCost: workItemData.totalCost,
+        isBillable: workItemData.isBillable,
+        clientApproval: workItemData.clientApproval,
+        clientNotes: workItemData.clientNotes,
+        deductFromRetainer: workItemData.deductFromRetainer,
+      } : null,
+      client: clientData ? {
+        name: clientData.name,
+        email: clientData.email,
+        company: clientData.company,
+      } : null,
     };
   }
 );

@@ -3,6 +3,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
+import type { WorkItem } from './lib/types';
 import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
 import { updateSettings, callGenerateInsights } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
@@ -469,10 +470,24 @@ function PortalRoutes() {
     }
   }, [user]);
 
-  // Portal users have a clientId custom claim on their ID token
-  const clientId = typeof claims.clientId === 'string' ? claims.clientId : undefined;
-  const { workItems } = useWorkItems(clientId);
-  const clientName = (user?.displayName ?? user?.email ?? 'Client');
+  // Portal users: try Firestore via claims, fall back to session-stored data
+  const clientId = typeof claims.clientId === 'string'
+    ? claims.clientId
+    : (sessionStorage.getItem('portalClientId') ?? undefined);
+  const { workItems: firestoreItems } = useWorkItems(clientId);
+
+  // Fall back to work item data stored in session (from verifyMagicLink)
+  const sessionWorkItem = useMemo(() => {
+    const stored = sessionStorage.getItem('portalWorkItem');
+    if (!stored) return [];
+    try {
+      const parsed = JSON.parse(stored);
+      return [{ ...parsed, createdAt: new Date(), updatedAt: new Date() }] as WorkItem[];
+    } catch { return []; }
+  }, []);
+
+  const workItems = firestoreItems.length > 0 ? firestoreItems : sessionWorkItem;
+  const clientName = (user?.displayName ?? user?.email ?? sessionStorage.getItem('portalEmail') ?? 'Client');
 
   return (
     <Routes>

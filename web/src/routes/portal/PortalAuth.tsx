@@ -20,20 +20,26 @@ export default function PortalAuth() {
 
     (async () => {
       try {
-        // Verify the magic link token
+        // Verify the magic link token and get work item data
         const verify = httpsCallable<
           { token: string },
-          { clientId: string; workItemId?: string; email: string }
+          { clientId: string; workItemId?: string; email: string; workItem: unknown; client: unknown }
         >(functions, 'verifyMagicLink');
         const result = await verify({ token });
 
         // Sign in anonymously for portal access
         await signInAnonymously(auth);
 
-        // Store portal session info
+        // Store portal session info and work item data
         sessionStorage.setItem('portalClientId', result.data.clientId);
         sessionStorage.setItem('portalEmail', result.data.email);
         sessionStorage.setItem('portalToken', token);
+        if (result.data.workItem) {
+          sessionStorage.setItem('portalWorkItem', JSON.stringify(result.data.workItem));
+        }
+        if (result.data.client) {
+          sessionStorage.setItem('portalClient', JSON.stringify(result.data.client));
+        }
 
         const dest = result.data.workItemId
           ? `/portal/${result.data.workItemId}`
