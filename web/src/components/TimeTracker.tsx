@@ -18,18 +18,22 @@ interface TimeTrackerState {
   isBillable: boolean;
   clients: Client[];
   apps: App[];
+  workItemId?: string;
+  lineItemId?: string;
   handlePlayPause: () => void;
   handleStop: () => void;
   setClientId: (id: string) => void;
   setAppId: (id: string) => void;
   setDescription: (desc: string) => void;
   setIsBillable: (v: boolean) => void;
+  setWorkItemId: (id: string | undefined) => void;
+  setLineItemId: (id: string | undefined) => void;
   toggleOpen: () => void;
 }
 
 const TimeTrackerContext = createContext<TimeTrackerState | null>(null);
 
-function useTimeTracker() {
+export function useTimeTracker() {
   const ctx = useContext(TimeTrackerContext);
   if (!ctx) throw new Error('useTimeTracker must be used within TimeTrackerProvider');
   return ctx;
@@ -58,6 +62,8 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
   const [appId, setAppId] = useState('');
   const [description, setDescription] = useState('');
   const [isBillable, setIsBillable] = useState(true);
+  const [workItemId, setWorkItemId] = useState<string | undefined>(undefined);
+  const [lineItemId, setLineItemId] = useState<string | undefined>(undefined);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<Date | null>(null);
 
@@ -74,8 +80,8 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
   }, [isRunning]);
 
   // Keep refs in sync for stable handleStop callback
-  const stateRef = useRef({ clientId, appId, description, elapsedSeconds, isBillable });
-  stateRef.current = { clientId, appId, description, elapsedSeconds, isBillable };
+  const stateRef = useRef({ clientId, appId, description, elapsedSeconds, isBillable, workItemId, lineItemId });
+  stateRef.current = { clientId, appId, description, elapsedSeconds, isBillable, workItemId, lineItemId };
 
   const handlePlayPause = useCallback(() => {
     setIsRunning((prev) => {
@@ -87,7 +93,7 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
   }, []);
 
   const handleStop = useCallback(() => {
-    const { clientId: cId, appId: aId, description: desc, elapsedSeconds: secs, isBillable: billable } = stateRef.current;
+    const { clientId: cId, appId: aId, description: desc, elapsedSeconds: secs, isBillable: billable, workItemId: wId, lineItemId: lId } = stateRef.current;
     const now = new Date();
     if (secs > 0 && startedAtRef.current) {
       createTimeEntry({
@@ -98,12 +104,23 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
         isBillable: billable,
         startedAt: startedAtRef.current,
         endedAt: now,
+        workItemId: wId || undefined,
+        lineItemId: lId || undefined,
       }).catch(console.error);
     }
     setIsRunning(false);
     setElapsedSeconds(0);
     setIsOpen(false);
     startedAtRef.current = null;
+    setWorkItemId(undefined);
+    setLineItemId(undefined);
+  }, []);
+
+  const handleSetClientId = useCallback((id: string) => {
+    setClientId(id);
+    setAppId('');
+    setWorkItemId(undefined);
+    setLineItemId(undefined);
   }, []);
 
   const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
@@ -111,7 +128,9 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
   return (
     <TimeTrackerContext.Provider value={{
       isRunning, elapsedSeconds, clientId, appId, description, selectedClient,
-      isOpen, isBillable, clients, apps, handlePlayPause, handleStop, setClientId, setAppId, setDescription, setIsBillable, toggleOpen,
+      isOpen, isBillable, clients, apps, workItemId, lineItemId,
+      handlePlayPause, handleStop, setClientId: handleSetClientId, setAppId, setDescription, setIsBillable,
+      setWorkItemId, setLineItemId, toggleOpen,
     }}>
       {children}
     </TimeTrackerContext.Provider>
@@ -249,7 +268,7 @@ export function TimeTrackerBar() {
               <label className="text-[10px] font-semibold uppercase tracking-wider text-white/60 w-14 flex-shrink-0">Client</label>
               <select
                 value={clientId}
-                onChange={(e) => { setClientId(e.target.value); setAppId(''); }}
+                onChange={(e) => setClientId(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 className="flex-1 h-8 px-2.5 rounded-lg bg-white/15 border border-white/20 text-sm text-white outline-none focus:bg-white/20 transition-colors cursor-pointer"
               >
@@ -366,7 +385,7 @@ export function TimeTrackerBar() {
             </label>
             <select
               value={clientId}
-              onChange={(e) => { setClientId(e.target.value); setAppId(''); }}
+              onChange={(e) => setClientId(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors"
             >
               <option value="">Select a client...</option>
