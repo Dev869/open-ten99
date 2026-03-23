@@ -270,7 +270,7 @@ export default function WorkItemDetail({
       </div>
 
       {/* Original Email */}
-      {(item.sourceEmail || item.senderEmail) && (
+      {(item.sourceEmail || item.sourceHtml || item.senderEmail) && (
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] mb-4 overflow-hidden">
           <button
             onClick={() => setShowEmail(!showEmail)}
@@ -291,9 +291,19 @@ export default function WorkItemDetail({
           </button>
           {showEmail && (
             <div className="px-4 pb-4 border-t border-[var(--border)]">
-              <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap mt-3">
-                {item.sourceEmail}
-              </p>
+              {item.sourceHtml ? (
+                <iframe
+                  srcDoc={item.sourceHtml}
+                  sandbox=""
+                  title="Original email"
+                  className="w-full min-h-[300px] border-0 rounded bg-white mt-3"
+                  style={{ colorScheme: 'light' }}
+                />
+              ) : (
+                <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap mt-3">
+                  {item.sourceEmail}
+                </p>
+              )}
             </div>
           )}
         </div>

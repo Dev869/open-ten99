@@ -98,6 +98,7 @@ export const onEmailReceived = onRequest(
       const senderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
+      const htmlBody = payload.HtmlBody || "";
       const messageId = payload.MessageID || "";
 
       if (!senderEmail) {
@@ -146,7 +147,10 @@ export const onEmailReceived = onRequest(
       }
 
       // --- Step 3: Call Gemini to extract change items ---
-      const parseResult = await extractChangeItems(subject, textBody);
+      // Use the richer content source: if textBody is very short (common in forwards),
+      // fall back to htmlBody which contains the forwarded message
+      const emailContent = textBody.length > 100 ? textBody : (htmlBody || textBody);
+      const parseResult = await extractChangeItems(subject, emailContent);
 
       // --- Step 4: Calculate costs ---
       const lineItems: ParsedLineItem[] = parseResult.items.map((item) => ({
@@ -167,7 +171,8 @@ export const onEmailReceived = onRequest(
         ...(clientId ? { clientId } : {}),
         senderEmail,
         senderName,
-        sourceEmail: textBody.slice(0, 10_000), // truncate to prevent oversized docs
+        sourceEmail: textBody.slice(0, 10_000),
+        sourceHtml: htmlBody.slice(0, 50_000),
         subject,
         lineItems,
         totalHours,

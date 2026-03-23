@@ -39,6 +39,7 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     projectId: data.projectId ?? undefined,
     appId: data.appId ?? undefined,
     sourceEmail: data.sourceEmail ?? '',
+    sourceHtml: data.sourceHtml ?? undefined,
     senderEmail: data.senderEmail ?? undefined,
     senderName: data.senderName ?? undefined,
     completed: data.completed ?? false,

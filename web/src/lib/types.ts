@@ -24,6 +24,7 @@ export interface WorkItem {
   projectId?: string;
   appId?: string;
   sourceEmail: string;
+  sourceHtml?: string;
   senderEmail?: string;
   senderName?: string;
   completed?: boolean;
