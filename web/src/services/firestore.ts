@@ -281,7 +281,7 @@ export async function updateWorkItem(item: WorkItem) {
   await updateDoc(ref, {
     type: item.type,
     status: item.status,
-    clientId: item.clientId,
+    clientId: item.clientId ?? null,
     projectId: item.projectId ?? null,
     appId: item.appId ?? null,
     assigneeId: item.assigneeId ?? null,

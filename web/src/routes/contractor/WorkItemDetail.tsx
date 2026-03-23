@@ -104,7 +104,6 @@ export default function WorkItemDetail({
   }
 
   async function handleApproveAndGenerate() {
-    if (!client) return;
     setGeneratingPdf(true);
     try {
       const scheduled = item!.estimatedBusinessDays
@@ -113,7 +112,12 @@ export default function WorkItemDetail({
       const updated = { ...item!, status: 'approved' as const, scheduledDate: scheduled };
       await updateWorkItem(updated);
       setItem(updated);
-      const blobUrl = await buildChangeOrderPdf(updated, client, {
+      const pdfClient = client || {
+        name: item!.senderName || 'Unknown',
+        email: item!.senderEmail || '',
+        createdAt: new Date(),
+      };
+      const blobUrl = await buildChangeOrderPdf(updated, pdfClient, {
         companyName: 'DW Tailored',
         hourlyRate,
         taxRate,
@@ -725,9 +729,13 @@ export default function WorkItemDetail({
       {item.status === 'approved' && !generatingPdf && (
         <button
           onClick={async () => {
-            if (!client) return;
             if (previewUrl) URL.revokeObjectURL(previewUrl);
-            const blobUrl = await buildChangeOrderPdf(item, client, {
+            const pdfClient = client || {
+              name: item.senderName || 'Unknown',
+              email: item.senderEmail || '',
+              createdAt: new Date(),
+            };
+            const blobUrl = await buildChangeOrderPdf(item, pdfClient, {
               companyName: 'DW Tailored',
               hourlyRate,
               taxRate,
@@ -746,7 +754,7 @@ export default function WorkItemDetail({
       )}
 
       {/* Send to Client */}
-      {client?.email && (
+      {(client?.email || item.senderEmail) && (
         <button
           onClick={handleSendToClient}
           className="w-full mt-3 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
