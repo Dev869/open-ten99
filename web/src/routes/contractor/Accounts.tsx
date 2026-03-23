@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
-import { useConnectedAccounts, useIntegration } from '../../hooks/useFirestore';
-import { useAuth } from '../../hooks/useAuth';
+import { useConnectedAccounts } from '../../hooks/useFirestore';
 import { deleteConnectedAccount } from '../../services/firestore';
 import { ConnectedAccountCard } from '../../components/finance/ConnectedAccountCard';
 import { PlaidLinkButton } from '../../components/finance/PlaidLinkButton';
@@ -24,58 +23,6 @@ export default function Accounts() {
   // Stripe connect state
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
-
-  const { user } = useAuth();
-  const { integration } = useIntegration(user?.uid);
-
-  // Postmark state
-  const [postmarkLoading, setPostmarkLoading] = useState(false);
-  const [postmarkError, setPostmarkError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const baseWebhookUrl = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/onEmailReceived`;
-  const webhookUrl = integration.postmarkToken
-    ? `${baseWebhookUrl}?token=${integration.postmarkToken}`
-    : '';
-
-  const handleGenerateWebhookUrl = useCallback(async () => {
-    setPostmarkLoading(true);
-    setPostmarkError(null);
-    try {
-      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
-      await fn({});
-      addToast('Webhook URL generated!', 'success');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate webhook URL';
-      setPostmarkError(message);
-      addToast(message, 'error');
-    } finally {
-      setPostmarkLoading(false);
-    }
-  }, [addToast]);
-
-  const handleDisconnectPostmark = useCallback(async () => {
-    setPostmarkLoading(true);
-    setPostmarkError(null);
-    try {
-      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
-      await fn({ disconnect: true });
-      addToast('Postmark disconnected', 'success');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to disconnect Postmark';
-      setPostmarkError(message);
-      addToast(message, 'error');
-    } finally {
-      setPostmarkLoading(false);
-    }
-  }, [addToast]);
-
-  const handleCopyWebhookUrl = useCallback(() => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    addToast('Webhook URL copied!', 'info');
-    setTimeout(() => setCopied(false), 2000);
-  }, [webhookUrl, addToast]);
 
   // Fetch Plaid link token on demand (not on mount — Cloud Functions may not be deployed)
   const fetchLinkToken = useCallback(async () => {
@@ -247,7 +194,7 @@ export default function Accounts() {
           </div>
 
           {/* Stripe subsection */}
-          <div className="p-5 border-b border-[var(--border)]">
+          <div className="p-5">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
               Stripe
             </h3>
@@ -259,86 +206,6 @@ export default function Accounts() {
               loading={stripeLoading}
               error={stripeError}
             />
-          </div>
-
-          {/* Postmark Email subsection */}
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Postmark Email
-              </h3>
-              <span className={`flex items-center gap-1.5 text-xs font-medium ${
-                integration.postmarkConfigured
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-amber-600 dark:text-amber-400'
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${
-                  integration.postmarkConfigured
-                    ? 'bg-emerald-500'
-                    : 'bg-amber-500'
-                }`} />
-                {integration.postmarkConfigured ? 'Active' : 'Not configured'}
-              </span>
-            </div>
-            <p className="text-xs text-[var(--text-secondary)] mb-4">
-              Receive client emails as draft work orders. Paste the webhook URL into your Postmark server's Inbound settings.
-            </p>
-
-            {postmarkError && (
-              <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg mb-3">
-                {postmarkError}
-              </div>
-            )}
-
-            {integration.postmarkConfigured ? (
-              <>
-                {/* Webhook URL with token */}
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Inbound Webhook URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={webhookUrl}
-                      className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-xs font-mono select-all"
-                    />
-                    <button
-                      onClick={handleCopyWebhookUrl}
-                      className="shrink-0 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
-                      title="Copy to clipboard"
-                    >
-                      {copied ? 'Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleGenerateWebhookUrl}
-                    disabled={postmarkLoading}
-                    className="px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {postmarkLoading ? 'Generating...' : 'Regenerate URL'}
-                  </button>
-                  <button
-                    onClick={handleDisconnectPostmark}
-                    disabled={postmarkLoading}
-                    className="px-4 py-2.5 rounded-lg border border-red-500/30 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </>
-            ) : (
-              <button
-                onClick={handleGenerateWebhookUrl}
-                disabled={postmarkLoading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {postmarkLoading ? 'Generating...' : 'Generate Webhook URL'}
-              </button>
-            )}
           </div>
         </div>
       </section>

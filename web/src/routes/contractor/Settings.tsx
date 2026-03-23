@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
 import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell } from '../../components/icons';
@@ -71,6 +71,55 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [syncing, setSyncing] = useState(false);
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  // Postmark state
+  const [postmarkLoading, setPostmarkLoading] = useState(false);
+  const [postmarkError, setPostmarkError] = useState<string | null>(null);
+  const [postmarkCopied, setPostmarkCopied] = useState(false);
+
+  const baseWebhookUrl = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/onEmailReceived`;
+  const postmarkWebhookUrl = integration.postmarkToken
+    ? `${baseWebhookUrl}?token=${integration.postmarkToken}`
+    : '';
+
+  const handleGenerateWebhookUrl = useCallback(async () => {
+    setPostmarkLoading(true);
+    setPostmarkError(null);
+    try {
+      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
+      await fn({});
+      addToast('Webhook URL generated!', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate webhook URL';
+      setPostmarkError(message);
+      addToast(message, 'error');
+    } finally {
+      setPostmarkLoading(false);
+    }
+  }, [addToast]);
+
+  const handleDisconnectPostmark = useCallback(async () => {
+    setPostmarkLoading(true);
+    setPostmarkError(null);
+    try {
+      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
+      await fn({ disconnect: true });
+      addToast('Postmark disconnected', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to disconnect';
+      setPostmarkError(message);
+      addToast(message, 'error');
+    } finally {
+      setPostmarkLoading(false);
+    }
+  }, [addToast]);
+
+  const handleCopyPostmarkUrl = useCallback(() => {
+    navigator.clipboard.writeText(postmarkWebhookUrl);
+    setPostmarkCopied(true);
+    addToast('Webhook URL copied!', 'info');
+    setTimeout(() => setPostmarkCopied(false), 2000);
+  }, [postmarkWebhookUrl, addToast]);
 
   const [pushState, setPushState] = useState<PushPermissionState>(getPushPermissionState);
   const [pushEnabled, setPushEnabled] = useState(settings.pushNotificationsEnabled ?? false);
@@ -556,6 +605,87 @@ export default function Settings({ settings, userId }: SettingsProps) {
                   <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                 </svg>
                 Connect GitHub
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Postmark Email */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mt-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <IconMail className="w-[18px] h-[18px] text-[var(--text-primary)]" />
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Postmark Email</h3>
+            </div>
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${
+              integration.postmarkConfigured
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                integration.postmarkConfigured
+                  ? 'bg-emerald-500'
+                  : 'bg-amber-500'
+              }`} />
+              {integration.postmarkConfigured ? 'Active' : 'Not configured'}
+            </span>
+          </div>
+
+          {postmarkError && (
+            <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg mt-3">
+              {postmarkError}
+            </div>
+          )}
+
+          {integration.postmarkConfigured ? (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Inbound emails are forwarded as draft work orders. Copy the URL below into your Postmark server's Inbound webhook settings.
+              </p>
+              <div>
+                <p className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
+                  Webhook URL
+                </p>
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2 min-w-0">
+                  <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate min-w-0">
+                    {postmarkWebhookUrl}
+                  </code>
+                  <button
+                    onClick={handleCopyPostmarkUrl}
+                    className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0 min-h-[44px] flex items-center"
+                  >
+                    {postmarkCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleGenerateWebhookUrl}
+                  disabled={postmarkLoading}
+                  className="flex-1 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+                >
+                  {postmarkLoading ? 'Generating…' : 'Regenerate URL'}
+                </button>
+                <button
+                  onClick={handleDisconnectPostmark}
+                  disabled={postmarkLoading}
+                  className="px-4 py-2.5 min-h-[44px] rounded-lg bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm font-semibold hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Connect Postmark to automatically create draft work orders from inbound client emails.
+              </p>
+              <button
+                onClick={handleGenerateWebhookUrl}
+                disabled={postmarkLoading}
+                className="w-full py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+              >
+                {postmarkLoading ? 'Generating…' : 'Generate Webhook URL'}
               </button>
             </div>
           )}
