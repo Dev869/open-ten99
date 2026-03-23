@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { auth, functions } from '../../lib/firebase';
 
 export default function PortalAuth() {
@@ -20,12 +20,21 @@ export default function PortalAuth() {
 
     (async () => {
       try {
-        const verify = httpsCallable<{ token: string }, { customToken: string; workItemId?: string }>(
-          functions,
-          'verifyMagicLink'
-        );
+        // Verify the magic link token
+        const verify = httpsCallable<
+          { token: string },
+          { clientId: string; workItemId?: string; email: string }
+        >(functions, 'verifyMagicLink');
         const result = await verify({ token });
-        await signInWithCustomToken(auth, result.data.customToken);
+
+        // Sign in anonymously for Firestore read access
+        await signInAnonymously(auth);
+
+        // Store portal session info
+        sessionStorage.setItem('portalClientId', result.data.clientId);
+        sessionStorage.setItem('portalEmail', result.data.email);
+        sessionStorage.setItem('portalToken', token);
+
         const dest = result.data.workItemId
           ? `/portal/${result.data.workItemId}`
           : '/portal';

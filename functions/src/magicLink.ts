@@ -36,7 +36,6 @@ export const generateMagicLink = onCall(
       email: email.toLowerCase(),
       workItemId,
       ownerId: request.auth.uid,
-      used: false,
       createdAt: admin.firestore.Timestamp.fromDate(now),
       expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
     });
@@ -46,8 +45,8 @@ export const generateMagicLink = onCall(
 );
 
 /**
- * Verifies a magic link token and returns a Firebase custom auth token
- * with the clientId as a custom claim.
+ * Verifies a magic link token and returns portal access data.
+ * Does not require Firebase Auth — the portal uses the token itself for access.
  */
 export const verifyMagicLink = onCall(
   { cors: true, maxInstances: 10 },
@@ -73,34 +72,10 @@ export const verifyMagicLink = onCall(
       throw new HttpsError("deadline-exceeded", "This link has expired.");
     }
 
-    // Allow reuse within the 7-day window (don't enforce single-use)
-
-    // Create or get a portal user for this client email
-    const email = data.email;
-    const clientId = data.clientId;
-
-    let uid: string;
-    try {
-      const existingUser = await admin.auth().getUserByEmail(email);
-      uid = existingUser.uid;
-    } catch {
-      // Create a new user for this portal client
-      const newUser = await admin.auth().createUser({
-        email,
-        displayName: email.split("@")[0],
-      });
-      uid = newUser.uid;
-    }
-
-    // Set custom claims with clientId
-    await admin.auth().setCustomUserClaims(uid, { clientId });
-
-    // Generate a custom token
-    const customToken = await admin.auth().createCustomToken(uid, { clientId });
-
     return {
-      customToken,
+      clientId: data.clientId,
       workItemId: data.workItemId,
+      email: data.email,
     };
   }
 );
