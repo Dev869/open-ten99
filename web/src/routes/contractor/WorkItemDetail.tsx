@@ -137,23 +137,32 @@ export default function WorkItemDetail({
   }
 
   async function handleSendToClient() {
-    if (!client?.email || !item?.id || !client?.id) return;
+    if (!item?.id) return;
+
+    // Use original sender email if available (from forwarded emails), else client email
+    const recipientEmail = item.senderEmail || client?.email;
+    const recipientName = item.senderName || client?.name || '';
+    if (!recipientEmail) return;
+
     try {
-      // Generate a magic link for this client + work item
+      // Generate a magic link — use client if assigned, otherwise create for sender
+      const linkEmail = client?.email || recipientEmail;
+      const linkClientId = client?.id || 'unassigned';
+
       const gen = httpsCallable<
         { clientId: string; email: string; workItemId: string },
         { token: string }
       >(functions, 'generateMagicLink');
       const { data: { token } } = await gen({
-        clientId: client.id,
-        email: client.email,
+        clientId: linkClientId,
+        email: linkEmail,
         workItemId: item.id,
       });
 
       const portalLink = `https://ten99.dwtailored.com/portal/auth?token=${token}`;
 
       const subject = encodeURIComponent(
-        `DW Tailored Systems — Work Order: ${item.subject}`
+        `DW Tailored Systems — Invoice: ${item.subject}`
       );
 
       const lineItemsBlock = item.lineItems
@@ -169,7 +178,7 @@ export default function WorkItemDetail({
         : '';
 
       const body = encodeURIComponent(
-        `Hello ${client.name},\n\n` +
+        `Hello ${recipientName || 'there'},\n\n` +
         `A new work order from DW Tailored Systems is ready for your review.\n\n` +
         `————————————————————————————————\n` +
         `WORK ORDER SUMMARY\n` +
@@ -191,7 +200,7 @@ export default function WorkItemDetail({
         `DW Tailored Systems\n` +
         `https://dwtailored.com`
       );
-      window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_self');
+      window.open(`mailto:${recipientEmail}?subject=${subject}&body=${body}`, '_self');
     } catch (err) {
       console.error('Send to client error:', err);
     }

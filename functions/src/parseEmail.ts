@@ -27,6 +27,28 @@ interface GeminiParseResult {
 }
 
 /**
+ * Attempts to extract the original sender from a forwarded email.
+ * Looks for common forwarded-email patterns in the text/HTML body.
+ */
+function extractOriginalSender(textBody: string, htmlBody: string): { email: string; name: string } | null {
+  const combined = textBody + "\n" + htmlBody;
+
+  // Pattern: "From: Name <email>" or "From: email"
+  const fromWithAngle = combined.match(/From:\s*(?:([^<\n]+?)\s*)?<([^>\s]+@[^>\s]+)>/i);
+  if (fromWithAngle) {
+    return { name: (fromWithAngle[1] || "").trim(), email: fromWithAngle[2].trim() };
+  }
+
+  // Pattern: "From: email@domain.com" (no angle brackets)
+  const fromPlain = combined.match(/From:\s*([^\s<>\n]+@[^\s<>\n]+)/i);
+  if (fromPlain) {
+    return { name: "", email: fromPlain[1].trim() };
+  }
+
+  return null;
+}
+
+/**
  * HTTP function that receives Postmark inbound email webhooks.
  *
  * Flow:
@@ -94,12 +116,20 @@ export const onEmailReceived = onRequest(
 
     try {
       const payload = req.body as PostmarkInboundPayload;
-      const senderEmail = payload.FromFull?.Email || payload.From;
-      const senderName = payload.FromFull?.Name || payload.FromName || "";
+      const forwarderEmail = payload.FromFull?.Email || payload.From;
+      const forwarderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
       const htmlBody = payload.HtmlBody || "";
       const messageId = payload.MessageID || "";
+
+      // Detect forwarded emails and extract the original sender
+      const isForward = /^(Fwd?|FW):/i.test(subject);
+      const originalSender = isForward ? extractOriginalSender(textBody, htmlBody) : null;
+
+      // Use original sender if this is a forward, otherwise use the direct sender
+      const senderEmail = originalSender?.email || forwarderEmail;
+      const senderName = originalSender?.name || forwarderName;
 
       if (!senderEmail) {
         logger.error("No sender email found in payload");

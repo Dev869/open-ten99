@@ -73,13 +73,7 @@ export const verifyMagicLink = onCall(
       throw new HttpsError("deadline-exceeded", "This link has expired.");
     }
 
-    // Check if already used
-    if (data.used) {
-      throw new HttpsError("already-exists", "This link has already been used.");
-    }
-
-    // Mark as used
-    await docRef.update({ used: true });
+    // Allow reuse within the 7-day window (don't enforce single-use)
 
     // Create or get a portal user for this client email
     const email = data.email;
