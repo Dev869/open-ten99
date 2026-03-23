@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { WorkItem, Client, LineItem, RecurrenceFrequency } from '../../lib/types';
+import type { WorkItem, Client, RecurrenceFrequency, TimeEntry } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
+import { LineItemRow } from '../../components/LineItemRow';
+import { TimeEntryLinkPicker } from '../../components/TimeEntryLinkPicker';
 import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays } from '../../lib/utils';
+import { computeLineItemHours, computeLineItemCost } from '../../lib/timeComputation';
 import {
   updateWorkItem,
   discardWorkItem,
   updateInvoiceStatus,
+  unlinkTimeEntriesForLineItem,
 } from '../../services/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
@@ -24,6 +28,8 @@ interface WorkItemDetailProps {
   invoiceFromAddress?: string;
   invoiceTerms?: string;
   invoiceNotes?: string;
+  timeEntries: TimeEntry[];
+  roundTimeToQuarterHour?: boolean;
 }
 
 export default function WorkItemDetail({
@@ -36,6 +42,8 @@ export default function WorkItemDetail({
   invoiceFromAddress,
   invoiceTerms,
   invoiceNotes,
+  timeEntries,
+  roundTimeToQuarterHour,
 }: WorkItemDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -46,6 +54,7 @@ export default function WorkItemDetail({
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [linkPickerLineItemId, setLinkPickerLineItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (source) setItem({ ...source });
@@ -64,19 +73,6 @@ export default function WorkItemDetail({
 
   const client = clients.find((c) => c.id === item.clientId);
 
-  function updateLineItem(index: number, field: keyof LineItem, value: string | number) {
-    const updated = [...item!.lineItems];
-    if (field === 'hours') {
-      const hours = Number(value) || 0;
-      updated[index] = { ...updated[index], hours, cost: hours * hourlyRate };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
-    const totalHours = updated.reduce((s, li) => s + li.hours, 0);
-    const totalCost = updated.reduce((s, li) => s + li.cost, 0);
-    setItem({ ...item!, lineItems: updated, totalHours, totalCost });
-  }
-
   function addLineItem() {
     const updated = [
       ...item!.lineItems,
@@ -85,17 +81,51 @@ export default function WorkItemDetail({
     setItem({ ...item!, lineItems: updated });
   }
 
-  function removeLineItem(index: number) {
+  async function removeLineItem(index: number) {
+    const li = item!.lineItems[index];
+    const linkedCount = timeEntries.filter((te) => te.lineItemId === li.id).length;
+
+    if (linkedCount > 0) {
+      const confirmed = window.confirm(
+        `This line item has ${linkedCount} linked time entr${linkedCount === 1 ? 'y' : 'ies'}. Deleting it will unlink them. Continue?`
+      );
+      if (!confirmed) return;
+      await unlinkTimeEntriesForLineItem(timeEntries, li.id);
+    }
+
     const updated = item!.lineItems.filter((_, i) => i !== index);
-    const totalHours = updated.reduce((s, li) => s + li.hours, 0);
-    const totalCost = updated.reduce((s, li) => s + li.cost, 0);
+    const totalHours = updated.reduce(
+      (s, ul) => s + computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false),
+      0
+    );
+    const totalCost = updated.reduce(
+      (s, ul) => s + computeLineItemCost(
+        computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false),
+        hourlyRate,
+        ul.costOverride
+      ),
+      0
+    );
     setItem({ ...item!, lineItems: updated, totalHours, totalCost });
+  }
+
+  function buildSnapshotItem(): WorkItem {
+    const updatedLineItems = item!.lineItems.map((li) => {
+      const hours = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
+      const cost = computeLineItemCost(hours, hourlyRate, li.costOverride);
+      return { ...li, hours, cost };
+    });
+    const totalHours = updatedLineItems.reduce((s, li) => s + li.hours, 0);
+    const totalCost = updatedLineItems.reduce((s, li) => s + li.cost, 0);
+    return { ...item!, lineItems: updatedLineItems, totalHours, totalCost };
   }
 
   async function handleSave() {
     setSaving(true);
     try {
-      await updateWorkItem(item!);
+      const snapshot = buildSnapshotItem();
+      await updateWorkItem(snapshot);
+      setItem(snapshot);
     } catch (err) {
       console.error('Failed to save work item:', err);
     } finally {
@@ -109,15 +139,18 @@ export default function WorkItemDetail({
       const scheduled = item!.estimatedBusinessDays
         ? addBusinessDays(new Date(), item!.estimatedBusinessDays)
         : item!.scheduledDate;
-      const updated = { ...item!, status: 'approved' as const, scheduledDate: scheduled };
-      await updateWorkItem(updated);
-      setItem(updated);
+      const base = buildSnapshotItem();
+      const snapshot = { ...base, status: 'approved' as const, scheduledDate: scheduled };
+
+      await updateWorkItem(snapshot);
+      setItem(snapshot);
+
       const pdfClient = client || {
         name: item!.senderName || 'Unknown',
         email: item!.senderEmail || '',
         createdAt: new Date(),
       };
-      const blobUrl = await buildChangeOrderPdf(updated, pdfClient, {
+      const blobUrl = await buildChangeOrderPdf(snapshot, pdfClient, {
         companyName: 'DW Tailored',
         hourlyRate,
         taxRate,
@@ -169,7 +202,8 @@ export default function WorkItemDetail({
         `DW Tailored Systems — Invoice: ${item.subject}`
       );
 
-      const lineItemsBlock = item.lineItems
+      const snapshot = buildSnapshotItem();
+      const lineItemsBlock = snapshot.lineItems
         .map(
           (li, i) =>
             `  ${i + 1}. ${li.description || '(no description)'}\n` +
@@ -178,7 +212,7 @@ export default function WorkItemDetail({
         .join('\n\n');
 
       const billingNote = item.deductFromRetainer
-        ? `\nBilling: ${item.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
+        ? `\nBilling: ${snapshot.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
         : '';
 
       const body = encodeURIComponent(
@@ -192,8 +226,8 @@ export default function WorkItemDetail({
         `Line Items:\n\n` +
         `${lineItemsBlock}\n\n` +
         `————————————————————————————————\n` +
-        `Total Hours:  ${item.totalHours.toFixed(1)} hrs\n` +
-        `Total Cost:   ${formatCurrency(item.totalCost)}\n` +
+        `Total Hours:  ${snapshot.totalHours.toFixed(1)} hrs\n` +
+        `Total Cost:   ${formatCurrency(snapshot.totalCost)}\n` +
         `————————————————————————————————\n` +
         `${billingNote}\n` +
         `Review and approve this work order:\n` +
@@ -341,47 +375,43 @@ export default function WorkItemDetail({
             + Add Item
           </button>
         </div>
-        <div className="space-y-3">
-          {item.lineItems.map((li, i) => (
-            <div key={li.id} className="flex gap-3 items-start">
-              <span className="text-xs font-semibold text-[var(--text-secondary)] mt-2 w-5 text-right">
-                {i + 1}.
-              </span>
-              <div className="flex-1 space-y-2">
-                <textarea
-                  value={li.description}
-                  onChange={(e) => updateLineItem(i, 'description', e.target.value)}
-                  placeholder="Description"
-                  rows={1}
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                />
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <label className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
-                    Hours:
-                    <input
-                      type="number"
-                      value={li.hours}
-                      onChange={(e) => updateLineItem(i, 'hours', e.target.value)}
-                      step="0.5"
-                      min="0"
-                      className="w-16 px-2 py-1 bg-[var(--bg-input)] rounded text-sm font-medium text-[var(--text-primary)] focus:outline-none"
-                    />
-                  </label>
-                  <span className="text-xs text-[var(--text-secondary)]">
-                    Cost: <span className="font-semibold text-[var(--text-primary)]">{formatCurrency(li.cost)}</span>
-                  </span>
-                  <button
-                    onClick={() => removeLineItem(i)}
-                    className="ml-auto text-xs text-[var(--color-red)]/70 hover:text-[var(--color-red)]"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </div>
+        <div>
+          {item.lineItems.map((li, index) => (
+            <LineItemRow
+              key={li.id}
+              lineItem={li}
+              workItemId={item.id!}
+              clientId={item.clientId}
+              appId={item.appId}
+              timeEntries={timeEntries}
+              hourlyRate={hourlyRate}
+              roundToQuarter={roundTimeToQuarterHour ?? false}
+              onDescriptionChange={(desc) => {
+                const updated = [...item.lineItems];
+                updated[index] = { ...updated[index], description: desc };
+                setItem({ ...item, lineItems: updated });
+              }}
+              onCostOverrideChange={(override) => {
+                const updated = [...item.lineItems];
+                updated[index] = { ...updated[index], costOverride: override };
+                setItem({ ...item, lineItems: updated });
+              }}
+              onRemove={() => removeLineItem(index)}
+              onLinkEntries={() => setLinkPickerLineItemId(li.id)}
+            />
           ))}
         </div>
       </div>
+
+      {linkPickerLineItemId && (
+        <TimeEntryLinkPicker
+          timeEntries={timeEntries}
+          clientId={item.clientId}
+          workItemId={item.id!}
+          lineItemId={linkPickerLineItemId}
+          onClose={() => setLinkPickerLineItemId(null)}
+        />
+      )}
 
       {/* Schedule & Billing */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 mb-4">
