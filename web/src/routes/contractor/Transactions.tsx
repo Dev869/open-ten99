@@ -357,7 +357,7 @@ export default function Transactions() {
       </div>
 
       {/* Transaction Table */}
-      <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+      <div className="overflow-x-auto scrollbar-hide rounded-lg border border-[var(--border)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">

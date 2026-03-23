@@ -719,7 +719,7 @@ async function buildExpensesReport(
  * uploads it to Firebase Storage, and returns a 7-day signed URL.
  */
 export const onGenerateReport = onCall(
-  { maxInstances: 10, timeoutSeconds: 300 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 300 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(

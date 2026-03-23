@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
@@ -75,6 +76,7 @@ function MatchStatusBadge({ matchStatus }: { matchStatus: Transaction['matchStat
 }
 
 export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick, onReceiptClick, insightBadge }: TransactionRowProps) {
+  const navigate = useNavigate();
   const [localCategory, setLocalCategory] = useState(transaction.category);
 
   const isIncome = transaction.amount > 0;
@@ -84,13 +86,13 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
   const amountPrefix = isIncome ? '+' : '';
 
   function handleCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    e.stopPropagation();
     const next = e.target.value;
     setLocalCategory(next);
     onCategoryChange(transaction.id, next);
   }
 
   const isSuggested = transaction.matchStatus === 'suggested';
-  const rowCursor = isSuggested ? 'cursor-pointer' : '';
 
   const receiptStatus: 'confirmed' | 'none' =
     transaction.receiptIds && transaction.receiptIds.length > 0 ? 'confirmed' : 'none';
@@ -98,12 +100,14 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
   function handleRowClick() {
     if (isSuggested && onRowClick) {
       onRowClick(transaction.id);
+    } else {
+      navigate(`/dashboard/finance/transactions/${transaction.id}`);
     }
   }
 
   return (
     <tr
-      className={`border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors ${rowCursor}`}
+      className="border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
       onClick={handleRowClick}
     >
       {/* Date */}
@@ -133,7 +137,7 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
       </td>
 
       {/* Category (inline select) */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <select
           value={localCategory}
           onChange={handleCategoryChange}
@@ -149,7 +153,7 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
       </td>
 
       {/* Receipt */}
-      <td className="px-4 py-3 text-center">
+      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
         <ReceiptBadge
           status={receiptStatus}
           onClick={onReceiptClick ? () => onReceiptClick(transaction.id) : undefined}

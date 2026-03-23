@@ -266,6 +266,22 @@ service cloud.firestore {
       allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
     }
 
+    // magicLinks — contractors create, Cloud Functions verify
+    match /magicLinks/{linkId} {
+      allow read: if false; // only server-side via admin SDK
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if false; // only server-side
+    }
+
+    // timeEntries — standard ownerId pattern
+    match /timeEntries/{entryId} {
+      allow read: if isContractor() && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor() && resource.data.ownerId == request.auth.uid
+                     && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+    }
+
     match /mileageTrips/{tripId} {
       allow read: if isContractor() && resource.data.ownerId == request.auth.uid;
       allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;

@@ -20,13 +20,16 @@ export default function PortalAuth() {
 
     (async () => {
       try {
-        const verify = httpsCallable<{ token: string }, { customToken: string }>(
+        const verify = httpsCallable<{ token: string }, { customToken: string; workItemId?: string }>(
           functions,
           'verifyMagicLink'
         );
         const result = await verify({ token });
         await signInWithCustomToken(auth, result.data.customToken);
-        navigate('/portal', { replace: true });
+        const dest = result.data.workItemId
+          ? `/portal/${result.data.workItemId}`
+          : '/portal';
+        navigate(dest, { replace: true });
       } catch (err) {
         console.error('Auth error:', err);
         setError('This link has expired or is invalid. Please request a new one from your contractor.');

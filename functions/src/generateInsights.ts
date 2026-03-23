@@ -42,7 +42,7 @@ async function fetchUserData(uid: string): Promise<InsightData> {
 }
 
 export const onGenerateInsights = onCall(
-  { maxInstances: 10, timeoutSeconds: 300 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 300 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in');

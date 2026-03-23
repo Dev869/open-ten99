@@ -10,6 +10,8 @@ import {
   discardWorkItem,
   updateInvoiceStatus,
 } from '../../services/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../lib/firebase';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
 
 interface WorkItemDetailProps {
@@ -125,14 +127,27 @@ export default function WorkItemDetail({
     navigate('/dashboard/work-items');
   }
 
-  function handleSendToClient() {
-    if (!client?.email) return;
+  async function handleSendToClient() {
+    if (!client?.email || !item?.id || !client?.id) return;
     try {
+      // Generate a magic link for this client + work item
+      const gen = httpsCallable<
+        { clientId: string; email: string; workItemId: string },
+        { token: string }
+      >(functions, 'generateMagicLink');
+      const { data: { token } } = await gen({
+        clientId: client.id,
+        email: client.email,
+        workItemId: item.id,
+      });
+
+      const portalLink = `https://ten99.dwtailored.com/portal/auth?token=${token}`;
+
       const subject = encodeURIComponent(
-        `DW Tailored Systems — Work Order: ${item!.subject}`
+        `DW Tailored Systems — Work Order: ${item.subject}`
       );
 
-      const lineItemsBlock = item!.lineItems
+      const lineItemsBlock = item.lineItems
         .map(
           (li, i) =>
             `  ${i + 1}. ${li.description || '(no description)'}\n` +
@@ -140,8 +155,8 @@ export default function WorkItemDetail({
         )
         .join('\n\n');
 
-      const billingNote = item!.deductFromRetainer
-        ? `\nBilling: ${item!.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
+      const billingNote = item.deductFromRetainer
+        ? `\nBilling: ${item.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
         : '';
 
       const body = encodeURIComponent(
@@ -150,16 +165,18 @@ export default function WorkItemDetail({
         `————————————————————————————————\n` +
         `WORK ORDER SUMMARY\n` +
         `————————————————————————————————\n\n` +
-        `Subject:  ${item!.subject}\n` +
-        `Type:     ${item!.type.charAt(0).toUpperCase() + item!.type.slice(1)}\n\n` +
+        `Subject:  ${item.subject}\n` +
+        `Type:     ${item.type.charAt(0).toUpperCase() + item.type.slice(1)}\n\n` +
         `Line Items:\n\n` +
         `${lineItemsBlock}\n\n` +
         `————————————————————————————————\n` +
-        `Total Hours:  ${item!.totalHours.toFixed(1)} hrs\n` +
-        `Total Cost:   ${formatCurrency(item!.totalCost)}\n` +
+        `Total Hours:  ${item.totalHours.toFixed(1)} hrs\n` +
+        `Total Cost:   ${formatCurrency(item.totalCost)}\n` +
         `————————————————————————————————\n` +
         `${billingNote}\n` +
-        `Please reply to approve or request changes.\n\n\n` +
+        `Review and approve this work order:\n` +
+        `${portalLink}\n\n` +
+        `This link expires in 7 days. Reply to this email with any questions.\n\n\n` +
         `Thank you for choosing DW Tailored Systems.\n\n` +
         `Best regards,\n` +
         `DW Tailored Systems\n` +

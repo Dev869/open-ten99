@@ -6,6 +6,7 @@ interface PdfSettings {
   companyName: string;
   hourlyRate: number;
   taxRate?: number;
+  pdfLogoUrl?: string;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -78,10 +79,6 @@ export async function buildChangeOrderPdf(
    * HEADER
    * ════════════════════════════════════════════════════════ */
 
-  // Company name — top left (size 22)
-  const companyDisplayName = 'DW TAILORED SYSTEMS';
-  const companyNameW = fontBold.widthOfTextAtSize(companyDisplayName, 22);
-
   // "CHANGE ORDER" label — top right, inside a teal box
   const coLabel = 'CHANGE ORDER';
   const coFontSize = 16;
@@ -92,21 +89,41 @@ export async function buildChangeOrderPdf(
   const coBoxH = coFontSize + coPadY * 2;
   const coBoxX = rightX - coBoxW;
 
-  // Ensure company name doesn't overlap with the CHANGE ORDER box
-  // Company name ends at MARGIN + companyNameW, box starts at coBoxX
-  // If they would overlap, reduce company name font size (safety check)
-  const companyNameEndX = MARGIN + companyNameW;
-  const gapBetweenHeaderElements = coBoxX - companyNameEndX;
-
-  if (gapBetweenHeaderElements < 10) {
-    // Truncate company name to fit — but this should not happen with current values
-    const maxCompanyW = coBoxX - MARGIN - 10;
-    const truncatedCompany = truncateText(companyDisplayName, fontBold, 22, maxCompanyW);
-    page.drawText(truncatedCompany, {
-      x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
-    });
+  // Company logo or name — top left
+  let headerH = 22; // default text height
+  if (settings.pdfLogoUrl) {
+    try {
+      const logoResp = await fetch(settings.pdfLogoUrl);
+      const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
+      const isPng = settings.pdfLogoUrl.toLowerCase().includes('.png') ||
+        (logoBytes[0] === 0x89 && logoBytes[1] === 0x50);
+      const logoImage = isPng
+        ? await pdfDoc.embedPng(logoBytes)
+        : await pdfDoc.embedJpg(logoBytes);
+      const logoMaxH = 40;
+      const logoMaxW = coBoxX - MARGIN - 20;
+      const scale = Math.min(logoMaxW / logoImage.width, logoMaxH / logoImage.height, 1);
+      const logoW = logoImage.width * scale;
+      const logoH = logoImage.height * scale;
+      page.drawImage(logoImage, {
+        x: MARGIN,
+        y: y - logoH + 22, // align bottom with text baseline area
+        width: logoW,
+        height: logoH,
+      });
+      headerH = logoH;
+    } catch {
+      // Logo fetch/embed failed — fall back to text
+      const companyDisplayName = settings.companyName.toUpperCase();
+      page.drawText(companyDisplayName, {
+        x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
+      });
+    }
   } else {
-    page.drawText(companyDisplayName, {
+    const companyDisplayName = settings.companyName.toUpperCase();
+    const maxCompanyW = coBoxX - MARGIN - 10;
+    const displayText = truncateText(companyDisplayName, fontBold, 22, maxCompanyW);
+    page.drawText(displayText, {
       x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
     });
   }
@@ -120,8 +137,8 @@ export async function buildChangeOrderPdf(
     x: coBoxX + coPadX, y: coBoxY + coPadY, size: coFontSize, font: fontBold, color: WHITE,
   });
 
-  // Move past the header — account for the taller of company name (22px) or box
-  y -= Math.max(22, coBoxH) + 12;
+  // Move past the header
+  y -= Math.max(headerH, coBoxH) + 12;
 
   // Horizontal rule
   page.drawRectangle({

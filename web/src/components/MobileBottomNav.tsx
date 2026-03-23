@@ -198,7 +198,7 @@ function MorePage({ open, onClose, dark, onToggleTheme }: MorePageProps) {
         {/* Theme toggle */}
         <div className="px-4 mt-4">
           <button
-            onClick={() => { onToggleTheme(); onClose(); }}
+            onClick={onToggleTheme}
             className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] active:scale-[0.98] transition-transform"
           >
             <div className="w-9 h-9 rounded-lg bg-[var(--bg-input)] flex items-center justify-center flex-shrink-0">

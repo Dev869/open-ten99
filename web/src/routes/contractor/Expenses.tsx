@@ -265,60 +265,58 @@ export default function Expenses() {
         <h2 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           All Expenses
         </h2>
-        <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs whitespace-nowrap">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Description
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Category
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Amount
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Receipt
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
-              ) : expenses.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-0">
-                    <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
-                      <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
-                        <IconBook size={32} color="var(--accent)" />
-                      </div>
-                      <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No expenses tracked</h2>
-                      <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
-                        Add expenses to track your business costs
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowForm(true)}
-                        className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all"
-                      >
-                        + Add Expense
-                      </button>
-                    </div>
-                  </td>
+        {!loading && expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4 rounded-lg border border-[var(--border)] bg-[var(--bg-card)]">
+            <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+              <IconBook size={32} color="var(--accent)" />
+            </div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No expenses tracked</h2>
+            <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
+              Add expenses to track your business costs
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all"
+            >
+              + Add Expense
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto scrollbar-hide rounded-lg border border-[var(--border)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs whitespace-nowrap">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Amount
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Receipt
+                  </th>
                 </tr>
-              ) : (
-                expenses.map((expense) => {
-                  const anomaly = insights?.expenses?.anomalies?.find((a) => a.transactionId === expense.id);
-                  return <ExpenseRow key={expense.id} expense={expense} anomaly={anomaly} />;
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
+                ) : (
+                  expenses.map((expense) => {
+                    const anomaly = insights?.expenses?.anomalies?.find((a) => a.transactionId === expense.id);
+                    return <ExpenseRow key={expense.id} expense={expense} anomaly={anomaly} />;
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

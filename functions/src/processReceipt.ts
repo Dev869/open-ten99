@@ -39,7 +39,6 @@ export const onReceiptUploaded = onObjectFinalized(
     // Find the receipt doc created client-side (by imageUrl match)
     const bucket = storage.bucket();
     const file = bucket.file(filePath);
-    const [url] = await file.getSignedUrl({ action: 'read', expires: Date.now() + 15 * 60 * 1000 });
 
     // Find receipt doc by matching the storage path in imageUrl
     const receiptsSnap = await db
@@ -195,8 +194,5 @@ Return ONLY the JSON object, no markdown formatting.`;
     }
 
     await receiptDoc.ref.update(receiptUpdate);
-
-    // Suppress unused variable warning — url was obtained for potential future use
-    void url;
   },
 );

@@ -44,7 +44,7 @@ export function TrendStatCard({
   return (
     <Link
       to={to}
-      className="group bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-3 md:p-4 hover-lift block animate-fade-in-up"
+      className="group bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-3 md:p-4 hover-lift block animate-fade-in-up overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-start justify-between mb-1.5 md:mb-3">
@@ -86,7 +86,7 @@ export function TrendStatCard({
             )}
           </div>
         </div>
-        <div className="w-16 md:w-24 flex-shrink-0">
+        <div className="w-16 md:w-24 flex-shrink-0 overflow-hidden">
           <Sparkline
             data={sparkData}
             color={sparkColor}

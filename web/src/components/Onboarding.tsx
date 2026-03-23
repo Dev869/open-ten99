@@ -156,14 +156,14 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-[var(--bg-page)] flex flex-col"
+      className="fixed inset-0 z-[80] md:static md:z-auto flex flex-col min-h-[50vh] bg-[var(--bg-page)]"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {/* Progress bar */}
-      <div className="w-full h-1 bg-[var(--border)]">
+      <div className="w-full h-1 bg-[var(--border)] md:rounded-t-xl">
         <div
           className="h-full transition-all duration-500 ease-out"
           style={{

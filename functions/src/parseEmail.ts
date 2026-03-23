@@ -62,7 +62,15 @@ export const onEmailReceived = onRequest(
         .get();
 
       for (const doc of integrationsSnap.docs) {
-        const storedToken = doc.data()?.postmarkWebhook?.token;
+        const data = doc.data();
+        const storedToken = data?.postmarkWebhook?.token;
+        logger.info("Token comparison", {
+          docId: doc.id,
+          hasPostmarkWebhook: !!data?.postmarkWebhook,
+          storedTokenPrefix: typeof storedToken === "string" ? storedToken.substring(0, 8) : "none",
+          providedTokenPrefix: providedToken.substring(0, 8),
+          match: storedToken === providedToken,
+        });
         if (typeof storedToken === "string" && storedToken === providedToken) {
           contractorUid = doc.id;
           break;
