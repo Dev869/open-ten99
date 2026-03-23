@@ -93,7 +93,7 @@ export default function Receipts() {
       {currentReceipt && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedReceipt(null)} />
-          <div className="relative ml-auto w-full sm:max-w-2xl bg-[var(--bg-card)] shadow-xl">
+          <div className="relative ml-auto w-full h-full sm:max-w-2xl bg-[var(--bg-card)] shadow-xl overflow-y-auto">
             <ReceiptDetail
               receipt={currentReceipt}
               onClose={() => setSelectedReceipt(null)}

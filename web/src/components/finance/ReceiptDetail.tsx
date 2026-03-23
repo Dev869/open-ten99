@@ -77,9 +77,9 @@ export default function ReceiptDetail({ receipt, onClose, onDeleted }: ReceiptDe
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row flex-1">
+      <div className="flex flex-col lg:flex-row lg:flex-1">
         {/* Left: Rendered extraction */}
-        <div className="flex-1 p-4 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+        <div className="lg:flex-1 p-4 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">Receipt</p>
             <button
@@ -131,7 +131,7 @@ export default function ReceiptDetail({ receipt, onClose, onDeleted }: ReceiptDe
         </div>
 
         {/* Right: Extracted data + match */}
-        <div className="flex-1 p-4">
+        <div className="lg:flex-1 p-4">
           <div className="mb-4">
             <p className="text-xs uppercase tracking-wider text-[var(--text-secondary)] mb-1">Vendor</p>
             <p className="text-base font-semibold text-[var(--text-primary)]">
