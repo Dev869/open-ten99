@@ -224,7 +224,13 @@ export default function WorkItemDetail({
         <div className="flex justify-between items-start">
           <div>
             <div className="text-sm text-white/70">{client?.name ?? 'Unknown Client'}</div>
-            <h1 className="text-xl font-bold text-white mt-1">{item.subject}</h1>
+            <input
+              type="text"
+              value={item.subject}
+              onChange={(e) => setItem({ ...item, subject: e.target.value })}
+              className="text-xl font-bold text-white mt-1 bg-transparent border-none outline-none w-full focus:ring-1 focus:ring-[var(--accent)] rounded px-1 -ml-1 placeholder:text-white/40"
+              placeholder="Work order title"
+            />
           </div>
           <StatusBadge status={item.status} />
         </div>

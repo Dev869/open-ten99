@@ -12,7 +12,6 @@ interface ReceiptUploaderProps {
 export default function ReceiptUploader({ onUploadComplete, onError }: ReceiptUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const scanInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
@@ -80,23 +79,8 @@ export default function ReceiptUploader({ onUploadComplete, onError }: ReceiptUp
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onClick={() => {
-        // On mobile, prefer camera; on desktop, file picker
-        if ('ontouchstart' in window) {
-          scanInputRef.current?.click();
-        } else {
-          fileInputRef.current?.click();
-        }
-      }}
+      onClick={() => fileInputRef.current?.click()}
     >
-      <input
-        ref={scanInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => e.target.files && handleFiles(e.target.files)}
-      />
       <input
         ref={fileInputRef}
         type="file"
