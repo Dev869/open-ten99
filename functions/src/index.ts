@@ -27,3 +27,6 @@ export { onReceiptUploaded } from './processReceipt';
 export { onReceiptMatchOnTransaction } from './receiptMatchOnTransaction';
 export { purgeDiscarded } from './purgeDiscarded';
 export { onGenerateInsights } from './generateInsights';
+export { onAnalyzeReport } from './analyzeReport';
+export { generateMagicLink, verifyMagicLink } from './magicLink';
+export { onSavePostmarkSecret } from "./postmarkSecret";
