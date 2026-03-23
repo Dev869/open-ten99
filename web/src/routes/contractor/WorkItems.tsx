@@ -225,7 +225,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
 
       {/* ── Desktop page title ── */}
       <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-        Work Items
+        Work Orders
       </h1>
 
       {/* ── Filter row: type + status + advanced toggle ── */}
@@ -432,7 +432,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
           <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
             <IconDocument size={32} color="var(--accent)" />
           </div>
-          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No work items yet</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No work orders yet</h2>
           <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
             {hasActiveFilters || search || selectedType !== 'All' || selectedStatus !== 'All'
               ? 'Try adjusting your filters or search terms.'

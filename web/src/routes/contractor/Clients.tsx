@@ -162,7 +162,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
           <div className="text-sm text-[var(--text-secondary)] mt-1.5 max-w-xs mx-auto">
             {search
               ? 'Try a different search term.'
-              : 'Add your first client and start tracking work items, retainers, and more.'}
+              : 'Add your first client and start tracking work orders, retainers, and more.'}
           </div>
           {!search && (
             <button

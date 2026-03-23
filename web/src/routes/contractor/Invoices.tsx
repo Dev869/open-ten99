@@ -164,7 +164,7 @@ export default function Invoices({ workItems, clients, settings, hourlyRate, pay
             to="/dashboard/work-items"
             className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all inline-flex items-center"
           >
-            Go to Work Items
+            Go to Work Orders
           </Link>
         </div>
       </div>

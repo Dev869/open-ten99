@@ -577,7 +577,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
           ) : (
             <div className="mt-3 space-y-3">
               <p className="text-sm text-[var(--text-secondary)]">
-                Connect your GitHub account to sync repositories and track activity across your work items.
+                Connect your GitHub account to sync repositories and track activity across your work orders.
               </p>
               <button
                 onClick={async () => {
@@ -771,7 +771,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                if (!confirm('This will populate sample clients, work items, time entries, expenses, and mileage trips. Continue?')) return;
+                if (!confirm('This will populate sample clients, work orders, time entries, expenses, and mileage trips. Continue?')) return;
                 addToast('Seeding data...', 'info');
                 import('../../lib/seedData').then(({ seedSampleData }) =>
                   seedSampleData()
@@ -788,7 +788,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             </button>
             <button
               onClick={async () => {
-                if (!confirm('This will delete ALL your data (clients, work items, time entries, expenses, mileage). Are you sure?')) return;
+                if (!confirm('This will delete ALL your data (clients, work orders, time entries, expenses, mileage). Are you sure?')) return;
                 const { clearAllData } = await import('../../lib/seedData');
                 await clearAllData();
                 addToast('All data cleared', 'success');

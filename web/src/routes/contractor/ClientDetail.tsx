@@ -130,7 +130,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
           </div>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50 mt-3">
-          <span>{clientItems.length} work items</span>
+          <span>{clientItems.length} work orders</span>
           <span>Client since {formatDate(client.createdAt)}</span>
           {client.phone && <span>{client.phone}</span>}
         </div>
@@ -403,7 +403,7 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
       {/* Work Items */}
       <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
         <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-          Work Items ({clientItems.length})
+          Work Orders ({clientItems.length})
         </h2>
         <div className="space-y-2">
           {clientItems.map((item, i) => (
@@ -427,9 +427,9 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                 <path d="M9 16h10M9 19h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">No work items yet</div>
+            <div className="text-sm font-semibold text-[var(--text-primary)]">No work orders yet</div>
             <div className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
-              Work items linked to {client.name} will appear here.
+              Work orders linked to {client.name} will appear here.
             </div>
           </div>
         )}

@@ -31,7 +31,7 @@ export interface ShortcutDef {
 }
 
 export const ALL_SHORTCUTS: ShortcutDef[] = [
-  { id: 'work-items', to: '/dashboard/work-items', label: 'Work Items', Icon: IconWrench },
+  { id: 'work-items', to: '/dashboard/work-items', label: 'Work Orders', Icon: IconWrench },
   { id: 'clients', to: '/dashboard/clients', label: 'Clients', Icon: IconClients },
   { id: 'calendar', to: '/dashboard/calendar', label: 'Calendar', Icon: IconCalendar },
   { id: 'invoices', to: '/dashboard/finance/invoices', label: 'Invoices', Icon: IconDollar },

@@ -36,7 +36,7 @@ interface TabItem {
 
 const primaryTabs: TabItem[] = [
   { to: '/dashboard', label: 'Dashboard', Icon: IconDashboard },
-  { to: '/dashboard/work-items', label: 'Work Items', Icon: IconWrench },
+  { to: '/dashboard/work-items', label: 'Work Orders', Icon: IconWrench },
   { to: '/dashboard/calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', label: 'Clients', Icon: IconClients },
 ];
@@ -50,7 +50,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'Work',
     items: [
-      { to: '/dashboard/work-items', label: 'Work Items', Icon: IconWrench },
+      { to: '/dashboard/work-items', label: 'Work Orders', Icon: IconWrench },
       { to: '/dashboard/clients', label: 'Clients', Icon: IconClients },
       { to: '/dashboard/calendar', label: 'Calendar', Icon: IconCalendar },
       { to: '/dashboard/team', label: 'Team', Icon: IconTeam },

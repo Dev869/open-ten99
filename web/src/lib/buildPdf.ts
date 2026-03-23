@@ -79,8 +79,8 @@ export async function buildChangeOrderPdf(
    * HEADER
    * ════════════════════════════════════════════════════════ */
 
-  // "CHANGE ORDER" label — top right, inside a teal box
-  const coLabel = 'CHANGE ORDER';
+  // "WORK ORDER" label — top right, inside a teal box
+  const coLabel = 'WORK ORDER';
   const coFontSize = 16;
   const coTextW = fontBold.widthOfTextAtSize(coLabel, coFontSize);
   const coPadX = 14;
@@ -189,7 +189,7 @@ export async function buildChangeOrderPdf(
   const statusLabel = WORK_ITEM_STATUS_LABELS[workItem.status] ?? workItem.status;
 
   const detailRows: Array<{ label: string; value: string }> = [
-    { label: 'Change Order #:', value: workItem.id ?? '—' },
+    { label: 'Work Order #:', value: workItem.id ?? '—' },
     { label: 'Date:', value: orderDate },
     { label: 'Status:', value: statusLabel },
   ];
@@ -435,7 +435,7 @@ export async function buildChangeOrderPdf(
     y -= 14;
 
     page.drawText(
-      'This change order is subject to acceptance. Please review and confirm before work begins.',
+      'This work order is subject to acceptance. Please review and confirm before work begins.',
       { x: MARGIN, y, size: 8, font, color: GRAY },
     );
     y -= 12;

@@ -59,6 +59,20 @@ export function WorkItemCard({
         </div>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <TypeTag type={item.type} />
+          {item.clientApproval && (
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+              item.clientApproval === 'approved' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+              item.clientApproval === 'rejected' ? 'bg-red-500/15 text-red-500' :
+              'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+            }`}>
+              {item.clientApproval === 'approved' ? 'Approved' : item.clientApproval === 'rejected' ? 'Rejected' : 'Pending Approval'}
+            </span>
+          )}
+          {item.completed && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              ✓ Completed
+            </span>
+          )}
           {!item.isBillable && (
             <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full">
               Non-Billable

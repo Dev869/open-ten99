@@ -22,7 +22,7 @@ import Login from './routes/Login';
 
 const pageNames: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/dashboard/work-items': 'Work Items',
+  '/dashboard/work-items': 'Work Orders',
   '/dashboard/calendar': 'Calendar',
   '/dashboard/clients': 'Clients',
   '/dashboard/apps': 'Apps',

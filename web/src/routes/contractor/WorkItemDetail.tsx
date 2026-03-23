@@ -35,7 +35,7 @@ export default function WorkItemDetail({
   const navigate = useNavigate();
   const source = workItems.find((i) => i.id === id);
   const [item, setItem] = useState<WorkItem | null>(null);
-  const [showEmail, setShowEmail] = useState(false);
+  const [showEmail, setShowEmail] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
@@ -194,7 +194,7 @@ export default function WorkItemDetail({
         onClick={() => navigate('/dashboard/work-items')}
         className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"
       >
-        ← Back to Work Items
+        ← Back to Work Orders
       </button>
 
       {/* Header */}
@@ -242,6 +242,21 @@ export default function WorkItemDetail({
             {item.completed && <span className="text-white text-[10px] leading-none">✓</span>}
           </span>
           {item.completed ? 'Completed' : 'Mark as Completed'}
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            const newType = item.type === 'maintenance' ? 'changeRequest' : 'maintenance';
+            const updated = { ...item, type: newType as WorkItem['type'] };
+            setItem(updated);
+            await updateWorkItem(updated);
+          }}
+          className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.type === 'maintenance' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+        >
+          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${item.type === 'maintenance' ? 'bg-blue-500 border-blue-500' : 'border-white/40'}`}>
+            {item.type === 'maintenance' && <span className="text-white text-[10px] leading-none">✓</span>}
+          </span>
+          Maintenance
         </button>
       </div>
 
@@ -713,7 +728,7 @@ export default function WorkItemDetail({
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-[var(--bg-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col sm:mx-4">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Change Order Preview</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Work Order Preview</h3>
               <div className="flex items-center gap-2">
                 <a
                   href={previewUrl}
