@@ -1,11 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
-
-const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
 
 interface PostmarkInboundPayload {
   From: string;
@@ -50,26 +46,7 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    // --- Resolve contractor first (needed for Firestore secret lookup) ---
-    let contractorUid: string | null;
-    try {
-      contractorUid = await resolveContractorUid();
-    } catch (err) {
-      logger.error("Failed to resolve contractor uid", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      res.status(503).send("Service Unavailable");
-      return;
-    }
-    if (!contractorUid) {
-      logger.warn(
-        "Could not resolve a single contractor uid — skipping email processing"
-      );
-      res.status(200).send("OK");
-      return;
-    }
-
-    // --- Validate webhook token (passed as ?token= query param) ---
+    // --- Authenticate via URL token and resolve contractor in one query ---
     const providedToken = req.query.token;
     if (typeof providedToken !== "string" || providedToken.length === 0) {
       logger.warn("Missing webhook token query parameter");
@@ -77,54 +54,26 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    let expectedToken: string | null = null;
-
-    // Try Firestore first (token stored by onSavePostmarkSecret)
+    let contractorUid: string;
     try {
-      const integrationSnap = await admin
+      const integrationsSnap = await admin
         .firestore()
-        .doc(`integrations/${contractorUid}`)
+        .collection("integrations")
+        .where("postmarkWebhook.token", "==", providedToken)
+        .limit(1)
         .get();
-      const pmWebhook = integrationSnap.data()?.postmarkWebhook;
 
-      if (pmWebhook?.token) {
-        expectedToken = pmWebhook.token;
-      } else {
-        // Field absent — fall back to env var for backward compat
-        const envSecret = webhookSecret.value();
-        if (envSecret && envSecret.length > 0) {
-          expectedToken = envSecret;
-        }
+      if (integrationsSnap.empty) {
+        logger.warn("No matching webhook token found");
+        res.status(401).send("Unauthorized");
+        return;
       }
+      contractorUid = integrationsSnap.docs[0].id;
     } catch (firestoreErr) {
-      logger.error("Failed to read integration doc", {
+      logger.error("Failed to look up webhook token", {
         error: firestoreErr instanceof Error ? firestoreErr.message : String(firestoreErr),
       });
       res.status(503).send("Service Unavailable");
-      return;
-    }
-
-    if (!expectedToken) {
-      logger.warn("No webhook token configured (Firestore or env)");
-      res.status(401).send("Unauthorized");
-      return;
-    }
-
-    // Timing-safe comparison with padding to prevent length leakage
-    const provided = Buffer.from(providedToken);
-    const expected = Buffer.from(expectedToken);
-    const safeLen = Math.max(provided.length, expected.length);
-    const paddedProvided = Buffer.alloc(safeLen);
-    const paddedExpected = Buffer.alloc(safeLen);
-    provided.copy(paddedProvided);
-    expected.copy(paddedExpected);
-    const tokenValid =
-      crypto.timingSafeEqual(paddedProvided, paddedExpected) &&
-      provided.length === expected.length;
-
-    if (!tokenValid) {
-      logger.warn("Invalid webhook token received");
-      res.status(401).send("Unauthorized");
       return;
     }
 
@@ -236,29 +185,6 @@ export const onEmailReceived = onRequest(
     }
   }
 );
-
-/**
- * Finds the single contractor uid by listing Firebase Auth users whose
- * sign-in provider is google.com. Returns the uid when exactly one such user
- * exists, otherwise returns null.
- */
-async function resolveContractorUid(): Promise<string | null> {
-  const listResult = await admin.auth().listUsers(1000);
-  const contractors = listResult.users.filter((user) =>
-    user.providerData.some((p) => p.providerId === "google.com")
-  );
-  if (contractors.length === 1) {
-    return contractors[0].uid;
-  }
-  if (contractors.length === 0) {
-    logger.warn("resolveContractorUid: no google.com users found");
-  } else {
-    logger.warn("resolveContractorUid: multiple google.com users found", {
-      count: contractors.length,
-    });
-  }
-  return null;
-}
 
 /**
  * Looks up a client by email scoped to the contractor. If none exists,
