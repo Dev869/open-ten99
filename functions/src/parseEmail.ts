@@ -35,7 +35,7 @@ interface GeminiParseResult {
  * 3. Look up existing client in Firestore (unassigned if no match)
  * 4. Call Gemini to extract change items and hour estimates
  * 5. Calculate costs using the user's hourly rate
- * 6. Create a workItems doc in Firestore
+ * 6. Create a work order doc in Firestore
  */
 export const onEmailReceived = onRequest(
   { maxInstances: 10, timeoutSeconds: 120, invoker: "public" },
@@ -95,6 +95,7 @@ export const onEmailReceived = onRequest(
     try {
       const payload = req.body as PostmarkInboundPayload;
       const senderEmail = payload.FromFull?.Email || payload.From;
+      const senderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
       const messageId = payload.MessageID || "";
@@ -120,7 +121,7 @@ export const onEmailReceived = onRequest(
           .limit(1)
           .get();
         if (!existing.empty) {
-          logger.info("Duplicate email skipped — work item already exists", {
+          logger.info("Duplicate email skipped — work order already exists", {
             messageId,
             existingWorkItemId: existing.docs[0].id,
           });
@@ -132,7 +133,7 @@ export const onEmailReceived = onRequest(
       // --- Step 1: Look up client by email (never auto-create) ---
       const clientId = await findClientByEmail(db, senderEmail, contractorUid);
       if (!clientId) {
-        logger.info("No matching client found for sender — work item will be unassigned", {
+        logger.info("No matching client found for sender — work order will be unassigned", {
           senderEmail,
         });
       }
@@ -157,13 +158,15 @@ export const onEmailReceived = onRequest(
       const totalHours = lineItems.reduce((sum, li) => sum + li.hours, 0);
       const totalCost = parseFloat((totalHours * hourlyRate).toFixed(2));
 
-      // --- Step 5: Create workItem doc ---
+      // --- Step 5: Create work order doc ---
       const now = admin.firestore.FieldValue.serverTimestamp();
       const workItemRef = await db.collection("workItems").add({
         type: "changeRequest",
         status: "draft",
         ownerId: contractorUid,
         ...(clientId ? { clientId } : {}),
+        senderEmail,
+        senderName,
         sourceEmail: textBody.slice(0, 10_000), // truncate to prevent oversized docs
         subject,
         lineItems,
@@ -175,7 +178,7 @@ export const onEmailReceived = onRequest(
         updatedAt: now,
       });
 
-      logger.info("Work item created", {
+      logger.info("Work order created", {
         workItemId: workItemRef.id,
         clientId,
         totalHours,

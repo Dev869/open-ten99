@@ -24,6 +24,9 @@ export interface WorkItem {
   projectId?: string;
   appId?: string;
   sourceEmail: string;
+  senderEmail?: string;
+  senderName?: string;
+  completed?: boolean;
   subject: string;
   lineItems: LineItem[];
   totalHours: number;

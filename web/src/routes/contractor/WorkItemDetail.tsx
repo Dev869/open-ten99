@@ -228,10 +228,25 @@ export default function WorkItemDetail({
             </span>
           )}
         </div>
+        {/* Completed toggle */}
+        <button
+          type="button"
+          onClick={async () => {
+            const updated = { ...item!, completed: !item!.completed };
+            setItem(updated);
+            await updateWorkItem(updated);
+          }}
+          className={`mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.completed ? 'bg-[var(--color-green)]/20 text-[var(--color-green)]' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+        >
+          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${item.completed ? 'bg-[var(--color-green)] border-[var(--color-green)]' : 'border-white/40'}`}>
+            {item.completed && <span className="text-white text-[10px] leading-none">✓</span>}
+          </span>
+          {item.completed ? 'Completed' : 'Mark as Completed'}
+        </button>
       </div>
 
       {/* Original Email */}
-      {item.sourceEmail && (
+      {(item.sourceEmail || item.senderEmail) && (
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] mb-4 overflow-hidden">
           <button
             onClick={() => setShowEmail(!showEmail)}
@@ -239,7 +254,14 @@ export default function WorkItemDetail({
           >
             <div className="flex items-center gap-2">
               <span className="text-[var(--accent)]">✉</span>
-              <span className="text-sm font-semibold text-[var(--text-primary)]">Original Email</span>
+              <div>
+                <span className="text-sm font-semibold text-[var(--text-primary)]">Original Email</span>
+                {item.senderEmail && (
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    From: {item.senderName ? `${item.senderName} <${item.senderEmail}>` : item.senderEmail}
+                  </p>
+                )}
+              </div>
             </div>
             <span className="text-xs text-[var(--text-secondary)]">{showEmail ? '▲' : '▼'}</span>
           </button>

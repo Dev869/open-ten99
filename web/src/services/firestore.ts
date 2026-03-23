@@ -39,6 +39,9 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     projectId: data.projectId ?? undefined,
     appId: data.appId ?? undefined,
     sourceEmail: data.sourceEmail ?? '',
+    senderEmail: data.senderEmail ?? undefined,
+    senderName: data.senderName ?? undefined,
+    completed: data.completed ?? false,
     subject: data.subject ?? '',
     lineItems: (data.lineItems ?? []).map((li: DocumentData) => ({
       id: li.id ?? crypto.randomUUID(),
