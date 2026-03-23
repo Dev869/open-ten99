@@ -9,12 +9,9 @@ export const onSavePostmarkSecret = onCall(async (request) => {
   }
   const uid = request.auth.uid;
 
-  // Verify contractor (Google sign-in)
-  const user = await admin.auth().getUser(uid);
-  const isGoogle = user.providerData.some(
-    (p) => p.providerId === "google.com"
-  );
-  if (!isGoogle) {
+  // Verify contractor (Google sign-in) via the decoded ID token
+  const signInProvider = request.auth.token.firebase?.sign_in_provider;
+  if (signInProvider !== "google.com") {
     throw new HttpsError("permission-denied", "Contractor access only");
   }
 
