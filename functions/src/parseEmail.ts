@@ -32,7 +32,7 @@ interface GeminiParseResult {
  * Flow:
  * 1. Validate webhook secret
  * 2. Extract sender, subject, body
- * 3. Look up or create client in Firestore
+ * 3. Look up existing client in Firestore (unassigned if no match)
  * 4. Call Gemini to extract change items and hour estimates
  * 5. Calculate costs using the user's hourly rate
  * 6. Create a workItems doc in Firestore
@@ -95,7 +95,6 @@ export const onEmailReceived = onRequest(
     try {
       const payload = req.body as PostmarkInboundPayload;
       const senderEmail = payload.FromFull?.Email || payload.From;
-      const senderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
       const messageId = payload.MessageID || "";
@@ -130,13 +129,13 @@ export const onEmailReceived = onRequest(
         }
       }
 
-      // --- Step 1: Look up or create client ---
-      const clientId = await findOrCreateClient(
-        db,
-        senderEmail,
-        senderName,
-        contractorUid
-      );
+      // --- Step 1: Look up client by email (never auto-create) ---
+      const clientId = await findClientByEmail(db, senderEmail, contractorUid);
+      if (!clientId) {
+        logger.info("No matching client found for sender — work item will be unassigned", {
+          senderEmail,
+        });
+      }
 
       // --- Step 2: Get user settings for hourly rate (scoped to contractor) ---
       const settingsSnap = await db.doc(`settings/${contractorUid}`).get();
@@ -164,7 +163,7 @@ export const onEmailReceived = onRequest(
         type: "changeRequest",
         status: "draft",
         ownerId: contractorUid,
-        clientId,
+        ...(clientId ? { clientId } : {}),
         sourceEmail: textBody.slice(0, 10_000), // truncate to prevent oversized docs
         subject,
         lineItems,
@@ -202,15 +201,15 @@ export const onEmailReceived = onRequest(
 );
 
 /**
- * Looks up a client by email scoped to the contractor. If none exists,
- * creates a draft client doc with ownerId set.
+ * Looks up a client by email scoped to the contractor.
+ * Returns the client ID if found, or null if no match exists.
+ * Never creates new clients automatically.
  */
-async function findOrCreateClient(
+async function findClientByEmail(
   db: admin.firestore.Firestore,
   email: string,
-  name: string,
   ownerId: string
-): Promise<string> {
+): Promise<string | null> {
   const normalizedEmail = email.toLowerCase().trim();
   const clientsSnap = await db
     .collection("clients")
@@ -223,21 +222,7 @@ async function findOrCreateClient(
     return clientsSnap.docs[0].id;
   }
 
-  // Create a draft client
-  const newClient = await db.collection("clients").add({
-    name: name || normalizedEmail.split("@")[0],
-    email: normalizedEmail,
-    ownerId,
-    notes: "Auto-created from inbound email",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  logger.info("Created draft client", {
-    clientId: newClient.id,
-    email: normalizedEmail,
-  });
-
-  return newClient.id;
+  return null;
 }
 
 /**
