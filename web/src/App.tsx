@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, Outlet, useNavigate, useLocation, Link } from 
 import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import type { WorkItem } from './lib/types';
-import { useWorkItems, useClients, useSettings, useApps } from './hooks/useFirestore';
+import { useWorkItems, useClients, useSettings, useApps, useTimeEntries } from './hooks/useFirestore';
 import { updateSettings, callGenerateInsights } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -361,6 +361,7 @@ function ContractorRoutes() {
   const { clients } = useClients();
   const { settings } = useSettings(user?.uid);
   const { apps } = useApps();
+  const { entries: timeEntries } = useTimeEntries();
   const navigate = useNavigate();
 
   return (
@@ -386,6 +387,8 @@ function ContractorRoutes() {
             invoiceFromAddress={settings.invoiceFromAddress}
             invoiceTerms={settings.invoiceTerms}
             invoiceNotes={settings.invoiceNotes}
+            timeEntries={timeEntries}
+            roundTimeToQuarterHour={settings.roundTimeToQuarterHour}
           />
         }
       />
