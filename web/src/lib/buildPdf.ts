@@ -82,7 +82,7 @@ export async function buildChangeOrderPdf(
    * HEADER
    * ════════════════════════════════════════════════════════ */
 
-  // "WORK ORDER" label — top right, inside a teal box
+  // "INVOICE" label — top right, inside a teal box
   const coLabel = 'INVOICE';
   const coFontSize = 16;
   const coTextW = fontBold.widthOfTextAtSize(coLabel, coFontSize);
@@ -438,7 +438,7 @@ export async function buildChangeOrderPdf(
     y -= 14;
 
     const termsText = settings.invoiceTerms
-      || 'This work order is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.';
+      || 'This invoice is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.';
     const termsLines = termsText.split('\n').filter(Boolean);
     for (const tLine of termsLines) {
       page.drawText(truncateText(tLine.trim(), font, 8, CONTENT_W - 10), {

@@ -225,68 +225,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </p>
         </div>
 
-        {/* Invoice Logo */}
-        <div>
-          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
-            Invoice Logo
-          </label>
-          <div className="flex items-center gap-3 mt-1.5">
-            {settings.pdfLogoUrl ? (
-              <img
-                src={settings.pdfLogoUrl}
-                alt="Invoice logo"
-                className="h-10 max-w-[160px] object-contain rounded border border-[var(--border)] bg-white p-1"
-              />
-            ) : (
-              <div className="h-10 px-4 flex items-center rounded border border-dashed border-[var(--border)] text-xs text-[var(--text-secondary)]">
-                No logo
-              </div>
-            )}
-            <label className="px-3 py-2 rounded-lg bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer">
-              Upload
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 2 * 1024 * 1024) {
-                    addToast('Logo must be under 2MB', 'error');
-                    return;
-                  }
-                  try {
-                    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-                    const { storage } = await import('../../lib/firebase');
-                    const storageRef = ref(storage, `logos/${userId}/${file.name}`);
-                    await uploadBytes(storageRef, file);
-                    const url = await getDownloadURL(storageRef);
-                    await updateSettings(userId, { pdfLogoUrl: url });
-                    addToast('Logo uploaded', 'success');
-                  } catch (err) {
-                    console.error('Logo upload failed:', err);
-                    addToast('Upload failed', 'error');
-                  }
-                  e.target.value = '';
-                }}
-              />
-            </label>
-            {settings.pdfLogoUrl && (
-              <button
-                onClick={async () => {
-                  await updateSettings(userId, { pdfLogoUrl: '' });
-                  addToast('Logo removed', 'info');
-                }}
-                className="text-xs text-[var(--color-red)] hover:underline"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <p className="text-[10px] text-[var(--text-secondary)] mt-1">
-            PNG or JPG, max 2MB. Replaces company name on invoices.
-          </p>
-        </div>
+        {/* Invoice Logo — moved to Invoice Template section */}
 
         {/* Hourly Rate */}
         <div>
@@ -373,19 +312,82 @@ export default function Settings({ settings, userId }: SettingsProps) {
         </div>
       </div>
 
-      {/* ── Work Order Template ── */}
+      {/* ── Invoice Template ── */}
       <div className="mt-8">
         <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-          Work Order Template
+          Invoice Template
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {/* Brand Logo */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Brand Logo
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              PNG or JPG, max 2MB. Shown in the invoice header.
+            </p>
+            <div className="flex items-center gap-3">
+              {settings.pdfLogoUrl ? (
+                <img
+                  src={settings.pdfLogoUrl}
+                  alt="Invoice logo"
+                  className="h-10 max-w-[160px] object-contain rounded border border-[var(--border)] bg-white p-1"
+                />
+              ) : (
+                <div className="h-10 px-4 flex items-center rounded border border-dashed border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                  No logo
+                </div>
+              )}
+              <label className="px-3 py-2 rounded-lg bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer">
+                Upload
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) {
+                      addToast('Logo must be under 2MB', 'error');
+                      return;
+                    }
+                    try {
+                      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                      const { storage } = await import('../../lib/firebase');
+                      const storageRef = ref(storage, `logos/${userId}/${file.name}`);
+                      await uploadBytes(storageRef, file);
+                      const url = await getDownloadURL(storageRef);
+                      await updateSettings(userId, { pdfLogoUrl: url });
+                      addToast('Logo uploaded', 'success');
+                    } catch (err) {
+                      console.error('Logo upload failed:', err);
+                      addToast('Upload failed', 'error');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              {settings.pdfLogoUrl && (
+                <button
+                  onClick={async () => {
+                    await updateSettings(userId, { pdfLogoUrl: '' });
+                    addToast('Logo removed', 'info');
+                  }}
+                  className="text-xs text-[var(--color-red)] hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* From Address */}
           <div className="p-5">
             <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
               From Address
             </label>
             <p className="text-xs text-[var(--text-secondary)] mb-2">
-              Your business details shown on work orders. One line per row.
+              Your business details shown on invoices. One line per row.
             </p>
             <textarea
               value={invoiceFromAddress}
@@ -402,12 +404,12 @@ export default function Settings({ settings, userId }: SettingsProps) {
               Terms &amp; Conditions
             </label>
             <p className="text-xs text-[var(--text-secondary)] mb-2">
-              Shown at the bottom of every work order PDF. One paragraph per line.
+              Shown at the bottom of every invoice PDF. One paragraph per line.
             </p>
             <textarea
               value={invoiceTerms}
               onChange={(e) => setInvoiceTerms(e.target.value)}
-              placeholder={'This work order is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.'}
+              placeholder={'This invoice is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.'}
               rows={4}
               className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
             />
