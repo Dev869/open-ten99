@@ -7,6 +7,9 @@ interface PdfSettings {
   hourlyRate: number;
   taxRate?: number;
   pdfLogoUrl?: string;
+  invoiceFromAddress?: string;
+  invoiceNotes?: string;
+  invoiceTerms?: string;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -163,17 +166,17 @@ export async function buildChangeOrderPdf(
     x: MARGIN, y, size: 11, font: fontBold, color: CHARCOAL,
   });
   y -= LINE_H;
-  page.drawText('Devin Wilson', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
-  y -= 14;
-  page.drawText('Custom software & consulting', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
-  y -= 14;
-  page.drawText('info@dwtailored.com', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
+
+  // Render from-address lines (user-customizable)
+  const fromLines = (settings.invoiceFromAddress || 'Devin Wilson\nCustom software & consulting\ninfo@dwtailored.com')
+    .split('\n')
+    .filter(Boolean);
+  for (const line of fromLines) {
+    page.drawText(truncateText(line.trim(), font, 9, leftColMaxW), {
+      x: MARGIN, y, size: 9, font, color: GRAY,
+    });
+    y -= 14;
+  }
   const leftColEndY = y;
 
   // ── Right column: document details ──
@@ -434,15 +437,32 @@ export async function buildChangeOrderPdf(
     });
     y -= 14;
 
-    page.drawText(
-      'This work order is subject to acceptance. Please review and confirm before work begins.',
-      { x: MARGIN, y, size: 8, font, color: GRAY },
-    );
-    y -= 12;
-    page.drawText(
-      'Payment is due upon completion unless other terms have been arranged.',
-      { x: MARGIN, y, size: 8, font, color: GRAY },
-    );
+    const termsText = settings.invoiceTerms
+      || 'This work order is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.';
+    const termsLines = termsText.split('\n').filter(Boolean);
+    for (const tLine of termsLines) {
+      page.drawText(truncateText(tLine.trim(), font, 8, CONTENT_W - 10), {
+        x: MARGIN, y, size: 8, font, color: GRAY,
+      });
+      y -= 12;
+    }
+  }
+
+  // Notes section (user-customizable)
+  if (settings.invoiceNotes && y - 40 > FOOTER_ZONE) {
+    y -= 8;
+    page.drawText('Notes', {
+      x: MARGIN, y, size: 9, font: fontBold, color: CHARCOAL,
+    });
+    y -= 14;
+    const notesLines = settings.invoiceNotes.split('\n').filter(Boolean);
+    for (const nLine of notesLines) {
+      if (y - 12 < FOOTER_ZONE) break;
+      page.drawText(truncateText(nLine.trim(), font, 8, CONTENT_W - 10), {
+        x: MARGIN, y, size: 8, font, color: GRAY,
+      });
+      y -= 12;
+    }
   }
 
   // Draw footer on every page that doesn't already have one

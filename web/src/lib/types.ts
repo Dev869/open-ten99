@@ -87,6 +87,7 @@ export interface AppSettings {
   invoiceNotes?: string;          // default footer notes (payment instructions, etc.)
   invoiceTaxRate?: number;        // optional tax percentage (e.g. 8.25)
   invoiceFromAddress?: string;    // sender address block
+  invoiceTerms?: string;          // custom terms & conditions text
   teamId?: string;
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys

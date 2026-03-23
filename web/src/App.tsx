@@ -382,6 +382,9 @@ function ContractorRoutes() {
             paymentTerms={settings.invoicePaymentTerms}
             taxRate={settings.invoiceTaxRate}
             pdfLogoUrl={settings.pdfLogoUrl}
+            invoiceFromAddress={settings.invoiceFromAddress}
+            invoiceTerms={settings.invoiceTerms}
+            invoiceNotes={settings.invoiceNotes}
           />
         }
       />

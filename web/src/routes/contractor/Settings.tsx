@@ -63,6 +63,13 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [accentColor, setAccentColor] = useState(settings.accentColor);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Work Order Template fields
+  const [invoiceFromAddress, setInvoiceFromAddress] = useState(settings.invoiceFromAddress ?? '');
+  const [invoiceTerms, setInvoiceTerms] = useState(settings.invoiceTerms ?? '');
+  const [invoiceNotes, setInvoiceNotes] = useState(settings.invoiceNotes ?? '');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [savedTemplate, setSavedTemplate] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode);
 
   const { user } = useAuth();
@@ -135,6 +142,9 @@ export default function Settings({ settings, userId }: SettingsProps) {
     setMileageRate(String(settings.mileageRate ?? 0.70));
     setAccentColor(settings.accentColor);
     setPushEnabled(settings.pushNotificationsEnabled ?? false);
+    setInvoiceFromAddress(settings.invoiceFromAddress ?? '');
+    setInvoiceTerms(settings.invoiceTerms ?? '');
+    setInvoiceNotes(settings.invoiceNotes ?? '');
   }, [settings]);
 
   async function handleSave() {
@@ -148,6 +158,18 @@ export default function Settings({ settings, userId }: SettingsProps) {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function handleSaveTemplate() {
+    setSavingTemplate(true);
+    await updateSettings(userId, {
+      invoiceFromAddress: invoiceFromAddress || undefined,
+      invoiceTerms: invoiceTerms || undefined,
+      invoiceNotes: invoiceNotes || undefined,
+    });
+    setSavingTemplate(false);
+    setSavedTemplate(true);
+    setTimeout(() => setSavedTemplate(false), 2000);
   }
 
   return (
@@ -348,6 +370,76 @@ export default function Settings({ settings, userId }: SettingsProps) {
           >
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
           </button>
+        </div>
+      </div>
+
+      {/* ── Work Order Template ── */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          Work Order Template
+        </h2>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {/* From Address */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              From Address
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Your business details shown on work orders. One line per row.
+            </p>
+            <textarea
+              value={invoiceFromAddress}
+              onChange={(e) => setInvoiceFromAddress(e.target.value)}
+              placeholder={'Devin Wilson\nCustom software & consulting\ninfo@dwtailored.com'}
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Terms & Conditions */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Terms &amp; Conditions
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Shown at the bottom of every work order PDF. One paragraph per line.
+            </p>
+            <textarea
+              value={invoiceTerms}
+              onChange={(e) => setInvoiceTerms(e.target.value)}
+              placeholder={'This work order is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.'}
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Default Notes
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Additional notes appended after terms. Good for payment instructions or disclaimers.
+            </p>
+            <textarea
+              value={invoiceNotes}
+              onChange={(e) => setInvoiceNotes(e.target.value)}
+              placeholder="Payment via ACH or check. Make payable to DW Tailored."
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Save Template */}
+          <div className="p-5">
+            <button
+              onClick={handleSaveTemplate}
+              disabled={savingTemplate}
+              className="w-full py-2.5 min-h-[44px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+            >
+              {savingTemplate ? 'Saving...' : savedTemplate ? 'Saved!' : 'Save Template'}
+            </button>
+          </div>
         </div>
       </div>
 

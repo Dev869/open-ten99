@@ -241,6 +241,7 @@ export function subscribeSettings(
       invoiceNotes: data?.invoiceNotes ?? undefined,
       invoiceTaxRate: data?.invoiceTaxRate ?? undefined,
       invoiceFromAddress: data?.invoiceFromAddress ?? undefined,
+      invoiceTerms: data?.invoiceTerms ?? undefined,
       teamId: data?.teamId ?? undefined,
       sidebarOrder: data?.sidebarOrder ?? undefined,
       sidebarHidden: data?.sidebarHidden ?? undefined,

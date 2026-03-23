@@ -21,6 +21,9 @@ interface WorkItemDetailProps {
   paymentTerms?: string;
   taxRate?: number;
   pdfLogoUrl?: string;
+  invoiceFromAddress?: string;
+  invoiceTerms?: string;
+  invoiceNotes?: string;
 }
 
 export default function WorkItemDetail({
@@ -30,6 +33,9 @@ export default function WorkItemDetail({
   paymentTerms,
   taxRate,
   pdfLogoUrl,
+  invoiceFromAddress,
+  invoiceTerms,
+  invoiceNotes,
 }: WorkItemDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -112,6 +118,9 @@ export default function WorkItemDetail({
         hourlyRate,
         taxRate,
         pdfLogoUrl,
+        invoiceFromAddress,
+        invoiceTerms,
+        invoiceNotes,
       });
       setPreviewUrl(blobUrl);
       setShowPdfPreview(true);
@@ -703,6 +712,10 @@ export default function WorkItemDetail({
               companyName: 'DW Tailored',
               hourlyRate,
               taxRate,
+              pdfLogoUrl,
+              invoiceFromAddress,
+              invoiceTerms,
+              invoiceNotes,
             });
             setPreviewUrl(blobUrl);
             setShowPdfPreview(true);
