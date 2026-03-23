@@ -229,8 +229,7 @@ export interface GitHubIntegration {
 }
 
 export interface PostmarkWebhook {
-  ciphertext: string;
-  iv: string;
+  encryptedSecret: string;
   updatedAt: Date;
 }
 

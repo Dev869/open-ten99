@@ -4,9 +4,10 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
+import { decryptToken } from "./utils/crypto";
 
 const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
-const encryptionKey = defineSecret("POSTMARK_ENCRYPTION_KEY");
+const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
 interface PostmarkInboundPayload {
   From: string;
@@ -29,22 +30,6 @@ interface ParsedLineItem {
 
 interface GeminiParseResult {
   items: Array<{ description: string; hours: number }>;
-}
-
-/**
- * Decrypts a Postmark webhook secret stored as AES-256-GCM ciphertext.
- * The ciphertext includes the 16-byte auth tag appended.
- */
-function decryptSecret(ciphertextHex: string, ivHex: string, keyHex: string): string {
-  const key = Buffer.from(keyHex, "hex");
-  const iv = Buffer.from(ivHex, "hex");
-  const raw = Buffer.from(ciphertextHex, "hex");
-  // Last 16 bytes are the GCM auth tag
-  const authTag = raw.subarray(raw.length - 16);
-  const encrypted = raw.subarray(0, raw.length - 16);
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(authTag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
 
 /**
@@ -104,15 +89,9 @@ export const onEmailReceived = onRequest(
         .get();
       const pmWebhook = integrationSnap.data()?.postmarkWebhook;
 
-      if (pmWebhook?.ciphertext && pmWebhook?.iv) {
-        const keyHex = encryptionKey.value();
-        if (!keyHex || keyHex.length !== 64) {
-          logger.error("POSTMARK_ENCRYPTION_KEY not configured or invalid");
-          res.status(503).send("Service Unavailable");
-          return;
-        }
+      if (pmWebhook?.encryptedSecret) {
         try {
-          expectedSecret = decryptSecret(pmWebhook.ciphertext, pmWebhook.iv, keyHex);
+          expectedSecret = decryptToken(pmWebhook.encryptedSecret, encryptionKey.value());
         } catch (decryptErr) {
           logger.error("Failed to decrypt Postmark webhook secret", {
             error: decryptErr instanceof Error ? decryptErr.message : String(decryptErr),

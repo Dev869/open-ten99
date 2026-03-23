@@ -782,7 +782,7 @@ export function subscribeIntegration(
           lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
         }
       : null;
-    const postmarkConfigured = !!data.postmarkWebhook?.ciphertext;
+    const postmarkConfigured = !!data.postmarkWebhook?.encryptedSecret;
     callback({ github, postmarkConfigured });
   });
 }

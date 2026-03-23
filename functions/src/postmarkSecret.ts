@@ -1,9 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
-import * as crypto from "crypto";
+import { encryptToken } from "./utils/crypto";
 
-const encryptionKey = defineSecret("POSTMARK_ENCRYPTION_KEY");
+const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
 // Printable ASCII: space (0x20) through tilde (0x7E)
 const PRINTABLE_ASCII = /^[\x20-\x7E]+$/;
@@ -47,7 +47,7 @@ export const onSavePostmarkSecret = onCall(
     if (secret.length < 1 || secret.length > 256) {
       throw new HttpsError(
         "invalid-argument",
-        "Secret must be 1–256 characters"
+        "Secret must be 1-256 characters"
       );
     }
     if (!PRINTABLE_ASCII.test(secret)) {
@@ -57,34 +57,17 @@ export const onSavePostmarkSecret = onCall(
       );
     }
 
-    // Validate encryption key
-    const keyHex = encryptionKey.value();
-    if (!keyHex || keyHex.length !== 64) {
-      throw new HttpsError(
-        "internal",
-        "Encryption not configured — set POSTMARK_ENCRYPTION_KEY in Cloud Functions secrets"
-      );
-    }
+    // Encrypt using shared TOKEN_ENCRYPTION_KEY (same key used by Stripe/Plaid/GitHub)
+    const encrypted = encryptToken(secret, encryptionKey.value());
 
-    // Encrypt with AES-256-GCM
-    const key = Buffer.from(keyHex, "hex");
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-    const encrypted = Buffer.concat([
-      cipher.update(secret, "utf8"),
-      cipher.final(),
-    ]);
-    const authTag = cipher.getAuthTag();
-
-    // Store ciphertext + authTag + iv
+    // Store encrypted secret
     await admin
       .firestore()
       .doc(`integrations/${uid}`)
       .set(
         {
           postmarkWebhook: {
-            ciphertext: Buffer.concat([encrypted, authTag]).toString("hex"),
-            iv: iv.toString("hex"),
+            encryptedSecret: encrypted,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           },
         },
