@@ -13,6 +13,7 @@ import {
   getDocs,
   getDoc,
   writeBatch,
+  serverTimestamp,
   type DocumentData,
   type DocumentSnapshot,
   type QueryConstraint,
@@ -49,6 +50,7 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
       description: li.description ?? '',
       hours: li.hours ?? 0,
       cost: li.cost ?? 0,
+      costOverride: li.costOverride ?? undefined,
     })),
     totalHours: data.totalHours ?? 0,
     totalCost: data.totalCost ?? 0,
@@ -258,6 +260,7 @@ function lineItemToData(li: LineItem) {
     description: li.description,
     hours: li.hours,
     cost: li.cost,
+    ...(li.costOverride !== undefined && { costOverride: li.costOverride }),
   };
 }
 
@@ -1311,6 +1314,9 @@ function docToTimeEntry(id: string, data: DocumentData): TimeEntry {
     startedAt: toDate(data.startedAt),
     endedAt: toDate(data.endedAt),
     createdAt: toDate(data.createdAt),
+    updatedAt: data.updatedAt?.toDate() ?? undefined,
+    workItemId: data.workItemId ?? undefined,
+    lineItemId: data.lineItemId ?? undefined,
   };
 }
 
@@ -1355,9 +1361,39 @@ export async function createTimeEntry(
     startedAt: Timestamp.fromDate(entry.startedAt),
     endedAt: Timestamp.fromDate(entry.endedAt),
     createdAt: Timestamp.now(),
+    ...(entry.workItemId && { workItemId: entry.workItemId }),
+    ...(entry.lineItemId && { lineItemId: entry.lineItemId }),
   });
 
   return docRef.id;
+}
+
+export async function updateTimeEntry(
+  id: string,
+  updates: Partial<Pick<TimeEntry, 'workItemId' | 'lineItemId'>>
+): Promise<void> {
+  const ref = doc(db, 'timeEntries', id);
+  await updateDoc(ref, {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function unlinkTimeEntriesForLineItem(
+  timeEntries: TimeEntry[],
+  lineItemId: string
+): Promise<void> {
+  const batch = writeBatch(db);
+  const matching = timeEntries.filter((te) => te.lineItemId === lineItemId);
+  for (const te of matching) {
+    const ref = doc(db, 'timeEntries', te.id);
+    batch.update(ref, {
+      workItemId: deleteField(),
+      lineItemId: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
 }
 
 // === Mileage Trip Service Functions ===
