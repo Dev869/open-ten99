@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import type { WorkItem } from '../lib/types';
-import { StatusBadge } from './StatusBadge';
 import { TypeTag } from './TypeTag';
 import { formatCurrency, formatHours } from '../lib/utils';
 import { typeColor } from '../lib/theme';
@@ -55,24 +54,30 @@ export function WorkItemCard({
               )}
             </div>
           </div>
-          <StatusBadge status={item.status} />
+          {/* Approval + Completion badges */}
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            {item.clientApproval && (
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                item.clientApproval === 'approved' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
+                item.clientApproval === 'rejected' ? 'bg-red-500/15 text-red-500' :
+                'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+              }`}>
+                {item.clientApproval === 'approved' ? 'Approved' : item.clientApproval === 'rejected' ? 'Rejected' : 'Pending'}
+              </span>
+            )}
+            {item.completed ? (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                ✓ Done
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] whitespace-nowrap">
+                Open
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <TypeTag type={item.type} />
-          {item.clientApproval && (
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-              item.clientApproval === 'approved' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' :
-              item.clientApproval === 'rejected' ? 'bg-red-500/15 text-red-500' :
-              'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-            }`}>
-              {item.clientApproval === 'approved' ? 'Approved' : item.clientApproval === 'rejected' ? 'Rejected' : 'Pending Approval'}
-            </span>
-          )}
-          {item.completed && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              ✓ Completed
-            </span>
-          )}
           {!item.isBillable && (
             <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full">
               Non-Billable
