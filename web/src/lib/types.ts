@@ -228,6 +228,17 @@ export interface GitHubIntegration {
   lastSyncAt?: Date;
 }
 
+export interface PostmarkWebhook {
+  ciphertext: string;
+  iv: string;
+  updatedAt: Date;
+}
+
+export interface IntegrationData {
+  github: GitHubIntegration | null;
+  postmarkConfigured: boolean;
+}
+
 export interface GitHubRepoInfo {
   fullName: string;
   defaultBranch: string;

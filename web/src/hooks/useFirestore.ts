@@ -18,7 +18,7 @@ import {
   subscribeInsights,
   callGenerateInsights,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, GitHubIntegration, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
+import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -181,7 +181,10 @@ export function useTeamInvites(teamId: string | undefined) {
 }
 
 export function useIntegration(userId: string | undefined) {
-  const [integration, setIntegration] = useState<GitHubIntegration | null>(null);
+  const [integration, setIntegration] = useState<IntegrationData>({
+    github: null,
+    postmarkConfigured: false,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

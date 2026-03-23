@@ -421,35 +421,35 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <h3 className="text-sm font-bold text-[var(--text-primary)]">GitHub</h3>
           </div>
 
-          {integration?.connected ? (
+          {integration.github?.connected ? (
             <div className="space-y-4 mt-3">
               {/* User info */}
               <div className="flex items-center gap-3">
-                {integration.avatarUrl ? (
+                {integration.github?.avatarUrl ? (
                   <img
-                    src={integration.avatarUrl}
-                    alt={integration.login}
+                    src={integration.github?.avatarUrl}
+                    alt={integration.github?.login}
                     className="w-9 h-9 rounded-full border border-[var(--border)]"
                   />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-[var(--bg-input)] flex items-center justify-center text-[var(--text-secondary)] text-sm font-bold">
-                    {integration.login.charAt(0).toUpperCase()}
+                    {integration.github?.login.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{integration.login}</p>
-                  {integration.lastSyncAt && (
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{integration.github?.login}</p>
+                  {integration.github?.lastSyncAt && (
                     <p className="text-[10px] text-[var(--text-secondary)]">
-                      Last synced {formatRelativeTime(integration.lastSyncAt)}
+                      Last synced {formatRelativeTime(integration.github?.lastSyncAt)}
                     </p>
                   )}
                 </div>
               </div>
 
               {/* Orgs */}
-              {integration.orgs.length > 0 && (
+              {integration.github?.orgs.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {integration.orgs.map((org) => (
+                  {integration.github?.orgs.map((org) => (
                     <span
                       key={org}
                       className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] border border-[var(--border)]"

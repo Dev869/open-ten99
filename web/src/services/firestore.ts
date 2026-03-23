@@ -20,7 +20,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData } from '../lib/types';
 
 // --- Converters ---
 
@@ -763,23 +763,27 @@ export async function deleteTeamInvite(teamId: string, inviteId: string) {
 
 export function subscribeIntegration(
   userId: string,
-  callback: (integration: GitHubIntegration | null) => void
+  callback: (integration: IntegrationData) => void
 ) {
   const ref = doc(db, 'integrations', userId);
   return onSnapshot(ref, (snapshot) => {
     if (!snapshot.exists()) {
-      callback(null);
+      callback({ github: null, postmarkConfigured: false });
       return;
     }
     const data = snapshot.data();
-    callback({
-      connected: data.connected ?? false,
-      login: data.login ?? '',
-      avatarUrl: data.avatarUrl ?? undefined,
-      orgs: data.orgs ?? [],
-      connectedAt: toDate(data.connectedAt),
-      lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
-    });
+    const github: GitHubIntegration | null = data.connected
+      ? {
+          connected: data.connected ?? false,
+          login: data.login ?? '',
+          avatarUrl: data.avatarUrl ?? undefined,
+          orgs: data.orgs ?? [],
+          connectedAt: toDate(data.connectedAt),
+          lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
+        }
+      : null;
+    const postmarkConfigured = !!data.postmarkWebhook?.ciphertext;
+    callback({ github, postmarkConfigured });
   });
 }
 
@@ -1132,6 +1136,32 @@ export async function updateTransactionCategory(
     category,
     updatedAt: Timestamp.now(),
   });
+}
+
+export async function updateTransaction(
+  transactionId: string,
+  fields: Partial<Pick<Transaction, 'description' | 'category' | 'taxDeductible' | 'type'>>
+): Promise<void> {
+  await updateDoc(doc(db, 'transactions', transactionId), {
+    ...fields,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function fetchTransaction(transactionId: string): Promise<Transaction | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    const snap = await getDoc(doc(db, 'transactions', transactionId));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    if (data.ownerId !== user.uid) return null;
+    return docToTransaction(snap.id, data);
+  } catch (error) {
+    console.error('Failed to fetch transaction:', error);
+    return null;
+  }
 }
 
 export async function fetchTransactions(options: {
