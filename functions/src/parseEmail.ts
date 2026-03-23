@@ -54,21 +54,28 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    let contractorUid: string;
+    let contractorUid: string | null = null;
     try {
       const integrationsSnap = await admin
         .firestore()
         .collection("integrations")
-        .where("postmarkWebhook.token", "==", providedToken)
-        .limit(1)
         .get();
 
-      if (integrationsSnap.empty) {
-        logger.warn("No matching webhook token found");
+      for (const doc of integrationsSnap.docs) {
+        const storedToken = doc.data()?.postmarkWebhook?.token;
+        if (typeof storedToken === "string" && storedToken === providedToken) {
+          contractorUid = doc.id;
+          break;
+        }
+      }
+
+      if (!contractorUid) {
+        logger.warn("No matching webhook token found", {
+          docsChecked: integrationsSnap.size,
+        });
         res.status(401).send("Unauthorized");
         return;
       }
-      contractorUid = integrationsSnap.docs[0].id;
     } catch (firestoreErr) {
       logger.error("Failed to look up webhook token", {
         error: firestoreErr instanceof Error ? firestoreErr.message : String(firestoreErr),
