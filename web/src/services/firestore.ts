@@ -308,6 +308,7 @@ export async function updateWorkItem(item: WorkItem) {
       : null,
     pdfUrl: item.pdfUrl ?? null,
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
+    completed: item.completed ?? false,
     ownerId: auth.currentUser?.uid ?? null,
     updatedAt: Timestamp.now(),
   });
