@@ -3,6 +3,7 @@ export interface LineItem {
   description: string;
   hours: number;
   cost: number;
+  costOverride?: number;
 }
 
 export type WorkItemType = 'changeRequest' | 'featureRequest' | 'maintenance';
@@ -95,6 +96,7 @@ export interface AppSettings {
   pushNotificationsEnabled?: boolean;
   fcmToken?: string;
   mileageRate?: number;
+  roundTimeToQuarterHour?: boolean;
 }
 
 export const PAYMENT_TERMS_OPTIONS = [
@@ -398,6 +400,9 @@ export interface TimeEntry {
   startedAt: Date;
   endedAt: Date;
   createdAt: Date;
+  updatedAt?: Date;
+  workItemId?: string;
+  lineItemId?: string;
 }
 
 /* ── Mileage Tracking ─────────────────────────────── */
