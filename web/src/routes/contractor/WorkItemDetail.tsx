@@ -741,7 +741,7 @@ export default function WorkItemDetail({
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-[var(--bg-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col sm:mx-4">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Work Order Preview</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Invoice Preview</h3>
               <div className="flex items-center gap-2">
                 <a
                   href={previewUrl}

@@ -42,7 +42,7 @@ const LINE_H = 16;          // standard text line height
 const SECTION_GAP = 24;     // gap between major sections
 
 /**
- * Generates a branded, professional change order PDF and returns a blob URL.
+ * Generates a branded, professional invoice PDF and returns a blob URL.
  */
 export async function buildChangeOrderPdf(
   workItem: WorkItem,
@@ -83,7 +83,7 @@ export async function buildChangeOrderPdf(
    * ════════════════════════════════════════════════════════ */
 
   // "WORK ORDER" label — top right, inside a teal box
-  const coLabel = 'WORK ORDER';
+  const coLabel = 'INVOICE';
   const coFontSize = 16;
   const coTextW = fontBold.widthOfTextAtSize(coLabel, coFontSize);
   const coPadX = 14;
@@ -192,7 +192,7 @@ export async function buildChangeOrderPdf(
   const statusLabel = WORK_ITEM_STATUS_LABELS[workItem.status] ?? workItem.status;
 
   const detailRows: Array<{ label: string; value: string }> = [
-    { label: 'Work Order #:', value: workItem.id ?? '—' },
+    { label: 'Invoice #:', value: workItem.id ?? '—' },
     { label: 'Date:', value: orderDate },
     { label: 'Status:', value: statusLabel },
   ];
