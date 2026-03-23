@@ -1,13 +1,11 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineString, defineSecret } from "firebase-functions/params";
+import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
-import { decryptToken } from "./utils/crypto";
 
 const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
-const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
 interface PostmarkInboundPayload {
   From: string;
@@ -44,7 +42,7 @@ interface GeminiParseResult {
  * 6. Create a workItems doc in Firestore
  */
 export const onEmailReceived = onRequest(
-  { maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
+  { maxInstances: 10, timeoutSeconds: 120 },
   async (req, res) => {
     // Only accept POST requests
     if (req.method !== "POST") {
@@ -71,17 +69,17 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    // --- Validate webhook secret ---
-    const providedSecret = req.headers["x-postmark-secret"];
-    if (typeof providedSecret !== "string" || providedSecret.length === 0) {
-      logger.warn("Missing webhook secret header");
+    // --- Validate webhook token (passed as ?token= query param) ---
+    const providedToken = req.query.token;
+    if (typeof providedToken !== "string" || providedToken.length === 0) {
+      logger.warn("Missing webhook token query parameter");
       res.status(401).send("Unauthorized");
       return;
     }
 
-    let expectedSecret: string | null = null;
+    let expectedToken: string | null = null;
 
-    // Try Firestore first
+    // Try Firestore first (token stored by onSavePostmarkSecret)
     try {
       const integrationSnap = await admin
         .firestore()
@@ -89,21 +87,13 @@ export const onEmailReceived = onRequest(
         .get();
       const pmWebhook = integrationSnap.data()?.postmarkWebhook;
 
-      if (pmWebhook?.encryptedSecret) {
-        try {
-          expectedSecret = decryptToken(pmWebhook.encryptedSecret, encryptionKey.value());
-        } catch (decryptErr) {
-          logger.error("Failed to decrypt Postmark webhook secret", {
-            error: decryptErr instanceof Error ? decryptErr.message : String(decryptErr),
-          });
-          res.status(503).send("Service Unavailable");
-          return;
-        }
+      if (pmWebhook?.token) {
+        expectedToken = pmWebhook.token;
       } else {
-        // Field absent — fall back to env var
+        // Field absent — fall back to env var for backward compat
         const envSecret = webhookSecret.value();
         if (envSecret && envSecret.length > 0) {
-          expectedSecret = envSecret;
+          expectedToken = envSecret;
         }
       }
     } catch (firestoreErr) {
@@ -114,26 +104,26 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    if (!expectedSecret) {
-      logger.warn("No webhook secret configured (Firestore or env)");
+    if (!expectedToken) {
+      logger.warn("No webhook token configured (Firestore or env)");
       res.status(401).send("Unauthorized");
       return;
     }
 
     // Timing-safe comparison with padding to prevent length leakage
-    const provided = Buffer.from(providedSecret);
-    const expected = Buffer.from(expectedSecret);
+    const provided = Buffer.from(providedToken);
+    const expected = Buffer.from(expectedToken);
     const safeLen = Math.max(provided.length, expected.length);
     const paddedProvided = Buffer.alloc(safeLen);
     const paddedExpected = Buffer.alloc(safeLen);
     provided.copy(paddedProvided);
     expected.copy(paddedExpected);
-    const secretValid =
+    const tokenValid =
       crypto.timingSafeEqual(paddedProvided, paddedExpected) &&
       provided.length === expected.length;
 
-    if (!secretValid) {
-      logger.warn("Invalid webhook secret received");
+    if (!tokenValid) {
+      logger.warn("Invalid webhook token received");
       res.status(401).send("Unauthorized");
       return;
     }

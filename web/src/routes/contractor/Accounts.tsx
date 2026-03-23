@@ -29,23 +29,40 @@ export default function Accounts() {
   const { integration } = useIntegration(user?.uid);
 
   // Postmark state
-  const [postmarkSecret, setPostmarkSecret] = useState('');
   const [postmarkLoading, setPostmarkLoading] = useState(false);
   const [postmarkError, setPostmarkError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const webhookUrl = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/onEmailReceived`;
+  const baseWebhookUrl = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/onEmailReceived`;
+  const webhookUrl = integration.postmarkToken
+    ? `${baseWebhookUrl}?token=${integration.postmarkToken}`
+    : '';
 
-  const handleSavePostmarkSecret = useCallback(async (secret: string) => {
+  const handleGenerateWebhookUrl = useCallback(async () => {
     setPostmarkLoading(true);
     setPostmarkError(null);
     try {
       const fn = httpsCallable(functions, 'onSavePostmarkSecret');
-      await fn({ secret });
-      setPostmarkSecret('');
-      addToast(secret === '' ? 'Postmark disconnected' : 'Postmark secret saved!', 'success');
+      await fn({});
+      addToast('Webhook URL generated!', 'success');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save Postmark secret';
+      const message = err instanceof Error ? err.message : 'Failed to generate webhook URL';
+      setPostmarkError(message);
+      addToast(message, 'error');
+    } finally {
+      setPostmarkLoading(false);
+    }
+  }, [addToast]);
+
+  const handleDisconnectPostmark = useCallback(async () => {
+    setPostmarkLoading(true);
+    setPostmarkError(null);
+    try {
+      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
+      await fn({ disconnect: true });
+      addToast('Postmark disconnected', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to disconnect Postmark';
       setPostmarkError(message);
       addToast(message, 'error');
     } finally {
@@ -245,7 +262,7 @@ export default function Accounts() {
           </div>
 
           {/* Postmark Email subsection */}
-          <div className="p-5 border-t border-[var(--border)]">
+          <div className="p-5">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 Postmark Email
@@ -264,78 +281,64 @@ export default function Accounts() {
               </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)] mb-4">
-              Receive client emails as draft work orders. Paste the URL and secret into your Postmark server's Inbound webhook settings.
+              Receive client emails as draft work orders. Paste the webhook URL into your Postmark server's Inbound settings.
             </p>
 
-            {/* Webhook URL */}
-            <div className="mb-3">
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                Webhook URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={webhookUrl}
-                  className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm font-mono select-all"
-                />
-                <button
-                  onClick={handleCopyWebhookUrl}
-                  className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
-                  title="Copy to clipboard"
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
+            {postmarkError && (
+              <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg mb-3">
+                {postmarkError}
               </div>
-            </div>
+            )}
 
-            {/* Webhook Secret */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (postmarkSecret.trim()) handleSavePostmarkSecret(postmarkSecret.trim());
-              }}
-              className="space-y-3"
-            >
-              <div>
-                <label htmlFor="postmark-secret" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  Webhook Secret
-                </label>
-                <input
-                  id="postmark-secret"
-                  type="password"
-                  value={postmarkSecret}
-                  onChange={(e) => setPostmarkSecret(e.target.value)}
-                  placeholder={integration.postmarkConfigured ? '••••••••' : 'Enter your webhook secret'}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-                  disabled={postmarkLoading}
-                />
-              </div>
-              {postmarkError && (
-                <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-                  {postmarkError}
+            {integration.postmarkConfigured ? (
+              <>
+                {/* Webhook URL with token */}
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Inbound Webhook URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={webhookUrl}
+                      className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-xs font-mono select-all"
+                    />
+                    <button
+                      onClick={handleCopyWebhookUrl}
+                      className="shrink-0 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={postmarkLoading || !postmarkSecret.trim()}
-                  className="px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {postmarkLoading ? 'Saving...' : 'Save Secret'}
-                </button>
-                {integration.postmarkConfigured && (
+                <div className="flex gap-2">
                   <button
-                    type="button"
-                    onClick={() => handleSavePostmarkSecret('')}
+                    onClick={handleGenerateWebhookUrl}
+                    disabled={postmarkLoading}
+                    className="px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {postmarkLoading ? 'Generating...' : 'Regenerate URL'}
+                  </button>
+                  <button
+                    onClick={handleDisconnectPostmark}
                     disabled={postmarkLoading}
                     className="px-4 py-2.5 rounded-lg border border-red-500/30 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Disconnect
                   </button>
-                )}
-              </div>
-            </form>
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={handleGenerateWebhookUrl}
+                disabled={postmarkLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {postmarkLoading ? 'Generating...' : 'Generate Webhook URL'}
+              </button>
+            )}
           </div>
         </div>
       </section>

@@ -229,13 +229,14 @@ export interface GitHubIntegration {
 }
 
 export interface PostmarkWebhook {
-  encryptedSecret: string;
+  token: string;
   updatedAt: Date;
 }
 
 export interface IntegrationData {
   github: GitHubIntegration | null;
   postmarkConfigured: boolean;
+  postmarkToken?: string;
 }
 
 export interface GitHubRepoInfo {
