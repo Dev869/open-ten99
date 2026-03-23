@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../lib/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { auth, functions } from '../../lib/firebase';
 
 export default function PortalAuth() {
   const [params] = useSearchParams();
@@ -25,6 +26,9 @@ export default function PortalAuth() {
           { clientId: string; workItemId?: string; email: string }
         >(functions, 'verifyMagicLink');
         const result = await verify({ token });
+
+        // Sign in anonymously for portal access
+        await signInAnonymously(auth);
 
         // Store portal session info
         sessionStorage.setItem('portalClientId', result.data.clientId);
