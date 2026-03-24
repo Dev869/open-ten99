@@ -257,7 +257,17 @@ export default function WorkItemDetail({
       <div className="bg-gradient-to-br from-[#1A1A2E] to-[#444] rounded-2xl p-6 mb-4">
         <div className="flex justify-between items-start">
           <div>
-            <div className="text-sm text-white/70">{client?.name ?? 'Unknown Client'}</div>
+            <select
+              value={item.clientId}
+              onChange={(e) => setItem({ ...item, clientId: e.target.value })}
+              className="text-sm text-white/70 bg-transparent border-none outline-none cursor-pointer hover:text-white transition-colors appearance-none pr-4 -ml-1 px-1 rounded focus:ring-1 focus:ring-[var(--accent)]"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'rgba(255,255,255,0.5)\' fill=\'none\' stroke-width=\'1.5\' stroke-linecap=\'round\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0 center' }}
+            >
+              <option value="" className="text-[var(--text-primary)] bg-[var(--bg-card)]">No client</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id} className="text-[var(--text-primary)] bg-[var(--bg-card)]">{c.name}</option>
+              ))}
+            </select>
             <input
               type="text"
               value={item.subject}
