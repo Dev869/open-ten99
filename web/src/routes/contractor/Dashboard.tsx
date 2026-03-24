@@ -16,7 +16,7 @@ import {
   IconCar,
   IconPlus,
 } from '../../components/icons/Icons';
-import { TrendChart } from '../../components/dashboard/DashboardCharts';
+import { TrendChart, VerticalBarChart } from '../../components/dashboard/DashboardCharts';
 import {
   TrendStatCard,
   TopClientsCard,
@@ -29,9 +29,23 @@ import {
   WidgetConfigurator,
   WidgetSettingsButton,
 } from '../../components/dashboard/WidgetConfigurator';
-import { NewInvoiceModal } from '../../components/finance/NewInvoiceModal';
+
 import type { WorkItem, Client, App } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
+
+/* ── Widget section labels ────────────────────────── */
+
+const WIDGET_SECTIONS: Record<string, string> = {
+  'quick-actions': 'Quick Links',
+  'stat-cards': 'Quick Links',
+  'work-time': 'Analytics',
+  'weekly-hours': 'Analytics',
+  'info-grid': 'Analytics',
+  'revenue-chart': 'Analytics',
+  'utilization-gauge': 'Analytics',
+  'needs-attention': 'Activity',
+  'recent-completed': 'Activity',
+};
 
 class WidgetErrorBoundary extends Component<
   { widgetId: string; children: ReactNode },
@@ -296,11 +310,10 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
   const { config: widgetConfig, isVisible, toggleWidget, moveWidget, resetToDefault } = useDashboardWidgets();
   const [widgetPanelOpen, setWidgetPanelOpen] = useState(false);
 
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
   /* ── Widget render map ─────────────────────────── */
   const quickActions = [
-    { label: 'Invoice', Icon: IconDollar, color: 'var(--color-orange)', action: () => setInvoiceModalOpen(true) },
+    { label: 'Invoice', Icon: IconDollar, color: 'var(--color-orange)', action: () => navigate('/dashboard/finance/invoices') },
     { label: 'Receipt', Icon: IconCamera, color: 'var(--accent)', action: () => navigate('/dashboard/finance/receipts') },
     { label: 'Client', Icon: IconPlus, color: 'var(--color-green)', action: () => navigate('/dashboard/clients') },
     { label: 'Trip', Icon: IconCar, color: 'var(--text-secondary)', action: () => navigate('/dashboard/finance/mileage') },
@@ -313,15 +326,16 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
           <button
             key={label}
             onClick={action}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all flex-shrink-0"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all flex-shrink-0 border-l-[3px] shadow-sm"
+            style={{ borderLeftColor: color }}
           >
             <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}
             >
-              <Icon size={14} color={color} />
+              <Icon size={16} color={color} />
             </div>
-            <span className="text-xs font-semibold text-[var(--text-primary)] whitespace-nowrap">{label}</span>
+            <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">{label}</span>
           </button>
         ))}
       </div>
@@ -473,7 +487,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
           </Link>
         </div>
         <div className="mt-4">
-          <TrendChart
+          <VerticalBarChart
             data={dailyHoursData}
             color="var(--accent)"
             gradientId="chart-weekly-hours"
@@ -522,7 +536,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
             Details
           </Link>
         </div>
-        <TrendChart
+        <VerticalBarChart
           data={monthlyRevenueData}
           color="var(--color-orange)"
           gradientId="chart-monthly-rev"
@@ -616,9 +630,15 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
   return (
     <div className="animate-fade-in-up">
       <div className="flex items-center justify-between mb-3 md:mb-6">
-        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-          Dashboard
-        </h1>
+        <div className="hidden md:block">
+          <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+            {now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
+            {user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
+          </h1>
+          <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
         <div className="md:hidden" />
         <WidgetSettingsButton onClick={() => setWidgetPanelOpen(true)} />
       </div>
@@ -635,17 +655,26 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
         </div>
       )}
 
-      {/* Render widgets in user-configured order */}
-      {widgetConfig.order.map((widgetId) => {
-        if (!isVisible(widgetId)) return null;
-        const render = widgetRenderers[widgetId];
-        if (!render) return null;
-        return (
-          <WidgetErrorBoundary key={widgetId} widgetId={widgetId}>
-            {render()}
-          </WidgetErrorBoundary>
-        );
-      })}
+      {/* Render widgets in user-configured order, with section labels */}
+      {widgetConfig.order
+        .filter((id) => isVisible(id) && widgetRenderers[id])
+        .map((widgetId, idx, visible) => {
+          const section = WIDGET_SECTIONS[widgetId] ?? '';
+          const prevSection = idx > 0 ? (WIDGET_SECTIONS[visible[idx - 1]] ?? '') : '';
+          const showHeader = section !== '' && section !== prevSection;
+          return (
+            <div key={widgetId}>
+              {showHeader && (
+                <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-2 md:mb-3 mt-1 md:mt-2">
+                  {section}
+                </h2>
+              )}
+              <WidgetErrorBoundary widgetId={widgetId}>
+                {widgetRenderers[widgetId]()}
+              </WidgetErrorBoundary>
+            </div>
+          );
+        })}
 
       {/* Widget configurator modal */}
       {widgetPanelOpen && (
@@ -655,16 +684,6 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
           onMove={moveWidget}
           onReset={resetToDefault}
           onClose={() => setWidgetPanelOpen(false)}
-        />
-      )}
-
-      {/* New Invoice modal (from quick action) */}
-      {invoiceModalOpen && (
-        <NewInvoiceModal
-          clients={clients}
-          hourlyRate={settings.hourlyRate}
-          paymentTerms={settings.invoicePaymentTerms}
-          onClose={() => setInvoiceModalOpen(false)}
         />
       )}
     </div>

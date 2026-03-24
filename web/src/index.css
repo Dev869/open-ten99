@@ -213,6 +213,15 @@ main {
   display: none;
 }
 
+/* Remove focus outline from chart containers and all chart elements */
+.recharts-wrapper,
+.recharts-wrapper svg,
+.recharts-wrapper path,
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none !important;
+}
+
 /* Active nav glow */
 .teal-glow {
   box-shadow: 0 0 8px rgba(75, 168, 168, 0.25);

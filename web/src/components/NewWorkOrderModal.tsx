@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../lib/types';
 import { RECURRENCE_LABELS } from '../lib/types';
 import { formatCurrency, addBusinessDays, formatDate, cn } from '../lib/utils';
@@ -109,35 +110,38 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
     setSaving(false);
   }
 
-  const inputClass = 'w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors';
+  const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
 
-  return (
+  return createPortal(
     <>
-      {/* Desktop backdrop */}
-      <div
-        className="hidden md:block fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
+      {/* Full-screen overlay — covers everything including sidebar/navbar */}
+      <div className="fixed inset-0 z-[100] flex items-center justify-center">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+          onClick={onClose}
+        />
 
-      {/* Modal — full page on mobile, centered card on desktop */}
-      <div
-        className={cn(
-          'fixed z-[60] flex flex-col bg-[var(--bg-page)]',
-          'inset-0',
-          'md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
-          'md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
-          'animate-fade-in-up md:animate-scale-in'
-        )}
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
+        {/* Modal — full page on mobile, centered card on desktop */}
+        <div
+          className={cn(
+            'relative z-10 flex flex-col bg-[var(--bg-page)]',
+            'w-full h-full md:w-full md:h-auto',
+            'md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
+            'animate-fade-in-up md:animate-scale-in'
+          )}
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
         {/* Header */}
-        <div className="flex items-center justify-between h-14 px-4 flex-shrink-0 border-b border-[var(--border)]">
-          <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-            New Work Order
-          </h1>
+        <div className="flex items-center justify-between h-14 px-5 flex-shrink-0 border-b border-[var(--border)]">
+          <div>
+            <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+              New Work Order
+            </h1>
+          </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
           >
             <IconClose size={18} />
           </button>
@@ -145,24 +149,24 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-4 space-y-4">
+          <div className="px-5 py-5 space-y-5">
 
             {/* Type */}
             <div>
               <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
                 Type
               </label>
-              <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-0.5">
+              <div className="flex gap-1 bg-[var(--bg-input)] rounded-xl p-1">
                 {typeOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setType(opt.value)}
                     className={cn(
-                      'flex-1 py-2 rounded-md text-xs font-semibold transition-all',
+                      'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
                       type === opt.value
                         ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
-                        : 'text-[var(--text-secondary)]'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     )}
                   >
                     {opt.label}
@@ -252,15 +256,15 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                 <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
                   Billing
                 </label>
-                <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-0.5 h-10 items-center">
+                <div className="flex gap-1 bg-[var(--bg-input)] rounded-xl p-1 h-10 items-center">
                   <button
                     type="button"
                     onClick={() => setDeductFromRetainer(false)}
                     className={cn(
-                      'flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
+                      'flex-1 py-1.5 rounded-lg text-xs font-bold transition-all',
                       !deductFromRetainer
                         ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
-                        : 'text-[var(--text-secondary)]'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     )}
                   >
                     Hourly
@@ -269,10 +273,10 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                     type="button"
                     onClick={() => setDeductFromRetainer(true)}
                     className={cn(
-                      'flex-1 py-1.5 rounded-md text-xs font-semibold transition-all',
+                      'flex-1 py-1.5 rounded-lg text-xs font-bold transition-all',
                       deductFromRetainer
                         ? 'bg-[var(--bg-card)] text-[var(--color-orange)] shadow-sm'
-                        : 'text-[var(--text-secondary)]'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     )}
                   >
                     Retainer
@@ -386,35 +390,35 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
               </label>
               <div className="space-y-2">
                 {lineItems.map((li, i) => (
-                  <div key={li.id} className="bg-[var(--bg-card)] rounded-lg p-3 border border-[var(--border)]">
+                  <div key={li.id} className="bg-[var(--bg-card)] rounded-xl p-3.5 border border-[var(--border)]">
                     <div className="flex gap-2 items-start">
                       <input
                         type="text"
                         value={li.description}
                         onChange={(e) => updateLineItem(i, 'description', e.target.value)}
                         placeholder="Description"
-                        className="flex-1 text-sm text-[var(--text-primary)] bg-transparent outline-none placeholder:text-[var(--text-secondary)]"
+                        className="flex-1 text-sm text-[var(--text-primary)] bg-transparent outline-none placeholder:text-[var(--text-secondary)]/60"
                       />
                       <button
                         onClick={() => removeLineItem(i)}
-                        className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--color-red)] hover:bg-[var(--bg-input)] transition-colors flex-shrink-0"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:text-[var(--color-red)] hover:bg-[var(--bg-input)] transition-colors flex-shrink-0"
                       >
                         <IconTrash size={12} />
                       </button>
                     </div>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border)]">
                       <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] font-medium">
-                        Hrs
+                        Hours
                         <input
                           type="number"
                           value={li.hours}
                           onChange={(e) => updateLineItem(i, 'hours', e.target.value)}
                           step="0.5"
                           min="0"
-                          className="w-14 h-7 px-2 bg-[var(--bg-input)] rounded text-xs font-semibold text-[var(--text-primary)] outline-none text-center"
+                          className="w-16 h-8 px-2 bg-[var(--bg-input)] rounded-lg text-xs font-bold text-[var(--text-primary)] outline-none text-center focus:ring-2 focus:ring-[var(--accent)]/15 transition-all"
                         />
                       </label>
-                      <span className="text-xs font-semibold text-[var(--text-primary)] ml-auto">
+                      <span className="text-sm font-bold text-[var(--text-primary)] ml-auto tabular-nums">
                         {formatCurrency(li.cost)}
                       </span>
                     </div>
@@ -422,9 +426,9 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                 ))}
                 <button
                   onClick={addLineItem}
-                  className="w-full h-10 flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--accent)] rounded-lg border border-dashed border-[var(--border)] hover:bg-[var(--accent)]/5 transition-colors"
+                  className="w-full h-11 flex items-center justify-center gap-2 text-xs font-bold text-[var(--accent)] rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent)]/5 transition-all"
                 >
-                  <IconPlus size={12} />
+                  <IconPlus size={14} />
                   Add Line Item
                 </button>
               </div>
@@ -432,18 +436,18 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
 
             {/* Totals */}
             {lineItems.length > 0 && (
-              <div className="flex justify-between items-center bg-[var(--bg-card)] rounded-lg p-3 border border-[var(--border)]">
+              <div className="flex justify-between items-center bg-[var(--accent)]/8 rounded-xl p-4">
                 <div>
-                  <div className="text-[10px] text-[var(--text-secondary)] font-medium uppercase tracking-wider">Total</div>
-                  <div className="text-base font-extrabold text-[var(--text-primary)] mt-0.5">
-                    {totalHours.toFixed(1)} hrs
+                  <div className="text-[10px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Total Hours</div>
+                  <div className="text-lg font-extrabold text-[var(--text-primary)] mt-0.5 tabular-nums">
+                    {totalHours.toFixed(1)}h
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-[var(--text-secondary)]">
+                  <div className="text-[10px] text-[var(--text-secondary)] font-medium">
                     @ {formatCurrency(hourlyRate)}/hr
                   </div>
-                  <div className="text-lg font-extrabold text-[var(--accent)]">
+                  <div className="text-xl font-extrabold text-[var(--accent)] tabular-nums">
                     {formatCurrency(totalCost)}
                   </div>
                 </div>
@@ -454,24 +458,26 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
 
         {/* Footer */}
         <div
-          className="flex gap-3 px-4 py-3 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          className="flex gap-3 px-5 py-4 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
             onClick={onClose}
-            className="flex-1 h-10 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!isValid || saving}
-            className="flex-1 h-10 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold shadow-sm hover:bg-[var(--accent-dark)] disabled:bg-[var(--border)] disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-[0.98]"
           >
-            {saving ? 'Saving...' : 'Create'}
+            {saving ? 'Saving...' : 'Create Work Order'}
           </button>
         </div>
       </div>
-    </>
+      </div>
+    </>,
+    document.body
   );
 }

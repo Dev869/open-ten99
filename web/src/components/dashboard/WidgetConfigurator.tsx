@@ -226,10 +226,10 @@ export function WidgetSettingsButton({ onClick }: WidgetSettingsButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="p-1.5 md:p-2 rounded-lg hover:bg-[var(--bg-input)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+      className="p-2.5 rounded-xl hover:bg-[var(--bg-input)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
       title="Customize dashboard"
     >
-      <IconSettings size={14} />
+      <IconSettings size={20} />
     </button>
   );
 }

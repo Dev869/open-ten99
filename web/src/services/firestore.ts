@@ -267,8 +267,12 @@ function lineItemToData(li: LineItem) {
 export async function createWorkItem(item: Omit<WorkItem, 'id' | 'createdAt' | 'updatedAt'>) {
   const now = Timestamp.now();
   const ref = collection(db, 'workItems');
+  // Strip undefined values — Firestore rejects them in addDoc()
+  const clean = Object.fromEntries(
+    Object.entries(item).filter(([, v]) => v !== undefined)
+  );
   const docRef = await addDoc(ref, {
-    ...item,
+    ...clean,
     lineItems: item.lineItems.map(lineItemToData),
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
     ownerId: auth.currentUser?.uid ?? null,

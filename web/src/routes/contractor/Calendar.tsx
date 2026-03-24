@@ -440,8 +440,8 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
 
   const viewOptions: View[] = ['month', 'week', 'list'];
 
-  /* ── Day header letters ─────────────────────────── */
-  const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  /* ── Day header labels ──────────────────────────── */
+  const dayLetters = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Make <main> a non-scrolling flex container so the calendar fills it
   useEffect(() => {
@@ -568,20 +568,20 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
                     <div
                       key={day.toISOString()}
                       className={cn(
-                        'flex flex-col p-1 overflow-hidden border-b border-r border-[var(--border)] transition-colors cursor-default group',
+                        'flex flex-col p-1.5 overflow-hidden border-b border-r border-[var(--border)] transition-colors cursor-default group',
                         isWeekend && 'bg-[var(--bg-input)]/30',
-                        !isCurrentMonth && 'opacity-40',
-                        isToday && 'ring-1 ring-inset ring-[var(--accent)]/50 bg-[var(--accent)]/5',
+                        !isCurrentMonth && 'opacity-30',
+                        isToday && 'bg-[var(--accent)]/8',
                         'hover:bg-[var(--bg-input)]/50'
                       )}
                     >
                       {/* Day number */}
-                      <div className="flex-shrink-0 mb-0.5">
+                      <div className="flex-shrink-0 mb-1">
                         <span
                           className={cn(
-                            'inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full',
+                            'inline-flex items-center justify-center w-6 h-6 text-[11px] font-bold rounded-full',
                             isToday
-                              ? 'bg-[var(--accent)] text-white'
+                              ? 'bg-[var(--accent)] text-white shadow-sm'
                               : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
                           )}
                         >
@@ -589,32 +589,33 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
                         </span>
                       </div>
 
-                      {/* Work items — tiny pills */}
-                      <div className="flex-1 min-h-0 flex flex-col gap-px overflow-hidden">
-                        {items.slice(0, maxVisible).map((ci) => (
-                          <button
-                            key={calendarItemKey(ci)}
-                            onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
-                            className={cn(
-                              'flex items-center gap-1 w-full text-left rounded px-1 py-px transition-all hover:brightness-110 min-w-0',
-                              ci.isRecurring && 'opacity-70'
-                            )}
-                            title={`${ci.item.subject} - ${clientMap[ci.item.clientId] ?? 'Unknown'} - ${ci.item.totalHours.toFixed(1)}h`}
-                          >
-                            {/* Color dot */}
-                            <span
-                              className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type) }}
-                            />
-                            {/* Title — truncated pill */}
-                            <span className="text-[9px] leading-tight font-medium text-[var(--text-primary)] truncate">
-                              {ci.item.subject}
-                            </span>
-                          </button>
-                        ))}
+                      {/* Work items — colored pills */}
+                      <div className="flex-1 min-h-0 flex flex-col gap-0.5 overflow-hidden">
+                        {items.slice(0, maxVisible).map((ci) => {
+                          const color = TYPE_COLORS[ci.item.type] ?? typeColor(ci.item.type);
+                          return (
+                            <button
+                              key={calendarItemKey(ci)}
+                              onClick={() => navigate(`/dashboard/work-items/${ci.item.id}`)}
+                              className={cn(
+                                'w-full text-left rounded-md px-1.5 py-0.5 transition-all hover:brightness-95 min-w-0',
+                                ci.isRecurring && 'opacity-70'
+                              )}
+                              style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)` }}
+                              title={`${ci.item.subject} — ${clientMap[ci.item.clientId] ?? 'Unknown'} — ${ci.item.totalHours.toFixed(1)}h`}
+                            >
+                              <span
+                                className="text-[9px] leading-tight font-semibold truncate block"
+                                style={{ color }}
+                              >
+                                {ci.item.subject}
+                              </span>
+                            </button>
+                          );
+                        })}
                         {items.length > maxVisible && (
-                          <span className="text-[8px] font-semibold text-[var(--accent)] px-1">
-                            +{items.length - maxVisible}
+                          <span className="text-[9px] font-bold text-[var(--accent)] px-1.5 cursor-default">
+                            +{items.length - maxVisible} more
                           </span>
                         )}
                       </div>

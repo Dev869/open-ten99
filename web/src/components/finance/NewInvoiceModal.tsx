@@ -110,7 +110,7 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
   }
 
   /* ── Shared input class ─────────────────────────── */
-  const inputClass = 'w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors';
+  const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
 
   return (
     <>

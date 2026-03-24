@@ -94,6 +94,8 @@ export interface AppSettings {
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys
   pushNotificationsEnabled?: boolean;
+  pushNotifyWorkOrderDue?: boolean;
+  pushNotifyNewInboundOrder?: boolean;
   fcmToken?: string;
   mileageRate?: number;
   roundTimeToQuarterHour?: boolean;

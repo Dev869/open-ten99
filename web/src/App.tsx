@@ -380,6 +380,7 @@ function ContractorRoutes() {
           <WorkItemDetail
             workItems={workItems}
             clients={clients}
+            apps={apps}
             hourlyRate={settings.hourlyRate}
             paymentTerms={settings.invoicePaymentTerms}
             taxRate={settings.invoiceTaxRate}
@@ -521,7 +522,7 @@ export default function App() {
       <div className="min-h-screen bg-[#2C2417] flex items-center justify-center">
         <div className="text-center animate-fade-in-up">
           <div className="mb-5">
-            <BrandWordmark size={36} variant="light" />
+            <BrandWordmark size={64} variant="light" />
           </div>
           <div className="text-sm text-white/40 mt-3">Loading...</div>
         </div>

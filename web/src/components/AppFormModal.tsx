@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { KeyboardEvent } from 'react';
 import type {
   App,
@@ -14,6 +15,8 @@ import {
 } from '../lib/types';
 import { createApp, updateApp } from '../services/firestore';
 import { useToast } from '../hooks/useToast';
+import { cn } from '../lib/utils';
+import { IconClose } from './icons';
 
 interface AppFormModalProps {
   app?: App;
@@ -45,61 +48,49 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
 
   const isValid = name.trim() && selectedClientId;
 
-  function addRepoUrl() {
-    const val = repoUrlInput.trim();
-    if (val && !repoUrls.includes(val)) {
-      setRepoUrls([...repoUrls, val]);
+  // Lock body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    function handleKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
     }
-    setRepoUrlInput('');
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  function addTag(
+    value: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void,
+  ) {
+    const val = value.trim();
+    if (val && !list.includes(val)) {
+      setList([...list, val]);
+    }
+    setInput('');
   }
 
-  function handleRepoUrlKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+  function removeTag(index: number, list: string[], setList: (v: string[]) => void) {
+    setList(list.filter((_, i) => i !== index));
+  }
+
+  function handleTagKeyDown(
+    e: KeyboardEvent<HTMLInputElement>,
+    value: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void,
+  ) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      addRepoUrl();
+      addTag(value, list, setList, setInput);
     }
-  }
-
-  function removeRepoUrl(index: number) {
-    setRepoUrls(repoUrls.filter((_, i) => i !== index));
-  }
-
-  function addTechStack() {
-    const val = techStackInput.trim();
-    if (val && !techStack.includes(val)) {
-      setTechStack([...techStack, val]);
-    }
-    setTechStackInput('');
-  }
-
-  function handleTechStackKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTechStack();
-    }
-  }
-
-  function removeTechStack(index: number) {
-    setTechStack(techStack.filter((_, i) => i !== index));
-  }
-
-  function addVaultCredential() {
-    const val = vaultCredentialInput.trim();
-    if (val && !vaultCredentialIds.includes(val)) {
-      setVaultCredentialIds([...vaultCredentialIds, val]);
-    }
-    setVaultCredentialInput('');
-  }
-
-  function handleVaultCredentialKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addVaultCredential();
-    }
-  }
-
-  function removeVaultCredential(index: number) {
-    setVaultCredentialIds(vaultCredentialIds.filter((_, i) => i !== index));
   }
 
   async function handleSave() {
@@ -134,275 +125,292 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
     setSaving(false);
   }
 
-  const inputClass =
-    'w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]';
-  const labelClass =
-    'text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide';
+  const labelClass = 'block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5';
+  const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  function TagList({
+    items,
+    onRemove,
+  }: {
+    items: string[];
+    onRemove: (i: number) => void;
+  }) {
+    if (items.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {items.map((item, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-lg bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
+          >
+            <span className="max-w-[180px] truncate">{item}</span>
+            <button
+              type="button"
+              onClick={() => onRemove(i)}
+              className="w-4 h-4 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors"
+              aria-label={`Remove ${item}`}
+            >
+              <IconClose size={10} />
+            </button>
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="relative bg-[var(--bg-page)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in">
+
+      {/* Modal — full page on mobile, centered card on desktop */}
+      <div
+        className={cn(
+          'relative z-10 flex flex-col bg-[var(--bg-page)]',
+          'w-full h-full md:w-full md:h-auto',
+          'md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
+          'animate-fade-in-up md:animate-scale-in'
+        )}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-[var(--border)]">
-          <h2 className="text-lg font-extrabold text-[var(--text-primary)] uppercase tracking-wide">
+        <div className="flex items-center justify-between h-14 px-5 flex-shrink-0 border-b border-[var(--border)]">
+          <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
             {isEditMode ? 'Edit App' : 'New App'}
-          </h2>
+          </h1>
           <button
             onClick={onClose}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xl leading-none"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
           >
-            &times;
+            <IconClose size={18} />
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Name */}
-          <div>
-            <label className={labelClass}>Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="App name"
-              className={inputClass}
-            />
-          </div>
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-5 py-5 space-y-5">
 
-          {/* Client */}
-          <div>
-            <label className={labelClass}>Client *</label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Select a client</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* ── Core ── */}
 
-          {/* Platform */}
-          <div>
-            <label className={labelClass}>Platform *</label>
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value as AppPlatform)}
-              className={inputClass}
-            >
-              {(Object.keys(APP_PLATFORM_LABELS) as AppPlatform[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_PLATFORM_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Name */}
+            <div>
+              <label className={labelClass}>Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="App name"
+                className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+              />
+            </div>
 
-          {/* Status */}
-          <div>
-            <label className={labelClass}>Status *</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as AppStatus)}
-              className={inputClass}
-            >
-              {(Object.keys(APP_STATUS_LABELS) as AppStatus[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_STATUS_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className={labelClass}>Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of the app..."
-              rows={3}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          {/* URL */}
-          <div>
-            <label className={labelClass}>URL</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </div>
-
-          {/* Repo URLs */}
-          <div>
-            <label className={labelClass}>Repo URLs</label>
-            {repoUrls.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {repoUrls.map((repo, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    <span className="max-w-[180px] truncate">{repo}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeRepoUrl(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove repo URL"
-                    >
-                      &times;
-                    </button>
-                  </span>
+            {/* Client */}
+            <div>
+              <label className={labelClass}>Client</label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Select a client...</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
-              </div>
-            )}
-            <input
-              type="text"
-              value={repoUrlInput}
-              onChange={(e) => setRepoUrlInput(e.target.value)}
-              onKeyDown={handleRepoUrlKeyDown}
-              placeholder="Paste repo URL and press Enter"
-              className={repoUrls.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
-          </div>
+              </select>
+            </div>
 
-          {/* Tech Stack */}
-          <div>
-            <label className={labelClass}>Tech Stack</label>
-            {techStack.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {techStack.map((tech, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    {tech}
-                    <button
-                      type="button"
-                      onClick={() => removeTechStack(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove tech"
+            {/* Platform + Status — side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Platform</label>
+                <select
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value as AppPlatform)}
+                  className={inputClass}
+                >
+                  {(Object.keys(APP_PLATFORM_LABELS) as AppPlatform[]).map((key) => (
+                    <option key={key} value={key}>
+                      {APP_PLATFORM_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as AppStatus)}
+                  className={inputClass}
+                >
+                  {(Object.keys(APP_STATUS_LABELS) as AppStatus[]).map((key) => (
+                    <option key={key} value={key}>
+                      {APP_STATUS_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className={labelClass}>
+                Description <span className="normal-case tracking-normal font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description of the app..."
+                rows={2}
+                className={cn(inputClass, 'h-auto py-2.5 resize-none placeholder:text-[var(--text-secondary)]')}
+              />
+            </div>
+
+            {/* URL */}
+            <div>
+              <label className={labelClass}>
+                URL <span className="normal-case tracking-normal font-normal">(optional)</span>
+              </label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+              />
+            </div>
+
+            {/* ── Technical ── */}
+
+            <div className="pt-2">
+              <div className="text-[9px] font-bold text-[var(--text-secondary)]/60 uppercase tracking-[0.15em] mb-4">
+                Technical Details
+              </div>
+
+              <div className="space-y-5">
+                {/* Repo URLs */}
+                <div>
+                  <label className={labelClass}>Repo URLs</label>
+                  <TagList
+                    items={repoUrls}
+                    onRemove={(i) => removeTag(i, repoUrls, setRepoUrls)}
+                  />
+                  <input
+                    type="text"
+                    value={repoUrlInput}
+                    onChange={(e) => setRepoUrlInput(e.target.value)}
+                    onKeyDown={(e) => handleTagKeyDown(e, repoUrlInput, repoUrls, setRepoUrls, setRepoUrlInput)}
+                    placeholder="Paste repo URL and press Enter"
+                    className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+                  />
+                </div>
+
+                {/* Tech Stack */}
+                <div>
+                  <label className={labelClass}>Tech Stack</label>
+                  <TagList
+                    items={techStack}
+                    onRemove={(i) => removeTag(i, techStack, setTechStack)}
+                  />
+                  <input
+                    type="text"
+                    value={techStackInput}
+                    onChange={(e) => setTechStackInput(e.target.value)}
+                    onKeyDown={(e) => handleTagKeyDown(e, techStackInput, techStack, setTechStack, setTechStackInput)}
+                    placeholder="e.g. React, TypeScript — press Enter"
+                    className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+                  />
+                </div>
+
+                {/* Hosting + Environment — side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Hosting</label>
+                    <input
+                      type="text"
+                      value={hosting}
+                      onChange={(e) => setHosting(e.target.value)}
+                      placeholder="e.g. Vercel, AWS"
+                      className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Environment</label>
+                    <select
+                      value={environment}
+                      onChange={(e) => setEnvironment(e.target.value as AppEnvironment | '')}
+                      className={inputClass}
                     >
-                      &times;
-                    </button>
-                  </span>
-                ))}
+                      <option value="">None</option>
+                      {(Object.keys(APP_ENVIRONMENT_LABELS) as AppEnvironment[]).map((key) => (
+                        <option key={key} value={key}>
+                          {APP_ENVIRONMENT_LABELS[key]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Deployment Notes */}
+                <div>
+                  <label className={labelClass}>
+                    Deployment Notes <span className="normal-case tracking-normal font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={deploymentNotes}
+                    onChange={(e) => setDeploymentNotes(e.target.value)}
+                    placeholder="Deployment steps, env vars, etc."
+                    rows={2}
+                    className={cn(inputClass, 'h-auto py-2.5 resize-none placeholder:text-[var(--text-secondary)]')}
+                  />
+                </div>
+
+                {/* Linked Credentials */}
+                <div>
+                  <label className={labelClass}>Linked Credentials</label>
+                  <TagList
+                    items={vaultCredentialIds}
+                    onRemove={(i) => removeTag(i, vaultCredentialIds, setVaultCredentialIds)}
+                  />
+                  <input
+                    type="text"
+                    value={vaultCredentialInput}
+                    onChange={(e) => setVaultCredentialInput(e.target.value)}
+                    onKeyDown={(e) => handleTagKeyDown(e, vaultCredentialInput, vaultCredentialIds, setVaultCredentialIds, setVaultCredentialInput)}
+                    placeholder="Credential ID — press Enter"
+                    className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+                  />
+                </div>
               </div>
-            )}
-            <input
-              type="text"
-              value={techStackInput}
-              onChange={(e) => setTechStackInput(e.target.value)}
-              onKeyDown={handleTechStackKeyDown}
-              placeholder="e.g. React, TypeScript — press Enter to add"
-              className={techStack.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
-          </div>
-
-          {/* Hosting */}
-          <div>
-            <label className={labelClass}>Hosting</label>
-            <input
-              type="text"
-              value={hosting}
-              onChange={(e) => setHosting(e.target.value)}
-              placeholder="e.g. Vercel, AWS, Firebase"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Environment */}
-          <div>
-            <label className={labelClass}>Environment</label>
-            <select
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value as AppEnvironment | '')}
-              className={inputClass}
-            >
-              <option value="">None</option>
-              {(Object.keys(APP_ENVIRONMENT_LABELS) as AppEnvironment[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_ENVIRONMENT_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Deployment Notes */}
-          <div>
-            <label className={labelClass}>Deployment Notes</label>
-            <textarea
-              value={deploymentNotes}
-              onChange={(e) => setDeploymentNotes(e.target.value)}
-              placeholder="Deployment steps, environment variables, etc."
-              rows={3}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          {/* Linked Credentials */}
-          <div>
-            <label className={labelClass}>Linked Credentials</label>
-            {vaultCredentialIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {vaultCredentialIds.map((credId, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    <span className="max-w-[180px] truncate">{credId}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeVaultCredential(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove credential"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <input
-              type="text"
-              value={vaultCredentialInput}
-              onChange={(e) => setVaultCredentialInput(e.target.value)}
-              onKeyDown={handleVaultCredentialKeyDown}
-              placeholder="Credential ID — press Enter to add"
-              className={vaultCredentialIds.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-5 border-t border-[var(--border)]">
+        <div
+          className="flex gap-3 px-5 py-4 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!isValid || saving}
-            className="flex-1 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
           >
             {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create App'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

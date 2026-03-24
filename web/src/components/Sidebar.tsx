@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
-  IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps,
+  IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps, IconCamera,
   IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook, IconClock,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconPaintBrush,
 } from './icons';
@@ -36,7 +36,7 @@ const defaultNavItems: NavItem[] = [
       { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconBook },
-      { to: '/dashboard/finance/receipts', key: 'finance-receipts', label: 'Receipts', Icon: IconDocument },
+      { to: '/dashboard/finance/receipts', key: 'finance-receipts', label: 'Receipts', Icon: IconCamera },
       { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
       { to: '/dashboard/finance/accounts', key: 'finance-accounts', label: 'Accounts', Icon: IconGear },
       { to: '/dashboard/finance/mileage', key: 'finance-mileage', label: 'Mileage', Icon: IconClock },
@@ -362,14 +362,17 @@ export function Sidebar({
         )}
       >
         {/* Brand mark */}
-        <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <span className={cn('flex-shrink-0', expanded ? 'hidden' : 'hidden md:block')}>
-              <BrandIcon size={24} />
-            </span>
-            <span className={cn(expanded ? '' : 'md:hidden')}>
-              <BrandWordmark size={18} />
-            </span>
+        <div className={cn(
+          'flex items-center h-16 flex-shrink-0',
+          expanded ? 'px-4' : 'px-1 md:justify-center'
+        )}>
+          <Link to="/dashboard" className={cn('block overflow-hidden', expanded ? 'w-full' : 'w-[64px]')}>
+            <div className={cn(expanded ? 'hidden' : 'hidden md:block')}>
+              <BrandIcon size={28} variant={dark ? 'light' : 'dark'} />
+            </div>
+            <div className={cn(expanded ? '' : 'md:hidden')}>
+              <BrandWordmark size={36} variant={dark ? 'light' : 'dark'} />
+            </div>
           </Link>
         </div>
 

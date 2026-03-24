@@ -67,7 +67,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
           <div className="flex-1 bg-[#4BA8A8]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <BrandWordmark size={12} variant="light" />
+          <BrandWordmark size={28} variant="light" />
           <h1 className="text-xl font-bold text-white mt-2">
             Welcome, {clientName}
           </h1>

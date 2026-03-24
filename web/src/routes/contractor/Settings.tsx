@@ -472,105 +472,171 @@ export default function Settings({ settings, userId }: SettingsProps) {
         </div>
       </div>
 
-      {/* ── Notifications ── */}
+      {/* ── Push Notifications ── */}
       <div className="mt-8">
         <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-          Notifications
+          Push Notifications
         </h2>
 
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <IconBell size={18} color="var(--text-primary)" />
-            <h3 className="text-sm font-bold text-[var(--text-primary)]">Push Notifications</h3>
-          </div>
-          <p className="text-xs text-[var(--text-secondary)] mb-4">
-            Get notified about overdue work orders, retainer renewals, and other important updates on this device.
-          </p>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {/* Master toggle */}
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <IconBell size={18} color="var(--text-primary)" />
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Enable Notifications</h3>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mb-4">
+              Receive alerts on this device even when the app is closed.
+            </p>
 
-          {pushState === 'unsupported' ? (
-            <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                {isIOSNotInPWA
-                  ? 'Add Ten99 to your Home Screen to enable push notifications.'
-                  : 'Push notifications are not supported on this browser.'}
-              </p>
-              {isIOSNotInPWA && (
-                <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">
-                  Tap the Share button in Safari, then select &ldquo;Add to Home Screen&rdquo;.
+            {pushState === 'unsupported' ? (
+              <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {isIOSNotInPWA
+                    ? 'Add Ten99 to your Home Screen to enable push notifications.'
+                    : 'Push notifications are not supported on this browser.'}
                 </p>
-              )}
-            </div>
-          ) : pushState === 'denied' ? (
-            <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                Notifications are blocked. To enable them, update your browser or device notification settings for this site.
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {pushEnabled ? 'Enabled' : 'Disabled'}
-                </p>
-                <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
-                  {pushEnabled
-                    ? 'You\u2019ll receive push notifications on this device.'
-                    : 'Enable to receive alerts even when the app is closed.'}
+                {isIOSNotInPWA && (
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">
+                    Tap the Share button in Safari, then select &ldquo;Add to Home Screen&rdquo;.
+                  </p>
+                )}
+              </div>
+            ) : pushState === 'denied' ? (
+              <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Notifications are blocked. To enable them, update your browser or device notification settings for this site.
                 </p>
               </div>
-              <button
-                onClick={async () => {
-                  setTogglingPush(true);
-                  try {
-                    if (pushEnabled) {
-                      // Disable
-                      await updateSettings(userId, {
-                        pushNotificationsEnabled: false,
-                        fcmToken: undefined,
-                      });
-                      setPushEnabled(false);
-                      addToast('Push notifications disabled.', 'info');
-                    } else {
-                      // Enable — request permission + get token
-                      const token = await requestPushPermissionAndGetToken();
-                      setPushState(getPushPermissionState());
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    {pushEnabled ? 'Enabled' : 'Disabled'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    {pushEnabled
+                      ? 'You\u2019ll receive push notifications on this device.'
+                      : 'Turn on to configure which notifications you receive.'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setTogglingPush(true);
+                    try {
+                      if (pushEnabled) {
+                        await updateSettings(userId, {
+                          pushNotificationsEnabled: false,
+                          fcmToken: undefined,
+                        });
+                        setPushEnabled(false);
+                        addToast('Push notifications disabled.', 'info');
+                      } else {
+                        const token = await requestPushPermissionAndGetToken();
+                        setPushState(getPushPermissionState());
 
-                      if (!token) {
-                        if (getPushPermissionState() === 'denied') {
-                          addToast('Notification permission was denied.', 'error');
-                        } else {
-                          addToast('Could not enable push notifications.', 'error');
+                        if (!token) {
+                          if (getPushPermissionState() === 'denied') {
+                            addToast('Notification permission was denied.', 'error');
+                          } else {
+                            addToast('Could not enable push notifications.', 'error');
+                          }
+                          return;
                         }
-                        return;
-                      }
 
-                      await updateSettings(userId, {
-                        pushNotificationsEnabled: true,
-                        fcmToken: token,
-                      });
-                      setPushEnabled(true);
-                      addToast('Push notifications enabled!', 'success');
+                        await updateSettings(userId, {
+                          pushNotificationsEnabled: true,
+                          pushNotifyWorkOrderDue: true,
+                          pushNotifyNewInboundOrder: true,
+                          fcmToken: token,
+                        });
+                        setPushEnabled(true);
+                        addToast('Push notifications enabled!', 'success');
+                      }
+                    } catch (err) {
+                      console.error('Push toggle error:', err);
+                      addToast('Something went wrong. Please try again.', 'error');
+                    } finally {
+                      setTogglingPush(false);
                     }
-                  } catch (err) {
-                    console.error('Push toggle error:', err);
-                    addToast('Something went wrong. Please try again.', 'error');
-                  } finally {
-                    setTogglingPush(false);
-                  }
-                }}
-                disabled={togglingPush}
-                role="switch"
-                aria-checked={pushEnabled}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:opacity-50 ${
-                  pushEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-                    pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }}
+                  disabled={togglingPush}
+                  role="switch"
+                  aria-checked={pushEnabled}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:opacity-50 ${
+                    pushEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Individual notification preferences — only shown when push is enabled */}
+          {pushEnabled && pushState !== 'unsupported' && pushState !== 'denied' && (
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+                Notify me about
+              </p>
+
+              {/* Work order due reminders */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    Work order due reminders
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    Get reminded when a scheduled work order is approaching its due date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.pushNotifyWorkOrderDue ?? true}
+                  onClick={() => updateSettings(userId, { pushNotifyWorkOrderDue: !(settings.pushNotifyWorkOrderDue ?? true) })}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    (settings.pushNotifyWorkOrderDue ?? true) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      (settings.pushNotifyWorkOrderDue ?? true) ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* New inbound work order */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    New inbound work order
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    Get notified when a new work order is created from an inbound email via Postmark.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.pushNotifyNewInboundOrder ?? true}
+                  onClick={() => updateSettings(userId, { pushNotifyNewInboundOrder: !(settings.pushNotifyNewInboundOrder ?? true) })}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    (settings.pushNotifyNewInboundOrder ?? true) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      (settings.pushNotifyNewInboundOrder ?? true) ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -821,7 +887,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
         {/* App Info */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5 flex items-center gap-4">
-          <BrandIcon size={28} />
+          <BrandIcon size={40} />
           <div>
             <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
             <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>

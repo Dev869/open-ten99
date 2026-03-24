@@ -23,6 +23,7 @@ import {
   IconGear,
   IconFinanceOverview,
   IconClock,
+  IconCamera,
 } from './icons';
 import type { IconProps } from './icons';
 
@@ -62,7 +63,7 @@ const menuSections: MenuSection[] = [
       { to: '/dashboard/finance', label: 'Overview', Icon: IconFinanceOverview },
       { to: '/dashboard/finance/invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/expenses', label: 'Expenses', Icon: IconBook },
-      { to: '/dashboard/finance/receipts', label: 'Receipts', Icon: IconDocument },
+      { to: '/dashboard/finance/receipts', label: 'Receipts', Icon: IconCamera },
       { to: '/dashboard/finance/transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/reports', label: 'Reports', Icon: IconDocument },
       { to: '/dashboard/finance/accounts', label: 'Accounts', Icon: IconGear },

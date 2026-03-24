@@ -196,7 +196,7 @@ export function Onboarding({ user, settings, onComplete }: OnboardingProps) {
           {step === 0 && (
             <div className="animate-fade-in-up text-center">
               <div className="flex justify-center mb-8">
-                <BrandWordmark size={36} />
+                <BrandWordmark size={64} />
               </div>
               <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
                 Welcome to Ten99

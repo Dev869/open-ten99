@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkline } from './DashboardCharts';
+import { Sparkline, DonutChart } from './DashboardCharts';
 import {
   IconChevronRight,
   IconDocument,
@@ -99,49 +99,9 @@ export function TrendStatCard({
   );
 }
 
-/* ── Client Row ────────────────────────────────────── */
-
-interface ClientRowProps {
-  name: string;
-  hours: number;
-  maxHours: number;
-  clientId: string;
-}
-
-function ClientRow({ name, hours, maxHours, clientId }: ClientRowProps) {
-  const pct = maxHours > 0 ? (hours / maxHours) * 100 : 0;
-  return (
-    <Link
-      to={`/dashboard/clients/${clientId}`}
-      className="group flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-[var(--bg-input)]/50 transition-colors"
-    >
-      <div className="w-7 h-7 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[10px] font-extrabold text-[var(--accent)]">
-        {name.charAt(0).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-bold text-[var(--text-primary)] truncate">{name}</div>
-        <div className="mt-1 h-1.5 rounded-full bg-[var(--bg-input)] overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${pct}%`,
-              backgroundColor: 'var(--accent)',
-            }}
-          />
-        </div>
-      </div>
-      <span className="text-xs font-semibold text-[var(--text-secondary)] tabular-nums">
-        {hours.toFixed(1)}h
-      </span>
-      <IconChevronRight
-        size={12}
-        className="text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity"
-      />
-    </Link>
-  );
-}
-
 /* ── Top Clients Card ──────────────────────────────── */
+
+const CLIENT_COLORS = ['#4BA8A8', '#D4873E', '#5A9A5A', '#ef4444', '#8C7E6A'];
 
 interface TopClientsCardProps {
   clients: Array<{ id: string; name: string; hours: number }>;
@@ -149,7 +109,12 @@ interface TopClientsCardProps {
 }
 
 export function TopClientsCard({ clients, delay = 0 }: TopClientsCardProps) {
-  const maxHours = clients.length > 0 ? Math.max(...clients.map((c) => c.hours)) : 0;
+  const totalHours = clients.reduce((sum, c) => sum + c.hours, 0);
+  const donutData = clients.map((c, i) => ({
+    name: c.name,
+    value: c.hours,
+    color: CLIENT_COLORS[i % CLIENT_COLORS.length],
+  }));
 
   return (
     <div
@@ -178,16 +143,35 @@ export function TopClientsCard({ clients, delay = 0 }: TopClientsCardProps) {
           No activity yet
         </p>
       ) : (
-        <div className="space-y-0.5">
-          {clients.map((c) => (
-            <ClientRow
-              key={c.id}
-              name={c.name}
-              hours={c.hours}
-              maxHours={maxHours}
-              clientId={c.id}
-            />
-          ))}
+        <div className="flex items-start gap-4">
+          <DonutChart
+            data={donutData}
+            size={120}
+            showCenterLabel
+            centerValue={`${totalHours.toFixed(0)}h`}
+            centerLabel="Total"
+            valueFormatter={(v) => `${v.toFixed(1)}h`}
+          />
+          <div className="flex-1 min-w-0 pt-1">
+            {clients.map((c, i) => (
+              <Link
+                key={c.id}
+                to={`/dashboard/clients/${c.id}`}
+                className="flex items-center gap-2 py-[5px] group rounded-md px-1 -mx-1 hover:bg-[var(--bg-input)]/50 transition-colors"
+              >
+                <div
+                  className="w-[6px] h-[6px] rounded-full flex-shrink-0"
+                  style={{ backgroundColor: CLIENT_COLORS[i % CLIENT_COLORS.length] }}
+                />
+                <span className="text-[11px] text-[var(--text-primary)] truncate flex-1">
+                  {c.name}
+                </span>
+                <span className="text-[11px] font-semibold text-[var(--text-primary)] tabular-nums flex-shrink-0">
+                  {c.hours.toFixed(1)}h
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -232,41 +216,31 @@ export function PipelineCard({ stages, delay = 0 }: PipelineCardProps) {
         </Link>
       </div>
 
-      {/* Segmented bar */}
-      <div className="flex h-3 rounded-full overflow-hidden bg-[var(--bg-input)] mb-4">
-        {stages.map((stage) => {
-          const pct = total > 0 ? (stage.count / total) * 100 : 0;
-          if (pct === 0) return null;
-          return (
-            <div
-              key={stage.label}
-              className="h-full transition-all duration-500"
-              style={{
-                width: `${pct}%`,
-                backgroundColor: stage.color,
-              }}
-              title={`${stage.label}: ${stage.count}`}
-            />
-          );
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-2">
-        {stages.map((stage) => (
-          <div key={stage.label} className="flex items-center gap-2">
-            <div
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: stage.color }}
-            />
-            <span className="text-[10px] text-[var(--text-secondary)] truncate">
-              {stage.label}
-            </span>
-            <span className="text-xs font-extrabold text-[var(--text-primary)] ml-auto tabular-nums">
-              {stage.count}
-            </span>
-          </div>
-        ))}
+      <div className="flex items-start gap-4">
+        <DonutChart
+          data={stages.map((s) => ({ name: s.label, value: s.count, color: s.color }))}
+          size={120}
+          showCenterLabel
+          centerValue={String(total)}
+          centerLabel="Items"
+          valueFormatter={(v) => String(v)}
+        />
+        <div className="flex-1 min-w-0 pt-1">
+          {stages.map((stage) => (
+            <div key={stage.label} className="flex items-center gap-2 py-[5px] px-1 -mx-1">
+              <div
+                className="w-[6px] h-[6px] rounded-full flex-shrink-0"
+                style={{ backgroundColor: stage.color }}
+              />
+              <span className="text-[11px] text-[var(--text-primary)] flex-1">
+                {stage.label}
+              </span>
+              <span className="text-[11px] font-semibold text-[var(--text-primary)] tabular-nums flex-shrink-0">
+                {stage.count}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -289,6 +263,7 @@ export function InvoiceSummaryCard({ draft, sent, paid, overdue, delay = 0 }: In
     { label: 'Paid', count: paid, color: 'var(--color-green)' },
     { label: 'Overdue', count: overdue, color: 'var(--color-red)' },
   ];
+  const total = draft + sent + paid + overdue;
 
   return (
     <div
@@ -312,20 +287,36 @@ export function InvoiceSummaryCard({ draft, sent, paid, overdue, delay = 0 }: In
         </Link>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
-        {items.map((item) => (
-          <div key={item.label} className="text-center">
-            <div
-              className="text-xl font-extrabold tabular-nums"
-              style={{ color: item.color }}
-            >
-              {item.count}
+      <div className="flex items-start gap-4">
+        {total > 0 && (
+          <DonutChart
+            data={items.map((item) => ({ name: item.label, value: item.count, color: item.color }))}
+            size={100}
+            showCenterLabel
+            centerValue={String(total)}
+            centerLabel="Total"
+            valueFormatter={(v) => String(v)}
+          />
+        )}
+        <div className="flex-1 min-w-0 pt-1">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 py-[5px] px-1 -mx-1">
+              <div
+                className="w-[6px] h-[6px] rounded-full flex-shrink-0"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-[11px] text-[var(--text-primary)] flex-1">
+                {item.label}
+              </span>
+              <span
+                className="text-[11px] font-semibold tabular-nums flex-shrink-0"
+                style={{ color: item.color }}
+              >
+                {item.count}
+              </span>
             </div>
-            <div className="text-[9px] uppercase tracking-wider font-semibold text-[var(--text-secondary)] mt-0.5">
-              {item.label}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

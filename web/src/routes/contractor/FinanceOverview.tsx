@@ -62,14 +62,14 @@ export default function FinanceOverview({ workItems, clients }: { workItems: Wor
 
   return (
     <div>
-      {/* Mobile: compact finance dashboard that fits viewport */}
-      <div className="md:hidden flex flex-col" style={{ minHeight: 'calc(100dvh - 3.5rem - 3.5rem - 2rem - env(safe-area-inset-bottom) - env(safe-area-inset-top))' }}>
-        <div className="mb-3">
+      {/* Mobile: compact finance dashboard */}
+      <div className="md:hidden">
+        <div className="mb-4">
           <DateRangeSelector value={preset} onChange={setPreset} />
         </div>
 
-        {/* KPI grid — 2x2 compact */}
-        <div className="grid grid-cols-2 gap-2 flex-1">
+        {/* KPI grid — 2x2 */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <KpiCard label="Revenue" value={revenue} trend={revenueTrend} color="green" />
           <KpiCard label="Outstanding" value={outstanding} color="orange" />
           <KpiCard label="Overdue" value={overdue} color="red" />
@@ -77,16 +77,24 @@ export default function FinanceOverview({ workItems, clients }: { workItems: Wor
         </div>
 
         {/* Quick stats row */}
-        <div className="flex gap-2 mt-3">
-          <div className="flex-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3 text-center">
-            <div className="text-[10px] uppercase tracking-wide text-[var(--text-secondary)]">Clients</div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-3 text-center">
+            <div className="text-[10px] uppercase tracking-wide font-semibold text-[var(--text-secondary)]">Clients</div>
             <div className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{clientRevenue.length}</div>
           </div>
-          <div className="flex-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3 text-center">
-            <div className="text-[10px] uppercase tracking-wide text-[var(--text-secondary)]">Activity</div>
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-3 text-center">
+            <div className="text-[10px] uppercase tracking-wide font-semibold text-[var(--text-secondary)]">Activity</div>
             <div className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{workItems.filter(i => i.invoiceStatus).length}</div>
           </div>
         </div>
+
+        {/* Revenue chart for mobile */}
+        <div className="mb-4">
+          <RevenueChart data={monthlyRevenue} />
+        </div>
+
+        {/* Top clients for mobile */}
+        <TopClients clients={clientRevenue} />
       </div>
 
       {/* Desktop: full layout */}

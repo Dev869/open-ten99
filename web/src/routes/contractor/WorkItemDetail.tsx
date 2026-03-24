@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { WorkItem, Client, RecurrenceFrequency, TimeEntry } from '../../lib/types';
+import type { WorkItem, Client, App, RecurrenceFrequency, TimeEntry } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
 import { LineItemRow } from '../../components/LineItemRow';
 import { TimeEntryLinkPicker } from '../../components/TimeEntryLinkPicker';
-import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays } from '../../lib/utils';
+import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays, cn } from '../../lib/utils';
 import { computeLineItemHours, computeLineItemCost } from '../../lib/timeComputation';
 import {
   updateWorkItem,
@@ -17,10 +17,12 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
+import { IconClose } from '../../components/icons';
 
 interface WorkItemDetailProps {
   workItems: WorkItem[];
   clients: Client[];
+  apps: App[];
   hourlyRate: number;
   paymentTerms?: string;
   taxRate?: number;
@@ -35,6 +37,7 @@ interface WorkItemDetailProps {
 export default function WorkItemDetail({
   workItems,
   clients,
+  apps,
   hourlyRate,
   paymentTerms,
   taxRate,
@@ -72,6 +75,8 @@ export default function WorkItemDetail({
   }
 
   const client = clients.find((c) => c.id === item.clientId);
+  const availableApps = apps.filter((a) => a.clientId === item.clientId);
+  const linkedApp = apps.find((a) => a.id === item.appId);
 
   function addLineItem() {
     const updated = [
@@ -244,6 +249,9 @@ export default function WorkItemDetail({
     }
   }
 
+  const labelClass = 'block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5';
+  const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
+
   return (
     <div className="max-w-4xl">
       <button
@@ -254,12 +262,12 @@ export default function WorkItemDetail({
       </button>
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#1A1A2E] to-[#444] rounded-2xl p-6 mb-4">
-        <div className="flex justify-between items-start">
-          <div>
+      <div className="bg-gradient-to-br from-[#1A1A2E] to-[#444] rounded-2xl p-5 mb-4">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
             <select
               value={item.clientId}
-              onChange={(e) => setItem({ ...item, clientId: e.target.value })}
+              onChange={(e) => setItem({ ...item, clientId: e.target.value, appId: undefined })}
               className="text-sm text-white/70 bg-transparent border-none outline-none cursor-pointer hover:text-white transition-colors appearance-none pr-4 -ml-1 px-1 rounded focus:ring-1 focus:ring-[var(--accent)]"
               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'rgba(255,255,255,0.5)\' fill=\'none\' stroke-width=\'1.5\' stroke-linecap=\'round\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0 center' }}
             >
@@ -278,11 +286,11 @@ export default function WorkItemDetail({
           </div>
           <StatusBadge status={item.status} />
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+
+        {/* Meta row */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 items-center">
           <TypeTag type={item.type} />
-          <span className="text-xs text-white/60">
-            {formatDate(item.createdAt)}
-          </span>
+          <span className="text-xs text-white/60">{formatDate(item.createdAt)}</span>
           {item.scheduledDate && (
             <span className="text-xs text-white/60">
               Scheduled: {formatDate(item.scheduledDate)}
@@ -299,37 +307,64 @@ export default function WorkItemDetail({
               {item.recurrence.frequency === 'custom' ? `Every ${item.recurrence.customDays} days` : RECURRENCE_LABELS[item.recurrence.frequency]}
             </span>
           )}
+          {linkedApp && (
+            <button
+              onClick={() => navigate(`/dashboard/apps/${linkedApp.id}`)}
+              className="text-xs text-[var(--accent)] hover:text-white transition-colors"
+            >
+              {linkedApp.name}
+            </button>
+          )}
         </div>
-        {/* Completed toggle */}
-        <button
-          type="button"
-          onClick={async () => {
-            const updated = { ...item!, completed: !item!.completed };
-            setItem(updated);
-            await updateWorkItem(updated);
-          }}
-          className={`mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.completed ? 'bg-[var(--color-green)]/20 text-[var(--color-green)]' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-        >
-          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${item.completed ? 'bg-[var(--color-green)] border-[var(--color-green)]' : 'border-white/40'}`}>
-            {item.completed && <span className="text-white text-[10px] leading-none">✓</span>}
-          </span>
-          {item.completed ? 'Completed' : 'Mark as Completed'}
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            const newType = item.type === 'maintenance' ? 'changeRequest' : 'maintenance';
-            const updated = { ...item, type: newType as WorkItem['type'] };
-            setItem(updated);
-            await updateWorkItem(updated);
-          }}
-          className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.type === 'maintenance' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-        >
-          <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${item.type === 'maintenance' ? 'bg-blue-500 border-blue-500' : 'border-white/40'}`}>
-            {item.type === 'maintenance' && <span className="text-white text-[10px] leading-none">✓</span>}
-          </span>
-          Maintenance
-        </button>
+
+        {/* Quick toggles */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <button
+            type="button"
+            onClick={async () => {
+              const updated = { ...item!, completed: !item!.completed };
+              setItem(updated);
+              await updateWorkItem(updated);
+            }}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+              item.completed
+                ? 'bg-[var(--color-green)]/20 text-[var(--color-green)]'
+                : 'bg-white/10 text-white/60 hover:bg-white/20'
+            )}
+          >
+            <span className={cn(
+              'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+              item.completed ? 'bg-[var(--color-green)] border-[var(--color-green)]' : 'border-white/40'
+            )}>
+              {item.completed && <span className="text-white text-[10px] leading-none">✓</span>}
+            </span>
+            {item.completed ? 'Completed' : 'Mark Complete'}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const newType = item.type === 'maintenance' ? 'changeRequest' : 'maintenance';
+              const updated = { ...item, type: newType as WorkItem['type'] };
+              setItem(updated);
+              await updateWorkItem(updated);
+            }}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+              item.type === 'maintenance'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-white/10 text-white/60 hover:bg-white/20'
+            )}
+          >
+            <span className={cn(
+              'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+              item.type === 'maintenance' ? 'bg-blue-500 border-blue-500' : 'border-white/40'
+            )}>
+              {item.type === 'maintenance' && <span className="text-white text-[10px] leading-none">✓</span>}
+            </span>
+            Maintenance
+          </button>
+        </div>
       </div>
 
       {/* Original Email */}
@@ -375,7 +410,7 @@ export default function WorkItemDetail({
       {/* Line Items */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 mb-4">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">
+          <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
             Line Items
           </h2>
           <button
@@ -423,88 +458,91 @@ export default function WorkItemDetail({
         />
       )}
 
-      {/* Schedule & Billing */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-4 mb-4">
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
-                Business Days
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={item.estimatedBusinessDays ?? ''}
-                placeholder="e.g. 5"
-                onChange={(e) =>
-                  setItem({
-                    ...item!,
-                    estimatedBusinessDays: e.target.value ? Number(e.target.value) : undefined,
-                  })
-                }
-                className="w-full mt-1 px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-              />
-              {item.estimatedBusinessDays && !item.scheduledDate && (
-                <p className="text-xs text-[var(--text-secondary)] mt-1">
-                  Scheduled on approval: {formatDate(addBusinessDays(new Date(), item.estimatedBusinessDays))}
-                </p>
-              )}
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
-                Scheduled Date
-              </label>
-              <input
-                type="date"
-                value={item.scheduledDate ? item.scheduledDate.toISOString().split('T')[0] : ''}
-                onChange={(e) =>
-                  setItem({
-                    ...item!,
-                    scheduledDate: e.target.value ? new Date(e.target.value) : undefined,
-                  })
-                }
-                className="w-full mt-1 px-3 py-2 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-              />
-              {item.scheduledDate && item.estimatedBusinessDays && (
-                <p className="text-xs text-[var(--text-secondary)] mt-1">
-                  Set by {item.estimatedBusinessDays} business day estimate
-                </p>
-              )}
-            </div>
+      {/* Schedule, App & Billing */}
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4 space-y-5">
+
+        {/* App selector */}
+        {availableApps.length > 0 && (
+          <div>
+            <label className={labelClass}>Linked App</label>
+            <select
+              value={item.appId ?? ''}
+              onChange={(e) => setItem({ ...item, appId: e.target.value || undefined })}
+              className={inputClass}
+            >
+              <option value="">None</option>
+              {availableApps.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
           </div>
-          {/* Recurrence (maintenance) */}
+        )}
+
+        {/* Business Days + Scheduled Date */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>Business Days</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={item.estimatedBusinessDays ?? ''}
+              placeholder="e.g. 5"
+              onChange={(e) =>
+                setItem({
+                  ...item!,
+                  estimatedBusinessDays: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              className={cn(inputClass, 'placeholder:text-[var(--text-secondary)]')}
+            />
+            {item.estimatedBusinessDays && !item.scheduledDate && (
+              <p className="text-[10px] text-[var(--text-secondary)] mt-1">
+                On approval: {formatDate(addBusinessDays(new Date(), item.estimatedBusinessDays))}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className={labelClass}>Scheduled Date</label>
+            <input
+              type="date"
+              value={item.scheduledDate ? item.scheduledDate.toISOString().split('T')[0] : ''}
+              onChange={(e) =>
+                setItem({
+                  ...item!,
+                  scheduledDate: e.target.value ? new Date(e.target.value) : undefined,
+                })
+              }
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        {/* Repeat + Billing — side by side */}
+        <div className={cn('grid gap-3', item.type === 'maintenance' ? 'grid-cols-2' : 'grid-cols-1')}>
+          {/* Recurrence (maintenance only) */}
           {item.type === 'maintenance' && (
             <div>
-              <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
-                Repeat
-              </label>
-              <div className="flex gap-1.5 mt-1 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setItem({ ...item!, recurrence: undefined })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!item.recurrence ? 'bg-[var(--text-primary)] text-[var(--bg-page)]' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
-                >
-                  None
-                </button>
-                {(Object.keys(RECURRENCE_LABELS) as RecurrenceFrequency[]).filter((f) => f !== 'custom').map((freq) => (
-                  <button
-                    key={freq}
-                    type="button"
-                    onClick={() => setItem({ ...item!, recurrence: { frequency: freq } })}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === freq ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
-                  >
-                    {RECURRENCE_LABELS[freq]}
-                  </button>
+              <label className={labelClass}>Repeat</label>
+              <select
+                value={item.recurrence?.frequency ?? ''}
+                onChange={(e) => {
+                  const freq = e.target.value as RecurrenceFrequency | '';
+                  if (!freq) {
+                    setItem({ ...item!, recurrence: undefined });
+                  } else if (freq === 'custom') {
+                    setItem({ ...item!, recurrence: { frequency: 'custom', customDays: item.recurrence?.customDays ?? 3 } });
+                  } else {
+                    setItem({ ...item!, recurrence: { frequency: freq } });
+                  }
+                }}
+                className={inputClass}
+              >
+                <option value="">None</option>
+                {(Object.keys(RECURRENCE_LABELS) as RecurrenceFrequency[]).map((freq) => (
+                  <option key={freq} value={freq}>{RECURRENCE_LABELS[freq]}</option>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setItem({ ...item!, recurrence: { frequency: 'custom', customDays: item.recurrence?.customDays ?? 3 } })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${item.recurrence?.frequency === 'custom' ? 'bg-[var(--color-orange)] text-white' : 'bg-[var(--bg-input)] text-[var(--text-secondary)]'}`}
-                >
-                  Custom
-                </button>
-              </div>
+              </select>
               {item.recurrence?.frequency === 'custom' && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-[var(--text-secondary)]">Every</span>
@@ -522,29 +560,39 @@ export default function WorkItemDetail({
                         },
                       })
                     }
-                    className="w-16 px-2 py-1.5 bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] text-center focus:outline-none focus:ring-2 focus:ring-[var(--color-orange)]"
+                    className="w-16 h-8 px-2 bg-[var(--bg-input)] rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] text-center outline-none focus:border-[var(--color-orange)]"
                   />
                   <span className="text-xs text-[var(--text-secondary)]">days</span>
                 </div>
               )}
             </div>
           )}
+
+          {/* Billing Type */}
           <div>
-            <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
-              Billing Type
-            </label>
-            <div className="flex items-center gap-1 mt-1 bg-[var(--bg-input)] rounded-lg p-0.5 text-xs font-semibold w-fit">
+            <label className={labelClass}>Billing</label>
+            <div className="flex gap-1 bg-[var(--bg-input)] rounded-xl p-1 h-10 items-center">
               <button
                 type="button"
                 onClick={() => setItem({ ...item!, deductFromRetainer: false })}
-                className={`px-4 py-1.5 rounded-md transition-colors ${!item.deductFromRetainer ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)]'}`}
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  !item.deductFromRetainer
+                    ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                )}
               >
                 Hourly
               </button>
               <button
                 type="button"
                 onClick={() => setItem({ ...item!, deductFromRetainer: true })}
-                className={`px-4 py-1.5 rounded-md transition-colors ${item.deductFromRetainer ? 'bg-[var(--color-orange)] text-white' : 'text-[var(--text-secondary)]'}`}
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  item.deductFromRetainer
+                    ? 'bg-[var(--bg-card)] text-[var(--color-orange)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                )}
               >
                 Retainer
               </button>
@@ -554,72 +602,65 @@ export default function WorkItemDetail({
       </div>
 
       {/* Totals */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
-        {/* Assignee */}
-        {/* TODO: Enhance to show a member picker dropdown when team context is available */}
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[var(--text-secondary)] text-sm">Assignee</span>
-          <span className="text-[var(--text-primary)] text-sm">
-            {item.assigneeId || 'Unassigned'}
-          </span>
-        </div>
-        <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
-          <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
-          <span className="text-sm font-semibold">{item.totalHours.toFixed(1)} hrs</span>
-        </div>
-        <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
-          <span className="text-sm text-[var(--text-secondary)]">Hourly Rate</span>
-          <span className="text-sm font-semibold">{formatCurrency(hourlyRate)}</span>
-        </div>
-        {taxRate != null && taxRate > 0 && (
-          <div className="flex justify-between items-center mb-2 border-t border-[var(--border)] pt-2">
-            <span className="text-sm text-[var(--text-secondary)]">Tax ({taxRate}%)</span>
-            <span className="text-sm font-semibold">
-              {formatCurrency(item.totalCost * (taxRate / 100))}
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4">
+        <div className="space-y-0">
+          {/* Assignee */}
+          <div className="flex justify-between items-center py-2.5">
+            <span className="text-sm text-[var(--text-secondary)]">Assignee</span>
+            <span className="text-sm text-[var(--text-primary)]">{item.assigneeId || 'Unassigned'}</span>
+          </div>
+          <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
+            <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
+            <span className="text-sm font-semibold tabular-nums">{item.totalHours.toFixed(1)} hrs</span>
+          </div>
+          <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
+            <span className="text-sm text-[var(--text-secondary)]">Hourly Rate</span>
+            <span className="text-sm font-semibold tabular-nums">{formatCurrency(hourlyRate)}</span>
+          </div>
+          {taxRate != null && taxRate > 0 && (
+            <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
+              <span className="text-sm text-[var(--text-secondary)]">Tax ({taxRate}%)</span>
+              <span className="text-sm font-semibold tabular-nums">{formatCurrency(item.totalCost * (taxRate / 100))}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center py-3 border-t border-[var(--border)]">
+            <span className="font-bold text-[var(--text-primary)]">Total Cost</span>
+            <span className="text-xl font-extrabold text-[var(--accent)] tabular-nums">
+              {formatCurrency(
+                taxRate != null && taxRate > 0
+                  ? item.totalCost + item.totalCost * (taxRate / 100)
+                  : item.totalCost
+              )}
             </span>
           </div>
-        )}
-        <div className="flex justify-between items-center border-t border-[var(--border)] pt-2">
-          <span className="font-bold text-[var(--text-primary)]">Total Cost</span>
-          <span className="text-xl font-extrabold text-[var(--accent)]">
-            {formatCurrency(
-              taxRate != null && taxRate > 0
-                ? item.totalCost + item.totalCost * (taxRate / 100)
-                : item.totalCost
+          <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
+            {item.deductFromRetainer ? (
+              <>
+                <span className="text-sm text-[var(--color-orange)] font-medium">Retainer Deduction</span>
+                <span className="text-sm font-semibold text-[var(--color-orange)] tabular-nums">-{item.totalHours.toFixed(1)} hrs</span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-[var(--accent)] font-medium">Billing</span>
+                <span className="text-sm font-semibold text-[var(--accent)]">Hourly</span>
+              </>
             )}
-          </span>
-        </div>
-        <div className="flex justify-between items-center border-t border-[var(--border)] pt-2 mt-2">
-          {item.deductFromRetainer ? (
-            <>
-              <span className="text-sm text-[var(--color-orange)] font-medium">Retainer Deduction</span>
-              <span className="text-sm font-semibold text-[var(--color-orange)]">
-                -{item.totalHours.toFixed(1)} hrs
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="text-sm text-[var(--accent)] font-medium">Billing</span>
-              <span className="text-sm font-semibold text-[var(--accent)]">Hourly</span>
-            </>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Invoice Tracking */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
-        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wide mb-3">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4">
+        <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           Invoice
         </h2>
 
         {/* Draft / No invoice */}
         {(!item.invoiceStatus || item.invoiceStatus === 'draft') && (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-gray)]/20 text-[var(--color-gray)]">
-                {item.invoiceStatus === 'draft' ? 'Draft' : 'No Invoice'}
-              </span>
-            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-gray)]/20 text-[var(--color-gray)]">
+              {item.invoiceStatus === 'draft' ? 'Draft' : 'No Invoice'}
+            </span>
             <button
               onClick={async () => {
                 if (!item.id) return;
@@ -631,14 +672,9 @@ export default function WorkItemDetail({
                   invoiceSentDate: now,
                   invoiceDueDate: due,
                 });
-                setItem({
-                  ...item,
-                  invoiceStatus: 'sent',
-                  invoiceSentDate: now,
-                  invoiceDueDate: due,
-                });
+                setItem({ ...item, invoiceStatus: 'sent', invoiceSentDate: now, invoiceDueDate: due });
               }}
-              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-orange)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+              className="h-10 px-5 rounded-xl bg-[var(--color-orange)] text-white text-xs font-bold hover:brightness-110 transition-all"
             >
               Mark as Invoiced
             </button>
@@ -653,29 +689,26 @@ export default function WorkItemDetail({
                 Sent
               </span>
               <span className="text-sm text-[var(--text-secondary)]">
-                Sent: {item.invoiceSentDate ? formatDate(item.invoiceSentDate) : '—'}
+                {item.invoiceSentDate ? formatDate(item.invoiceSentDate) : '—'}
               </span>
             </div>
             <div className="text-sm text-[var(--text-secondary)] mb-3">
               Due: {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
               {item.invoiceDueDate && (
                 <span className="ml-1">
-                  ({Math.max(0, Math.ceil((item.invoiceDueDate.getTime() - Date.now()) / 86400000))} days remaining)
+                  ({Math.max(0, Math.ceil((item.invoiceDueDate.getTime() - Date.now()) / 86400000))} days left)
                 </span>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={async () => {
                   if (!item.id) return;
                   const now = new Date();
-                  await updateInvoiceStatus(item.id, {
-                    invoiceStatus: 'paid',
-                    invoicePaidDate: now,
-                  });
+                  await updateInvoiceStatus(item.id, { invoiceStatus: 'paid', invoicePaidDate: now });
                   setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
                 }}
-                className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+                className="h-10 px-5 rounded-xl bg-[var(--color-green)] text-white text-xs font-bold hover:brightness-110 transition-all"
               >
                 Mark as Paid
               </button>
@@ -685,7 +718,7 @@ export default function WorkItemDetail({
                   await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
                   setItem({ ...item, invoiceStatus: 'overdue' });
                 }}
-                className="min-h-[44px] px-5 rounded-xl border border-[var(--color-red)] text-[var(--color-red)] text-sm font-semibold hover:bg-[var(--color-red)]/5 transition-colors"
+                className="h-10 px-5 rounded-xl border border-[var(--color-red)] text-[var(--color-red)] text-xs font-bold hover:bg-[var(--color-red)]/5 transition-colors"
               >
                 Mark Overdue
               </button>
@@ -701,10 +734,10 @@ export default function WorkItemDetail({
                 Paid
               </span>
               <span className="text-sm text-[var(--text-secondary)]">
-                Paid: {item.invoicePaidDate ? formatDate(item.invoicePaidDate) : '—'}
+                {item.invoicePaidDate ? formatDate(item.invoicePaidDate) : '—'}
               </span>
             </div>
-            <span className="text-xl font-extrabold text-[var(--color-green)]">
+            <span className="text-xl font-extrabold text-[var(--color-green)] tabular-nums">
               {formatCurrency(item.totalCost)}
             </span>
           </div>
@@ -733,13 +766,10 @@ export default function WorkItemDetail({
               onClick={async () => {
                 if (!item.id) return;
                 const now = new Date();
-                await updateInvoiceStatus(item.id, {
-                  invoiceStatus: 'paid',
-                  invoicePaidDate: now,
-                });
+                await updateInvoiceStatus(item.id, { invoiceStatus: 'paid', invoicePaidDate: now });
                 setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
               }}
-              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+              className="h-10 px-5 rounded-xl bg-[var(--color-green)] text-white text-xs font-bold hover:brightness-110 transition-all"
             >
               Mark as Paid
             </button>
@@ -748,24 +778,24 @@ export default function WorkItemDetail({
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <button
           onClick={handleDiscard}
-          className="sm:flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
+          className="sm:flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
         >
           Discard
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="py-3 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors min-h-[44px]"
+          className="h-11 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-40 transition-all active:scale-[0.98]"
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
         <button
           onClick={handleApproveAndGenerate}
           disabled={generatingPdf}
-          className="sm:flex-1 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors min-h-[44px]"
+          className="sm:flex-1 h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold hover:bg-[var(--accent-dark)] disabled:opacity-40 transition-all active:scale-[0.98]"
         >
           {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
         </button>
@@ -793,7 +823,7 @@ export default function WorkItemDetail({
             setPreviewUrl(blobUrl);
             setShowPdfPreview(true);
           }}
-          className="w-full mt-3 py-3 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors"
+          className="w-full h-11 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all mb-3"
         >
           View PDF
         </button>
@@ -803,7 +833,7 @@ export default function WorkItemDetail({
       {(client?.email || item.senderEmail) && (
         <button
           onClick={handleSendToClient}
-          className="w-full mt-3 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+          className="w-full h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-all mb-4"
         >
           Send to Client →
         </button>
@@ -811,8 +841,8 @@ export default function WorkItemDetail({
 
       {/* PDF Preview Modal */}
       {showPdfPreview && previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--bg-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col sm:mx-4">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-card)] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col sm:mx-4 animate-slide-up sm:animate-scale-in">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">Invoice Preview</h3>
               <div className="flex items-center gap-2">
@@ -829,9 +859,9 @@ export default function WorkItemDetail({
                     if (previewUrl) URL.revokeObjectURL(previewUrl);
                     setPreviewUrl(null);
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
                 >
-                  ✕
+                  <IconClose size={18} />
                 </button>
               </div>
             </div>

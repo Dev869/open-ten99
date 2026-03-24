@@ -195,38 +195,47 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
 
   return (
     <div className="animate-fade-in-up">
-      {/* ── Header row: search + actions ── */}
-      <div className="flex items-center gap-2 mb-2">
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+          Work Orders
+          <span className="text-sm font-semibold text-[var(--text-secondary)] ml-2 normal-case tracking-normal">
+            {filtered.length}
+          </span>
+        </h1>
+        <div className="md:hidden" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="h-9 w-9 flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
+            aria-label="Export CSV"
+            title="Export CSV"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setShowNewOrder(true)}
+            className="h-9 flex-shrink-0 px-4 bg-[var(--accent)] text-white text-xs font-bold rounded-lg hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all whitespace-nowrap"
+          >
+            + New
+          </button>
+        </div>
+      </div>
+
+      {/* ── Search ── */}
+      <div className="mb-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="flex-1 min-w-0 px-3 py-2 h-9 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          placeholder="Search work orders..."
+          className="w-full px-4 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-shadow"
         />
-        <button
-          onClick={handleExport}
-          className="h-9 w-9 flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
-          aria-label="Export"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
-        <button
-          onClick={() => setShowNewOrder(true)}
-          className="h-9 flex-shrink-0 px-3 bg-[var(--accent)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--accent-dark)] transition-colors whitespace-nowrap"
-        >
-          + New
-        </button>
       </div>
-
-      {/* ── Desktop page title ── */}
-      <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-        Work Orders
-      </h1>
 
       {/* ── Filter row: type + status + advanced toggle ── */}
       <div className="flex items-center gap-1.5 mb-2">
@@ -346,17 +355,17 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
             />
           </div>
 
-          {/* Footer: clear + count */}
-          <div className="flex items-center gap-2">
-            {hasActiveFilters && (
+          {/* Footer: clear */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2">
               <button onClick={clearAllFilters} className="text-[11px] text-[var(--accent)] hover:underline">
-                Clear all
+                Clear all filters
               </button>
-            )}
-            <span className="text-[11px] text-[var(--text-secondary)] ml-auto">
-              {filtered.length} of {totalNonArchived}
-            </span>
-          </div>
+              <span className="text-[11px] text-[var(--text-secondary)] ml-auto">
+                {filtered.length} of {totalNonArchived}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
