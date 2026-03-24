@@ -107,52 +107,11 @@ export default function WorkItemDetail({
     navigate('/dashboard/work-items');
   }
 
-  function handleSendToClient() {
-    if (!client?.email) return;
-    try {
-      const portalUrl = `https://openchanges.web.app/portal/${item!.id}`;
-      const subject = encodeURIComponent(
-        `DW Tailored Systems — Work Order: ${item!.subject}`
-      );
-
-      const lineItemsBlock = item!.lineItems
-        .map(
-          (li, i) =>
-            `  ${i + 1}. ${li.description || '(no description)'}\n` +
-            `     Hours: ${li.hours.toFixed(1)}  |  Cost: ${formatCurrency(li.cost)}`
-        )
-        .join('\n\n');
-
-      const billingNote = item!.deductFromRetainer
-        ? `\nBilling: ${item!.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
-        : '';
-
-      const body = encodeURIComponent(
-        `Hello ${client.name},\n\n` +
-        `A new work order from DW Tailored Systems is ready for your review.\n\n` +
-        `————————————————————————————————\n` +
-        `WORK ORDER SUMMARY\n` +
-        `————————————————————————————————\n\n` +
-        `Subject:  ${item!.subject}\n` +
-        `Type:     ${item!.type.charAt(0).toUpperCase() + item!.type.slice(1)}\n\n` +
-        `Line Items:\n\n` +
-        `${lineItemsBlock}\n\n` +
-        `————————————————————————————————\n` +
-        `Total Hours:  ${item!.totalHours.toFixed(1)} hrs\n` +
-        `Total Cost:   ${formatCurrency(item!.totalCost)}\n` +
-        `————————————————————————————————\n` +
-        `${billingNote}\n` +
-        `Please review and approve this work order at the link below:\n\n` +
-        `${portalUrl}\n\n\n` +
-        `Thank you for choosing DW Tailored Systems.\n\n` +
-        `Best regards,\n` +
-        `DW Tailored Systems\n` +
-        `https://dwtailored.com`
-      );
-      window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_self');
-    } catch (err) {
-      console.error('Send to client error:', err);
-    }
+  async function handleMarkComplete() {
+    if (!item!.id) return;
+    const updated = { ...item!, status: 'completed' as const };
+    await updateWorkItem(updated);
+    setItem(updated);
   }
 
   return (
@@ -446,198 +405,147 @@ export default function WorkItemDetail({
         </div>
       </div>
 
-      {/* Invoice Tracking */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-6">
-        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wide mb-3">
-          Invoice
-        </h2>
-
-        {/* Draft / No invoice */}
-        {(!item.invoiceStatus || item.invoiceStatus === 'draft') && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-gray)]/20 text-[var(--color-gray)]">
-                {item.invoiceStatus === 'draft' ? 'Draft' : 'No Invoice'}
-              </span>
+      {/* ── Email Actions ── */}
+      {client?.email && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          {/* Send Work Order */}
+          <button
+            onClick={() => navigate(`/dashboard/work-items/${item.id}/email/completion`)}
+            className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 text-left transition-all hover:border-[var(--accent)] hover:shadow-lg hover:shadow-[var(--accent)]/5"
+          >
+            <div className="text-xs font-semibold text-[var(--accent)] uppercase tracking-wide mb-1">
+              Work Order
             </div>
-            <button
-              onClick={async () => {
-                if (!item.id) return;
-                const now = new Date();
-                const due = new Date(now);
-                due.setDate(due.getDate() + 30);
-                await updateInvoiceStatus(item.id, {
-                  invoiceStatus: 'sent',
-                  invoiceSentDate: now,
-                  invoiceDueDate: due,
-                });
-                setItem({
-                  ...item,
-                  invoiceStatus: 'sent',
-                  invoiceSentDate: now,
-                  invoiceDueDate: due,
-                });
-              }}
-              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-orange)] text-white text-sm font-semibold hover:brightness-110 transition-all"
-            >
-              Mark as Invoiced
-            </button>
-          </div>
-        )}
-
-        {/* Sent */}
-        {item.invoiceStatus === 'sent' && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-orange)]/20 text-[var(--color-orange)]">
-                Sent
-              </span>
-              <span className="text-sm text-[var(--text-secondary)]">
-                Sent: {item.invoiceSentDate ? formatDate(item.invoiceSentDate) : '—'}
-              </span>
+            <div className="text-sm font-bold text-[var(--text-primary)]">
+              Send to Client
             </div>
-            <div className="text-sm text-[var(--text-secondary)] mb-3">
-              Due: {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
-              {item.invoiceDueDate && (
-                <span className="ml-1">
-                  ({Math.max(0, Math.ceil((item.invoiceDueDate.getTime() - Date.now()) / 86400000))} days remaining)
-                </span>
-              )}
+            <div className="text-xs text-[var(--text-secondary)] mt-1">
+              Compose &amp; send work order details
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={async () => {
-                  if (!item.id) return;
-                  const now = new Date();
-                  await updateInvoiceStatus(item.id, {
-                    invoiceStatus: 'paid',
-                    invoicePaidDate: now,
-                  });
-                  setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
-                }}
-                className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
-              >
-                Mark as Paid
-              </button>
-              <button
-                onClick={async () => {
-                  if (!item.id) return;
-                  await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
-                  setItem({ ...item, invoiceStatus: 'overdue' });
-                }}
-                className="min-h-[44px] px-5 rounded-xl border border-[var(--color-red)] text-[var(--color-red)] text-sm font-semibold hover:bg-[var(--color-red)]/5 transition-colors"
-              >
-                Mark Overdue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Paid */}
-        {item.invoiceStatus === 'paid' && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-green)]/20 text-[var(--color-green)]">
-                Paid
-              </span>
-              <span className="text-sm text-[var(--text-secondary)]">
-                Paid: {item.invoicePaidDate ? formatDate(item.invoicePaidDate) : '—'}
-              </span>
-            </div>
-            <span className="text-xl font-extrabold text-[var(--color-green)]">
-              {formatCurrency(item.totalCost)}
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--accent)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
+              →
             </span>
-          </div>
-        )}
+          </button>
 
-        {/* Overdue */}
-        {item.invoiceStatus === 'overdue' && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-500">
-                Overdue
-              </span>
-              {item.invoiceDueDate && (
-                <span className="text-sm font-semibold text-red-500">
-                  {Math.ceil((Date.now() - item.invoiceDueDate.getTime()) / 86400000)} days overdue
+          {/* Send Invoice */}
+          <button
+            onClick={() => navigate(`/dashboard/work-items/${item.id}/email/invoice`)}
+            className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 text-left transition-all hover:border-[var(--color-orange)] hover:shadow-lg hover:shadow-[var(--color-orange)]/5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-[var(--color-orange)] uppercase tracking-wide mb-1">
+                Invoice
+              </div>
+              {item.invoiceStatus && item.invoiceStatus !== 'draft' && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  item.invoiceStatus === 'paid'
+                    ? 'bg-[var(--color-green)]/15 text-[var(--color-green)]'
+                    : item.invoiceStatus === 'overdue'
+                    ? 'bg-[var(--color-red)]/15 text-[var(--color-red)]'
+                    : 'bg-[var(--color-orange)]/15 text-[var(--color-orange)]'
+                }`}>
+                  {item.invoiceStatus === 'sent' ? 'Sent' : item.invoiceStatus === 'paid' ? 'Paid' : 'Overdue'}
                 </span>
               )}
             </div>
-            <div className="text-sm text-[var(--text-secondary)] mb-3">
-              Due: {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
-              {item.invoiceSentDate && (
-                <span className="ml-2">Sent: {formatDate(item.invoiceSentDate)}</span>
-              )}
+            <div className="text-sm font-bold text-[var(--text-primary)]">
+              {item.invoiceStatus === 'sent' || item.invoiceStatus === 'overdue' ? 'Resend Invoice' : 'Send Invoice'}
             </div>
+            <div className="text-xs text-[var(--text-secondary)] mt-1">
+              {item.invoiceStatus === 'paid'
+                ? `Paid ${item.invoicePaidDate ? formatDate(item.invoicePaidDate) : ''}`
+                : item.invoiceStatus === 'sent'
+                ? `Due ${item.invoiceDueDate ? formatDate(item.invoiceDueDate) : ''}`
+                : item.invoiceStatus === 'overdue'
+                ? `${item.invoiceDueDate ? Math.ceil((Date.now() - item.invoiceDueDate.getTime()) / 86400000) : 0} days overdue`
+                : 'Compose & send invoice email'}
+            </div>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-orange)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
+              →
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Invoice Status Actions ── */}
+      {(item.invoiceStatus === 'sent' || item.invoiceStatus === 'overdue') && (
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={async () => {
+              if (!item.id) return;
+              const now = new Date();
+              await updateInvoiceStatus(item.id, { invoiceStatus: 'paid', invoicePaidDate: now });
+              setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
+            }}
+            className="px-4 py-2 rounded-lg bg-[var(--color-green)]/10 text-[var(--color-green)] text-xs font-semibold hover:bg-[var(--color-green)]/20 transition-colors"
+          >
+            Mark as Paid
+          </button>
+          {item.invoiceStatus === 'sent' && (
             <button
               onClick={async () => {
                 if (!item.id) return;
-                const now = new Date();
-                await updateInvoiceStatus(item.id, {
-                  invoiceStatus: 'paid',
-                  invoicePaidDate: now,
-                });
-                setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
+                await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
+                setItem({ ...item, invoiceStatus: 'overdue' });
               }}
-              className="min-h-[44px] px-5 rounded-xl bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+              className="px-4 py-2 rounded-lg bg-[var(--color-red)]/10 text-[var(--color-red)] text-xs font-semibold hover:bg-[var(--color-red)]/20 transition-colors"
             >
-              Mark as Paid
+              Mark Overdue
             </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={handleDiscard}
-          className="sm:flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
-        >
-          Discard
-        </button>
+      {/* ── Toolbar ── */}
+      <div className="flex items-center gap-3 mb-4">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="py-3 px-6 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors min-h-[44px]"
+          className="py-2.5 px-5 rounded-lg border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 disabled:opacity-50 transition-colors"
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : 'Save'}
         </button>
+        {item.status !== 'completed' && item.status !== 'archived' && (
+          <button
+            onClick={handleApproveAndGenerate}
+            disabled={generatingPdf}
+            className="py-2.5 px-5 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+          >
+            {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
+          </button>
+        )}
+        {item.status === 'approved' && !generatingPdf && (
+          <button
+            onClick={async () => {
+              if (!client) return;
+              const blobUrl = await buildChangeOrderPdf(item, client, {
+                companyName: 'DW Tailored',
+                hourlyRate,
+              });
+              setPreviewUrl(blobUrl);
+              setShowPdfPreview(true);
+            }}
+            className="py-2.5 px-5 rounded-lg border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors"
+          >
+            View PDF
+          </button>
+        )}
+        {item.status !== 'completed' && item.status !== 'archived' && (
+          <button
+            onClick={handleMarkComplete}
+            className="py-2.5 px-5 rounded-lg bg-[var(--color-green)] text-white text-sm font-semibold hover:brightness-110 transition-all"
+          >
+            Complete
+          </button>
+        )}
+        <div className="flex-1" />
         <button
-          onClick={handleApproveAndGenerate}
-          disabled={generatingPdf}
-          className="sm:flex-1 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors min-h-[44px]"
+          onClick={handleDiscard}
+          className="py-2.5 px-4 rounded-lg text-sm text-[var(--text-secondary)] hover:text-[var(--color-red)] hover:bg-[var(--color-red)]/5 transition-colors"
         >
-          {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
+          Discard
         </button>
       </div>
-
-      {/* View PDF */}
-      {item.status === 'approved' && !generatingPdf && (
-        <button
-          onClick={async () => {
-            if (!client) return;
-            const blobUrl = await buildChangeOrderPdf(item, client, {
-              companyName: 'DW Tailored',
-              hourlyRate,
-            });
-            setPreviewUrl(blobUrl);
-            setShowPdfPreview(true);
-          }}
-          className="w-full mt-3 py-3 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors"
-        >
-          View PDF
-        </button>
-      )}
-
-      {/* Send to Client */}
-      {client?.email && (
-        <button
-          onClick={handleSendToClient}
-          className="w-full mt-3 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
-        >
-          Send to Client →
-        </button>
-      )}
 
       {/* PDF Preview Modal */}
       {showPdfPreview && previewUrl && (
@@ -675,6 +583,7 @@ export default function WorkItemDetail({
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -33,6 +33,7 @@ const Profile = lazy(() => import('./routes/contractor/Profile'));
 const Vault = lazy(() => import('./routes/contractor/Vault'));
 const AppsList = lazy(() => import('./routes/contractor/AppsList'));
 const AppDetail = lazy(() => import('./routes/contractor/AppDetail'));
+const EmailComposer = lazy(() => import('./routes/contractor/EmailComposer'));
 const GitHubCallback = lazy(() => import('./routes/contractor/GitHubCallback'));
 
 // Lazy-loaded portal routes
@@ -264,6 +265,10 @@ function ContractorRoutes() {
             hourlyRate={settings.hourlyRate}
           />
         }
+      />
+      <Route
+        path="work-items/:id/email/:type"
+        element={<EmailComposer workItems={workItems} clients={clients} />}
       />
       <Route
         path="calendar"

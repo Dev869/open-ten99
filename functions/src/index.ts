@@ -23,3 +23,4 @@ export { onStripeConnect, onStripeSync, onStripeWebhook } from "./stripe";
 export { onManualSync, onDeleteConnectedAccount, onPlaidUpdateLinkToken } from "./manualSync";
 export { onTransactionCreated } from './matchTransaction';
 export { onSmartCategorize } from './smartCategorize';
+export { sendCompletionEmail } from './sendCompletionEmail';

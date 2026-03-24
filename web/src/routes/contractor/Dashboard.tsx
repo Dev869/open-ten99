@@ -24,6 +24,18 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
     setOnboardingDismissed(true);
   }, []);
 
+  const clientMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
+    return map;
+  }, [clients]);
+
+  const appMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
+    return map;
+  }, [apps]);
+
   const showOnboarding =
     !onboardingDismissed &&
     clients.length === 0 &&
@@ -39,17 +51,6 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
       />
     );
   }
-  const clientMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    clients.forEach((c) => { if (c.id) map[c.id] = c.name; });
-    return map;
-  }, [clients]);
-
-  const appMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    apps.forEach((a) => { if (a.id) map[a.id] = a.name; });
-    return map;
-  }, [apps]);
 
   const pending = workItems.filter(
     (i) => i.status === 'draft' || i.status === 'inReview'

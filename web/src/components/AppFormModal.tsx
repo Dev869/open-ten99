@@ -135,9 +135,11 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
   }
 
   const inputClass =
-    'w-full mt-1.5 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]';
+    'w-full mt-1 px-3 py-2 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow';
   const labelClass =
-    'text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide';
+    'text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-widest';
+  const sectionClass =
+    'text-[10px] text-[var(--accent)] uppercase font-bold tracking-[0.2em] flex items-center gap-2 before:content-[""] before:h-px before:flex-1 before:bg-[var(--border)] after:content-[""] after:h-px after:flex-1 after:bg-[var(--border)]';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -145,259 +147,270 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
         className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="relative bg-[var(--bg-page)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in">
+      <div className="relative bg-[var(--bg-page)] rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-scale-in flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-[var(--border)]">
-          <h2 className="text-lg font-extrabold text-[var(--text-primary)] uppercase tracking-wide">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-[var(--border)] shrink-0">
+          <h2 className="text-base font-extrabold text-[var(--text-primary)] uppercase tracking-wide">
             {isEditMode ? 'Edit App' : 'New App'}
           </h2>
           <button
             onClick={onClose}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xl leading-none"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-all text-lg leading-none"
           >
             &times;
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Name */}
-          <div>
-            <label className={labelClass}>Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="App name"
-              className={inputClass}
-            />
-          </div>
+        <div className="overflow-y-auto flex-1 scrollbar-hide">
+          <div className="px-5 pt-4 pb-2 space-y-3">
+            {/* ── Basics ── */}
+            <div className={sectionClass}>Basics</div>
 
-          {/* Client */}
-          <div>
-            <label className={labelClass}>Client *</label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Select a client</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Platform */}
-          <div>
-            <label className={labelClass}>Platform *</label>
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value as AppPlatform)}
-              className={inputClass}
-            >
-              {(Object.keys(APP_PLATFORM_LABELS) as AppPlatform[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_PLATFORM_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className={labelClass}>Status *</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as AppStatus)}
-              className={inputClass}
-            >
-              {(Object.keys(APP_STATUS_LABELS) as AppStatus[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_STATUS_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className={labelClass}>Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of the app..."
-              rows={3}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          {/* URL */}
-          <div>
-            <label className={labelClass}>URL</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </div>
-
-          {/* Repo URLs */}
-          <div>
-            <label className={labelClass}>Repo URLs</label>
-            {repoUrls.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {repoUrls.map((repo, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    <span className="max-w-[180px] truncate">{repo}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeRepoUrl(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove repo URL"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
+            {/* Name + Client */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Name *</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="App name"
+                  className={inputClass}
+                />
               </div>
-            )}
-            <input
-              type="text"
-              value={repoUrlInput}
-              onChange={(e) => setRepoUrlInput(e.target.value)}
-              onKeyDown={handleRepoUrlKeyDown}
-              placeholder="Paste repo URL and press Enter"
-              className={repoUrls.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
-          </div>
-
-          {/* Tech Stack */}
-          <div>
-            <label className={labelClass}>Tech Stack</label>
-            {techStack.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {techStack.map((tech, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    {tech}
-                    <button
-                      type="button"
-                      onClick={() => removeTechStack(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove tech"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
+              <div>
+                <label className={labelClass}>Client *</label>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-            <input
-              type="text"
-              value={techStackInput}
-              onChange={(e) => setTechStackInput(e.target.value)}
-              onKeyDown={handleTechStackKeyDown}
-              placeholder="e.g. React, TypeScript — press Enter to add"
-              className={techStack.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
-          </div>
+            </div>
 
-          {/* Hosting */}
-          <div>
-            <label className={labelClass}>Hosting</label>
-            <input
-              type="text"
-              value={hosting}
-              onChange={(e) => setHosting(e.target.value)}
-              placeholder="e.g. Vercel, AWS, Firebase"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Environment */}
-          <div>
-            <label className={labelClass}>Environment</label>
-            <select
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value as AppEnvironment | '')}
-              className={inputClass}
-            >
-              <option value="">None</option>
-              {(Object.keys(APP_ENVIRONMENT_LABELS) as AppEnvironment[]).map((key) => (
-                <option key={key} value={key}>
-                  {APP_ENVIRONMENT_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Deployment Notes */}
-          <div>
-            <label className={labelClass}>Deployment Notes</label>
-            <textarea
-              value={deploymentNotes}
-              onChange={(e) => setDeploymentNotes(e.target.value)}
-              placeholder="Deployment steps, environment variables, etc."
-              rows={3}
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-
-          {/* Linked Credentials */}
-          <div>
-            <label className={labelClass}>Linked Credentials</label>
-            {vaultCredentialIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-2">
-                {vaultCredentialIds.map((credId, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
-                  >
-                    <span className="max-w-[180px] truncate">{credId}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeVaultCredential(i)}
-                      className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
-                      aria-label="Remove credential"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
+            {/* Platform + Status */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Platform *</label>
+                <select
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value as AppPlatform)}
+                  className={inputClass}
+                >
+                  {(Object.keys(APP_PLATFORM_LABELS) as AppPlatform[]).map((key) => (
+                    <option key={key} value={key}>
+                      {APP_PLATFORM_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-            <input
-              type="text"
-              value={vaultCredentialInput}
-              onChange={(e) => setVaultCredentialInput(e.target.value)}
-              onKeyDown={handleVaultCredentialKeyDown}
-              placeholder="Credential ID — press Enter to add"
-              className={vaultCredentialIds.length > 0 ? inputClass : `${inputClass} mt-1.5`}
-            />
+              <div>
+                <label className={labelClass}>Status *</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as AppStatus)}
+                  className={inputClass}
+                >
+                  {(Object.keys(APP_STATUS_LABELS) as AppStatus[]).map((key) => (
+                    <option key={key} value={key}>
+                      {APP_STATUS_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description of the app..."
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            {/* ── Technical ── */}
+            <div className={sectionClass}>Technical</div>
+
+            {/* URL */}
+            <div>
+              <label className={labelClass}>URL</label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className={inputClass}
+              />
+            </div>
+
+            {/* Repo URLs */}
+            <div>
+              <label className={labelClass}>Repo URLs</label>
+              {repoUrls.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1.5">
+                  {repoUrls.map((repo, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
+                    >
+                      <span className="max-w-[160px] truncate">{repo}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeRepoUrl(i)}
+                        className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
+                        aria-label="Remove repo URL"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                value={repoUrlInput}
+                onChange={(e) => setRepoUrlInput(e.target.value)}
+                onKeyDown={handleRepoUrlKeyDown}
+                placeholder="Paste URL, press Enter"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Tech Stack */}
+            <div>
+              <label className={labelClass}>Tech Stack</label>
+              {techStack.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1.5">
+                  {techStack.map((tech, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
+                    >
+                      {tech}
+                      <button
+                        type="button"
+                        onClick={() => removeTechStack(i)}
+                        className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
+                        aria-label="Remove tech"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                value={techStackInput}
+                onChange={(e) => setTechStackInput(e.target.value)}
+                onKeyDown={handleTechStackKeyDown}
+                placeholder="e.g. React, TypeScript — Enter to add"
+                className={inputClass}
+              />
+            </div>
+
+            {/* ── Infrastructure ── */}
+            <div className={sectionClass}>Infrastructure</div>
+
+            {/* Hosting + Environment */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Hosting</label>
+                <input
+                  type="text"
+                  value={hosting}
+                  onChange={(e) => setHosting(e.target.value)}
+                  placeholder="e.g. Vercel, AWS"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Environment</label>
+                <select
+                  value={environment}
+                  onChange={(e) => setEnvironment(e.target.value as AppEnvironment | '')}
+                  className={inputClass}
+                >
+                  <option value="">None</option>
+                  {(Object.keys(APP_ENVIRONMENT_LABELS) as AppEnvironment[]).map((key) => (
+                    <option key={key} value={key}>
+                      {APP_ENVIRONMENT_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Deployment Notes */}
+            <div>
+              <label className={labelClass}>Deployment Notes</label>
+              <textarea
+                value={deploymentNotes}
+                onChange={(e) => setDeploymentNotes(e.target.value)}
+                placeholder="Steps, env vars, etc."
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            {/* Linked Credentials */}
+            <div>
+              <label className={labelClass}>Linked Credentials</label>
+              {vaultCredentialIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1.5">
+                  {vaultCredentialIds.map((credId, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--bg-input)] text-xs text-[var(--text-primary)] border border-[var(--border)]"
+                    >
+                      <span className="max-w-[160px] truncate">{credId}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeVaultCredential(i)}
+                        className="text-[var(--text-secondary)] hover:text-[var(--color-red)] transition-colors ml-0.5 leading-none"
+                        aria-label="Remove credential"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                value={vaultCredentialInput}
+                onChange={(e) => setVaultCredentialInput(e.target.value)}
+                onKeyDown={handleVaultCredentialKeyDown}
+                placeholder="Credential ID — Enter to add"
+                className={inputClass}
+              />
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-5 border-t border-[var(--border)]">
+        <div className="flex gap-3 px-5 py-3.5 border-t border-[var(--border)] shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+            className="flex-1 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!isValid || saving}
-            className="flex-1 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create App'}
           </button>

@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate } from '../lib/types';
 
 // --- Converters ---
 
@@ -894,5 +894,88 @@ export async function rejectMatch(transactionId: string): Promise<void> {
     matchConfidence: null,
     updatedAt: Timestamp.now(),
   });
+}
+
+// --- Email Templates ---
+
+function docToEmailTemplate(id: string, data: DocumentData): EmailTemplate {
+  return {
+    id,
+    ownerId: data.ownerId,
+    name: data.name ?? '',
+    subject: data.subject ?? '',
+    html: data.html ?? '',
+    greeting: data.greeting ?? undefined,
+    message: data.message ?? undefined,
+    closing: data.closing ?? undefined,
+    signoff: data.signoff ?? undefined,
+    fromEmail: data.fromEmail ?? undefined,
+    fromName: data.fromName ?? undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+export function subscribeEmailTemplates(
+  callback: (templates: EmailTemplate[]) => void,
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const q = query(
+    collection(db, 'emailTemplates'),
+    where('ownerId', '==', user.uid),
+    orderBy('updatedAt', 'desc'),
+  );
+
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => docToEmailTemplate(d.id, d.data())));
+  });
+}
+
+export async function saveEmailTemplate(
+  template: Omit<EmailTemplate, 'id' | 'ownerId' | 'createdAt' | 'updatedAt'> & { id?: string },
+): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const now = Timestamp.now();
+
+  if (template.id) {
+    const ref = doc(db, 'emailTemplates', template.id);
+    await updateDoc(ref, {
+      name: template.name,
+      subject: template.subject,
+      html: template.html,
+      greeting: template.greeting ?? null,
+      message: template.message ?? null,
+      closing: template.closing ?? null,
+      signoff: template.signoff ?? null,
+      fromEmail: template.fromEmail ?? null,
+      fromName: template.fromName ?? null,
+      updatedAt: now,
+    });
+    return template.id;
+  }
+
+  const ref = await addDoc(collection(db, 'emailTemplates'), {
+    ownerId: user.uid,
+    name: template.name,
+    subject: template.subject,
+    html: template.html,
+    greeting: template.greeting ?? null,
+    message: template.message ?? null,
+    closing: template.closing ?? null,
+    signoff: template.signoff ?? null,
+    fromEmail: template.fromEmail ?? null,
+    fromName: template.fromName ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function deleteEmailTemplate(templateId: string): Promise<void> {
+  await deleteDoc(doc(db, 'emailTemplates', templateId));
 }
 

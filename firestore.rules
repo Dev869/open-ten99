@@ -246,5 +246,17 @@ service cloud.firestore {
       allow delete: if isContractor()
         && resource.data.ownerId == request.auth.uid;
     }
+
+    match /emailTemplates/{templateId} {
+      allow read: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor()
+        && resource.data.ownerId == request.auth.uid;
+    }
   }
 }

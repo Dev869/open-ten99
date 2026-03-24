@@ -361,3 +361,21 @@ export interface Transaction {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/* ── Email Templates ──────────────────────────────── */
+
+export interface EmailTemplate {
+  id?: string;
+  ownerId: string;
+  name: string;
+  subject: string;
+  html: string;
+  greeting?: string;
+  message?: string;
+  closing?: string;
+  signoff?: string;
+  fromEmail?: string;
+  fromName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
