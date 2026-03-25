@@ -31,3 +31,4 @@ export { onGenerateInsights } from './generateInsights';
 export { onAnalyzeReport } from './analyzeReport';
 export { generateMagicLink, verifyMagicLink } from './magicLink';
 export { onSavePostmarkSecret } from "./postmarkSecret";
+export { generateRetainerInvoices } from './generateRetainerInvoices';
