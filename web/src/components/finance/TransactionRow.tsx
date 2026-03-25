@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import ReceiptBadge from './ReceiptBadge';
 
 interface TransactionRowProps {
   transaction: Transaction;
   accounts: ConnectedAccount[];
   onCategoryChange: (id: string, category: string) => void;
   onRowClick?: (id: string) => void;
+  onReceiptClick?: (id: string) => void;
+  insightBadge?: React.ReactNode;
 }
 
 function SourceBadge({ transaction, accounts }: { transaction: Transaction; accounts: ConnectedAccount[] }) {
@@ -71,7 +75,8 @@ function MatchStatusBadge({ matchStatus }: { matchStatus: Transaction['matchStat
   return null;
 }
 
-export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick }: TransactionRowProps) {
+export function TransactionRow({ transaction, accounts, onCategoryChange, onRowClick, onReceiptClick, insightBadge }: TransactionRowProps) {
+  const navigate = useNavigate();
   const [localCategory, setLocalCategory] = useState(transaction.category);
 
   const isIncome = transaction.amount > 0;
@@ -81,23 +86,28 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
   const amountPrefix = isIncome ? '+' : '';
 
   function handleCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    e.stopPropagation();
     const next = e.target.value;
     setLocalCategory(next);
     onCategoryChange(transaction.id, next);
   }
 
   const isSuggested = transaction.matchStatus === 'suggested';
-  const rowCursor = isSuggested ? 'cursor-pointer' : '';
+
+  const receiptStatus: 'confirmed' | 'none' =
+    transaction.receiptIds && transaction.receiptIds.length > 0 ? 'confirmed' : 'none';
 
   function handleRowClick() {
     if (isSuggested && onRowClick) {
       onRowClick(transaction.id);
+    } else {
+      navigate(`/dashboard/finance/transactions/${transaction.id}`);
     }
   }
 
   return (
     <tr
-      className={`border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors ${rowCursor}`}
+      className="border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
       onClick={handleRowClick}
     >
       {/* Date */}
@@ -107,11 +117,17 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
 
       {/* Description */}
       <td className="px-4 py-3 text-sm text-[var(--text-primary)] max-w-xs">
-        <span className="inline-flex items-center gap-0 max-w-full">
+        <span className="inline-flex items-center gap-1 max-w-full flex-wrap">
           <span className="line-clamp-1 shrink min-w-0" title={transaction.description}>
             {transaction.description}
           </span>
+          {transaction.isRecurring && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Recurring
+            </span>
+          )}
           <MatchStatusBadge matchStatus={transaction.matchStatus} />
+          {insightBadge}
         </span>
       </td>
 
@@ -126,7 +142,7 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
       </td>
 
       {/* Category (inline select) */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <select
           value={localCategory}
           onChange={handleCategoryChange}
@@ -139,6 +155,14 @@ export function TransactionRow({ transaction, accounts, onCategoryChange, onRowC
             </option>
           ))}
         </select>
+      </td>
+
+      {/* Receipt */}
+      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+        <ReceiptBadge
+          status={receiptStatus}
+          onClick={onReceiptClick ? () => onReceiptClick(transaction.id) : undefined}
+        />
       </td>
     </tr>
   );

@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import type { WorkItem } from '../../lib/types';
 import { StatusBadge } from '../../components/StatusBadge';
 import { TypeTag } from '../../components/TypeTag';
@@ -42,11 +44,17 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
     <div className="min-h-screen bg-[var(--bg-page)]">
       {/* Teal brand header */}
       <div className="bg-[#4BA8A8]">
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
+        <div className="max-w-2xl mx-auto px-4 pt-6 pb-2 flex items-center justify-between">
           <div className="flex items-baseline gap-1">
             <span className="text-white font-black text-2xl tracking-tight leading-none">DW</span>
             <span className="text-white/70 text-[8px] font-bold tracking-[0.2em] uppercase ml-1">Tailored Systems</span>
           </div>
+          <button
+            onClick={() => signOut(auth).then(() => navigate('/portal/auth'))}
+            className="text-xs font-semibold text-white/80 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/10"
+          >
+            Sign Out
+          </button>
         </div>
       </div>
       {/* Dark section with accent stripe */}
@@ -59,7 +67,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
           <div className="flex-1 bg-[#4BA8A8]" />
         </div>
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <BrandWordmark size={12} variant="light" />
+          <BrandWordmark size={28} variant="light" />
           <h1 className="text-xl font-bold text-white mt-2">
             Welcome, {clientName}
           </h1>

@@ -4,8 +4,8 @@ import { cn } from '../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
-  IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps,
-  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook,
+  IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps, IconCamera,
+  IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook, IconClock,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconPaintBrush,
 } from './icons';
 import { BrandIcon, BrandWordmark } from './Brand';
@@ -22,7 +22,7 @@ interface NavItem {
 
 const defaultNavItems: NavItem[] = [
   { to: '/dashboard', key: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
-  { to: '/dashboard/work-items', key: 'work-items', label: 'Work Items', Icon: IconWrench },
+  { to: '/dashboard/work-items', key: 'work-items', label: 'Work Orders', Icon: IconWrench },
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
   { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },
@@ -36,8 +36,10 @@ const defaultNavItems: NavItem[] = [
       { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconBook },
+      { to: '/dashboard/finance/receipts', key: 'finance-receipts', label: 'Receipts', Icon: IconCamera },
       { to: '/dashboard/finance/reports', key: 'finance-reports', label: 'Reports', Icon: IconDocument },
       { to: '/dashboard/finance/accounts', key: 'finance-accounts', label: 'Accounts', Icon: IconGear },
+      { to: '/dashboard/finance/mileage', key: 'finance-mileage', label: 'Mileage', Icon: IconClock },
     ],
   },
   { key: 'team', to: '/dashboard/team', label: 'Team', Icon: IconTeam },
@@ -248,8 +250,6 @@ function CustomizePanel({
 
 interface SidebarProps {
   pendingCount: number;
-  isOpen: boolean;
-  onClose: () => void;
   sidebarOrder?: string[];
   sidebarHidden?: string[];
   onUpdateSidebar?: (order: string[], hidden: string[]) => void;
@@ -264,8 +264,6 @@ interface SidebarProps {
 
 export function Sidebar({
   pendingCount,
-  isOpen,
-  onClose,
   dark,
   onToggleTheme,
   sidebarOrder,
@@ -292,40 +290,6 @@ export function Sidebar({
   const closeFlyout = useCallback(() => {
     flyoutTimeout.current = setTimeout(() => setFlyoutKey(null), 300);
   }, []);
-
-  // Track which nav groups are expanded (mobile only)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const expanded = new Set<string>();
-    for (const item of defaultNavItems) {
-      if (item.children?.some((child) => location.pathname.startsWith(child.to))) {
-        expanded.add(item.key);
-      }
-    }
-    return expanded;
-  });
-
-  const toggleGroup = useCallback((key: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
-
-  // Auto-expand group when navigating to a child route
-  useEffect(() => {
-    for (const item of defaultNavItems) {
-      if (item.children?.some((child) => location.pathname.startsWith(child.to))) {
-        setExpandedGroups((prev) => {
-          if (prev.has(item.key)) return prev;
-          const next = new Set(prev);
-          next.add(item.key);
-          return next;
-        });
-      }
-    }
-  }, [location.pathname]);
 
   // Track viewport for mobile detection
   useEffect(() => {
@@ -389,32 +353,26 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden animate-fade-in"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar — desktop only */}
       <aside
         className={cn(
           'h-full z-50 flex flex-col bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex-shrink-0 transition-all duration-200',
           'hidden md:flex',
-          expanded ? 'w-[220px]' : 'w-[72px]',
-          isOpen && '!flex fixed w-[280px] shadow-2xl animate-slide-in-right'
+          expanded ? 'w-[220px]' : 'w-[72px]'
         )}
       >
         {/* Brand mark */}
-        <div className={cn('flex items-center h-16 flex-shrink-0 px-4', !expanded && 'md:justify-center')}>
-          <Link to="/dashboard" className="flex items-center gap-3" onClick={onClose}>
-            <span className={cn('flex-shrink-0', expanded ? 'hidden' : 'hidden md:block')}>
-              <BrandIcon size={24} />
-            </span>
-            <span className={cn(expanded ? '' : 'md:hidden')}>
-              <BrandWordmark size={18} />
-            </span>
+        <div className={cn(
+          'flex items-center h-16 flex-shrink-0',
+          expanded ? 'px-4' : 'px-1 md:justify-center'
+        )}>
+          <Link to="/dashboard" className={cn('block overflow-hidden', expanded ? 'w-full' : 'w-[64px]')}>
+            <div className={cn(expanded ? 'hidden' : 'hidden md:block')}>
+              <BrandIcon size={28} variant={dark ? 'light' : 'dark'} />
+            </div>
+            <div className={cn(expanded ? '' : 'md:hidden')}>
+              <BrandWordmark size={36} variant={dark ? 'light' : 'dark'} />
+            </div>
           </Link>
         </div>
 
@@ -422,7 +380,6 @@ export function Sidebar({
         <nav className={cn('flex-1 flex flex-col gap-1 px-3 mt-2', !expanded && 'md:items-center')}>
           {visibleNavItems.map((item) => {
             if (item.children) {
-              const isGroupExpanded = expandedGroups.has(item.key);
               const isGroupActive = item.children.some((child) =>
                 location.pathname.startsWith(child.to)
               );
@@ -448,13 +405,9 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={(e) => {
-                      if (isMobileView) {
-                        toggleGroup(item.key);
-                      } else {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setFlyoutTop(rect.top);
-                        if (flyoutKey === item.key) closeFlyout(); else openFlyout(item.key);
-                      }
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setFlyoutTop(rect.top);
+                      if (flyoutKey === item.key) closeFlyout(); else openFlyout(item.key);
                     }}
                     className={cn(
                       'relative flex items-center rounded-xl transition-all duration-200',
@@ -473,7 +426,7 @@ export function Sidebar({
                       {item.label}
                     </span>
                     <span className={cn('flex-shrink-0 transition-transform duration-200 inline-flex', !expanded && 'md:hidden')}>
-                      {isGroupExpanded ? (
+                      {flyoutKey === item.key ? (
                         <IconChevronDown size={14} />
                       ) : (
                         <IconChevronRight size={14} />
@@ -481,47 +434,22 @@ export function Sidebar({
                     </span>
                   </button>
 
-                  {/* Mobile: inline expand */}
-                  {isGroupExpanded && (
-                    <div className="flex flex-col gap-0.5 mt-0.5 md:hidden">
-                      {item.children.map((child) => (
-                        <NavLink
-                          key={child.to}
-                          to={child.to}
-                          end={child.to === '/dashboard/finance'}
-                          onClick={onClose}
-                          className={({ isActive }) =>
-                            cn(
-                              'flex items-center rounded-xl transition-all duration-200',
-                              'w-full pl-10 pr-3 py-2 gap-3',
-                              isActive
-                                ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
-                            )
-                          }
-                        >
-                          <div className="flex-shrink-0">
-                            <child.Icon size={18} />
-                          </div>
-                          <span className="text-sm font-medium">{child.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Desktop: flyout panel to the right */}
+                  {/* Flyout panel to the right (desktop + mobile) */}
                   {flyoutKey === item.key && (
                     <div
                       className={cn(
-                        'hidden md:block fixed z-[60] animate-fade-in',
-                        expanded ? 'left-[220px]' : 'left-[72px]'
+                        'fixed z-[60] animate-fade-in',
+                        // Mobile: anchor to right edge of screen
+                        'right-2 left-auto',
+                        // Desktop: next to sidebar (expanded or collapsed)
+                        expanded ? 'md:right-auto md:left-[220px]' : 'md:right-auto md:left-[72px]'
                       )}
                       style={{ top: flyoutTop }}
                       onMouseEnter={() => openFlyout(item.key)}
                       onMouseLeave={() => closeFlyout()}
                     >
                       {/* Bridge gap + visible panel */}
-                      <div className="pl-2">
+                      <div className="md:pl-2">
                         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl py-2 w-[200px]">
                           <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                             {item.label}
@@ -531,7 +459,10 @@ export function Sidebar({
                               key={child.to}
                               to={child.to}
                               end={child.to === '/dashboard/finance'}
-                              onClick={() => { if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current); setFlyoutKey(null); }}
+                              onClick={() => {
+                                if (flyoutTimeout.current) clearTimeout(flyoutTimeout.current);
+                                setFlyoutKey(null);
+                              }}
                               className={({ isActive }) =>
                                 cn(
                                   'flex items-center gap-3 px-3 py-2.5 mx-1 rounded-lg transition-colors duration-150',
@@ -558,7 +489,6 @@ export function Sidebar({
                 key={item.to}
                 to={item.to}
                 end={item.to === '/dashboard'}
-                onClick={onClose}
                 className={({ isActive }) =>
                   cn(
                     'relative flex items-center rounded-xl transition-all duration-200',
@@ -599,7 +529,6 @@ export function Sidebar({
         <div className={cn('flex flex-col gap-1 px-3 pb-5 flex-shrink-0', !expanded && 'md:items-center')}>
           <NavLink
             to="/dashboard/settings"
-            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 'flex items-center rounded-xl transition-all duration-200',
@@ -663,7 +592,6 @@ export function Sidebar({
           )}
           <NavLink
             to="/dashboard/profile"
-            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 'flex items-center rounded-xl transition-all duration-200',
@@ -715,7 +643,7 @@ export function Sidebar({
       </aside>
 
       {/* Collapse tab — fixed to sidebar edge, expanded state only, desktop only */}
-      {expanded && !isOpen && (
+      {expanded && (
         <button
           onClick={onToggleExpanded}
           className="fixed top-1/2 -translate-y-1/2 left-[210px] hidden md:flex items-center justify-center w-5 h-10 rounded-full bg-[var(--bg-sidebar)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:scale-110 shadow-sm transition-all duration-200 z-50"

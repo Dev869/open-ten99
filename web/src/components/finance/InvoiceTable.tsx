@@ -1,5 +1,6 @@
-import type { WorkItem, Client } from '../../lib/types';
+import type { WorkItem, Client, InvoiceRisk } from '../../lib/types';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { InsightBadge } from '../insights/InsightBadge';
 
 interface InvoiceTableProps {
   workItems: WorkItem[];
@@ -7,6 +8,7 @@ interface InvoiceTableProps {
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onRowClick?: (workItem: WorkItem) => void;
+  invoiceRisks?: InvoiceRisk[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -16,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
   overdue: 'var(--color-red)',
 };
 
-export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChange, onRowClick }: InvoiceTableProps) {
+export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChange, onRowClick, invoiceRisks }: InvoiceTableProps) {
   const clientMap = new Map(clients.map(c => [c.id, c.name]));
 
   const allSelected = workItems.length > 0 && workItems.every(item => selectedIds.has(item.id ?? ''));
@@ -83,6 +85,7 @@ export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChang
               const isSelected = selectedIds.has(id);
               const status = item.invoiceStatus ?? 'draft';
               const clientName = clientMap.get(item.clientId) ?? item.clientId;
+              const risk = invoiceRisks?.find((r) => r.workItemId === id);
 
               return (
                 <tr
@@ -117,12 +120,22 @@ export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChang
                     {item.invoiceDueDate ? formatDate(item.invoiceDueDate) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: STATUS_COLORS[status] ?? STATUS_COLORS.draft }}
-                    >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                        style={{ backgroundColor: STATUS_COLORS[status] ?? STATUS_COLORS.draft }}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </span>
+                      {risk && (
+                        <InsightBadge label={risk.risk} level={risk.risk} tooltip={risk.reason} />
+                      )}
+                      {risk?.predictedPayDate && (
+                        <span className="text-xs text-[var(--text-secondary)]">
+                          ~{new Date(risk.predictedPayDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

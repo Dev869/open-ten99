@@ -59,4 +59,9 @@ export {
   IconAlertCircle,
   IconInfo,
   IconThumbsUp,
+  IconMore,
+  IconCamera,
+  IconCar,
+  // AI
+  IconSparkle,
 } from './Icons';

@@ -3,6 +3,7 @@ export interface LineItem {
   description: string;
   hours: number;
   cost: number;
+  costOverride?: number;
 }
 
 export type WorkItemType = 'changeRequest' | 'featureRequest' | 'maintenance';
@@ -24,6 +25,10 @@ export interface WorkItem {
   projectId?: string;
   appId?: string;
   sourceEmail: string;
+  sourceHtml?: string;
+  senderEmail?: string;
+  senderName?: string;
+  completed?: boolean;
   subject: string;
   lineItems: LineItem[];
   totalHours: number;
@@ -44,6 +49,8 @@ export interface WorkItem {
   invoiceSentDate?: Date;
   invoicePaidDate?: Date;
   invoiceDueDate?: Date;
+  preDiscardStatus?: WorkItemStatus;
+  discardedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,10 +82,32 @@ export interface AppSettings {
   hourlyRate: number;
   companyName: string;
   pdfLogoUrl?: string;
+  // Invoice template
+  invoicePrefix?: string;         // e.g. "INV-"
+  invoiceNextNumber?: number;     // auto-incrementing number
+  invoicePaymentTerms?: string;   // e.g. "Net 30", "Due on Receipt"
+  invoiceNotes?: string;          // default footer notes (payment instructions, etc.)
+  invoiceTaxRate?: number;        // optional tax percentage (e.g. 8.25)
+  invoiceFromAddress?: string;    // sender address block
+  invoiceTerms?: string;          // custom terms & conditions text
   teamId?: string;
   sidebarOrder?: string[];    // ordered array of nav item route keys
   sidebarHidden?: string[];   // array of hidden nav item route keys
+  pushNotificationsEnabled?: boolean;
+  pushNotifyWorkOrderDue?: boolean;
+  pushNotifyNewInboundOrder?: boolean;
+  fcmToken?: string;
+  mileageRate?: number;
+  roundTimeToQuarterHour?: boolean;
 }
+
+export const PAYMENT_TERMS_OPTIONS = [
+  'Due on Receipt',
+  'Net 15',
+  'Net 30',
+  'Net 45',
+  'Net 60',
+] as const;
 
 export interface MagicLink {
   clientId: string;
@@ -208,6 +237,17 @@ export interface GitHubIntegration {
   lastSyncAt?: Date;
 }
 
+export interface PostmarkWebhook {
+  token: string;
+  updatedAt: Date;
+}
+
+export interface IntegrationData {
+  github: GitHubIntegration | null;
+  postmarkConfigured: boolean;
+  postmarkToken?: string;
+}
+
 export interface GitHubRepoInfo {
   fullName: string;
   defaultBranch: string;
@@ -327,6 +367,66 @@ export type TransactionType = 'income' | 'expense' | 'transfer' | 'uncategorized
 export type TransactionProvider = 'plaid' | 'stripe' | 'manual';
 export type MatchStatus = 'unmatched' | 'suggested' | 'confirmed' | 'rejected';
 
+export type ReceiptStatus = 'processing' | 'unmatched' | 'matched' | 'confirmed';
+
+export interface Receipt {
+  id: string;
+  ownerId: string;
+  status: ReceiptStatus;
+  imageUrl: string;
+  fileName: string;
+  uploadedAt: Date;
+  vendor?: string;
+  amount?: number;
+  date?: Date;
+  category?: string;
+  lineItems?: Array<{ description: string; amount: number }>;
+  rawText?: string;
+  transactionId?: string;
+  matchConfidence?: number;
+  matchMethod?: 'auto' | 'manual';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/* ── Time Tracking ─────────────────────────────────── */
+
+export interface TimeEntry {
+  id: string;
+  ownerId: string;
+  clientId: string;
+  appId?: string;
+  description: string;
+  durationSeconds: number;
+  isBillable: boolean;
+  startedAt: Date;
+  endedAt: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+  workItemId?: string;
+  lineItemId?: string;
+}
+
+/* ── Mileage Tracking ─────────────────────────────── */
+
+export type MileagePurpose = 'business' | 'personal';
+
+export interface MileageTrip {
+  id: string;
+  ownerId: string;
+  date: Date;
+  description: string;
+  miles: number;          // Always one-way input value
+  purpose: MileagePurpose;
+  clientId?: string;
+  roundTrip: boolean;
+  rate: number;           // IRS rate at time of entry (e.g. 0.70)
+  deduction: number;      // effectiveMiles × rate (0 if personal)
+  transactionId?: string; // Linked auto-created expense (business only)
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ConnectedAccount {
   id: string;
   ownerId: string;
@@ -356,8 +456,10 @@ export interface Transaction {
   matchConfidence?: number;
   matchStatus: MatchStatus;
   isManual: boolean;
-  receiptUrl?: string;
+  receiptUrl?: string;    // Legacy — migrate to receiptIds
+  receiptIds?: string[];  // Linked Receipt document IDs
   taxDeductible?: boolean;
+  isRecurring?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -378,4 +480,143 @@ export interface EmailTemplate {
   fromName?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// --- AI Insights ---
+
+export type InsightStatus = 'generating' | 'ready' | 'error';
+export type RiskLevel = 'low' | 'medium' | 'high';
+export type TrendDirection = 'up' | 'down' | 'stable';
+
+export interface ExpenseAnomaly {
+  transactionId: string;
+  description: string;
+  amount: number;
+  category: string;
+  reason: string;
+  severity: 'info' | 'warning';
+}
+
+export interface CategoryTrend {
+  category: string;
+  currentMonth: number;
+  previousMonth: number;
+  trend: TrendDirection;
+  percentChange: number;
+}
+
+export interface MissedDeduction {
+  transactionId: string;
+  description: string;
+  amount: number;
+  suggestedCategory: string;
+  reason: string;
+}
+
+export interface InvoiceRisk {
+  workItemId: string;
+  clientName: string;
+  amount: number;
+  risk: RiskLevel;
+  reason: string;
+  predictedPayDate: string;
+}
+
+export interface ClientPaymentPattern {
+  avgDaysToPayment: number;
+  onTimeRate: number;
+  trend: 'improving' | 'worsening' | 'stable';
+}
+
+export interface ClientScore {
+  clientId: string;
+  clientName: string;
+  lifetimeValue: number;
+  churnRisk: RiskLevel;
+  revenueShare: number;
+  reason: string;
+}
+
+export interface ConcentrationRisk {
+  level: 'healthy' | 'moderate' | 'dangerous';
+  topClientShare: number;
+  recommendation: string;
+}
+
+export interface CashFlowProjection {
+  month: string;
+  inflow: number;
+  outflow: number;
+  netCash: number;
+}
+
+export interface RunwayEstimate {
+  months: number;
+  status: 'comfortable' | 'caution' | 'critical';
+}
+
+export interface CompletionEstimate {
+  workItemId: string;
+  title: string;
+  estimatedDays: number;
+  confidence: number;
+}
+
+export interface ScopeCreepAlert {
+  workItemId: string;
+  title: string;
+  reason: string;
+  severity: 'warning' | 'info';
+}
+
+export interface Utilization {
+  currentRate: number;
+  trend: TrendDirection;
+  recommendation: string;
+}
+
+export interface Insights {
+  generatedAt: Date;
+  status: InsightStatus;
+  errors?: string[];
+
+  expenses: {
+    anomalies: ExpenseAnomaly[];
+    categoryTrends: CategoryTrend[];
+  };
+
+  tax: {
+    estimatedSavings: number;
+    effectiveRate: number;
+    missedDeductions: MissedDeduction[];
+    deductionsByCategory: Record<string, number>;
+    totalDeductible: number;
+  };
+
+  forecast: {
+    revenue: Array<{ month: string; amount: number }>;
+    expenses: Array<{ month: string; amount: number }>;
+    confidence: number;
+  };
+
+  payments: {
+    invoiceRisks: InvoiceRisk[];
+    clientPatterns: Record<string, ClientPaymentPattern>;
+  };
+
+  clients: {
+    scores: ClientScore[];
+    concentrationRisk: ConcentrationRisk;
+  };
+
+  cashFlow: {
+    projections: CashFlowProjection[];
+    runway: RunwayEstimate;
+  };
+
+  projects: {
+    completionEstimates: CompletionEstimate[];
+    scopeCreep: ScopeCreepAlert[];
+    utilization: Utilization;
+  };
 }

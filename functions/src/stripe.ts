@@ -15,7 +15,7 @@ const encryptionKey = defineSecret('TOKEN_ENCRYPTION_KEY');
  * Validates the key, encrypts it, stores credentials, and runs an initial sync.
  */
 export const onStripeConnect = onCall(
-  { maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to connect a Stripe account.');
@@ -208,7 +208,7 @@ export const onStripeSync = onSchedule({ schedule: 'every 6 hours', secrets: [en
  * Validates the webhook signature and processes charge/payment_intent events.
  */
 export const onStripeWebhook = onRequest(
-  { maxInstances: 10 },
+  { cors: true, maxInstances: 10 },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');

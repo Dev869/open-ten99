@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
-import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock } from '../../components/icons';
+import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell } from '../../components/icons';
 import { BrandIcon } from '../../components/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useIntegration } from '../../hooks/useFirestore';
 import { useToast } from '../../hooks/useToast';
+import {
+  getPushPermissionState,
+  requestPushPermissionAndGetToken,
+  isSafariIOSPWA,
+  type PushPermissionState,
+} from '../../lib/notifications';
 
 interface SettingsProps {
   settings: AppSettings;
@@ -53,9 +59,17 @@ function formatRelativeTime(date: Date): string {
 export default function Settings({ settings, userId }: SettingsProps) {
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [hourlyRate, setHourlyRate] = useState(String(settings.hourlyRate));
+  const [mileageRate, setMileageRate] = useState(String(settings.mileageRate ?? 0.70));
   const [accentColor, setAccentColor] = useState(settings.accentColor);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Work Order Template fields
+  const [invoiceFromAddress, setInvoiceFromAddress] = useState(settings.invoiceFromAddress ?? '');
+  const [invoiceTerms, setInvoiceTerms] = useState(settings.invoiceTerms ?? '');
+  const [invoiceNotes, setInvoiceNotes] = useState(settings.invoiceNotes ?? '');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [savedTemplate, setSavedTemplate] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode);
 
   const { user } = useAuth();
@@ -65,10 +79,72 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  // Postmark state
+  const [postmarkLoading, setPostmarkLoading] = useState(false);
+  const [postmarkError, setPostmarkError] = useState<string | null>(null);
+  const [postmarkCopied, setPostmarkCopied] = useState(false);
+
+  const baseWebhookUrl = `https://us-central1-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/onEmailReceived`;
+  const postmarkWebhookUrl = integration.postmarkToken
+    ? `${baseWebhookUrl}?token=${integration.postmarkToken}`
+    : '';
+
+  const handleGenerateWebhookUrl = useCallback(async () => {
+    setPostmarkLoading(true);
+    setPostmarkError(null);
+    try {
+      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
+      await fn({});
+      addToast('Webhook URL generated!', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate webhook URL';
+      setPostmarkError(message);
+      addToast(message, 'error');
+    } finally {
+      setPostmarkLoading(false);
+    }
+  }, [addToast]);
+
+  const handleDisconnectPostmark = useCallback(async () => {
+    setPostmarkLoading(true);
+    setPostmarkError(null);
+    try {
+      const fn = httpsCallable(functions, 'onSavePostmarkSecret');
+      await fn({ disconnect: true });
+      addToast('Postmark disconnected', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to disconnect';
+      setPostmarkError(message);
+      addToast(message, 'error');
+    } finally {
+      setPostmarkLoading(false);
+    }
+  }, [addToast]);
+
+  const handleCopyPostmarkUrl = useCallback(() => {
+    navigator.clipboard.writeText(postmarkWebhookUrl);
+    setPostmarkCopied(true);
+    addToast('Webhook URL copied!', 'info');
+    setTimeout(() => setPostmarkCopied(false), 2000);
+  }, [postmarkWebhookUrl, addToast]);
+
+  const [pushState, setPushState] = useState<PushPermissionState>(getPushPermissionState);
+  const [pushEnabled, setPushEnabled] = useState(settings.pushNotificationsEnabled ?? false);
+  const [togglingPush, setTogglingPush] = useState(false);
+
+  // True on iPhone/iPad when not installed to home screen (Safari iOS browser)
+  const isIOSNotInPWA =
+    /iPad|iPhone/.test(navigator.userAgent) && !isSafariIOSPWA();
+
   useEffect(() => {
     setCompanyName(settings.companyName);
     setHourlyRate(String(settings.hourlyRate));
+    setMileageRate(String(settings.mileageRate ?? 0.70));
     setAccentColor(settings.accentColor);
+    setPushEnabled(settings.pushNotificationsEnabled ?? false);
+    setInvoiceFromAddress(settings.invoiceFromAddress ?? '');
+    setInvoiceTerms(settings.invoiceTerms ?? '');
+    setInvoiceNotes(settings.invoiceNotes ?? '');
   }, [settings]);
 
   async function handleSave() {
@@ -77,16 +153,29 @@ export default function Settings({ settings, userId }: SettingsProps) {
       companyName: companyName.trim(),
       hourlyRate: Number(hourlyRate) || 0,
       accentColor,
+      mileageRate: Number(mileageRate) || 0.70,
     });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
+  async function handleSaveTemplate() {
+    setSavingTemplate(true);
+    await updateSettings(userId, {
+      invoiceFromAddress: invoiceFromAddress || undefined,
+      invoiceTerms: invoiceTerms || undefined,
+      invoiceNotes: invoiceNotes || undefined,
+    });
+    setSavingTemplate(false);
+    setSavedTemplate(true);
+    setTimeout(() => setSavedTemplate(false), 2000);
+  }
+
   return (
     <div className="max-w-lg">
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Settings
         </h1>
         <span className="text-[10px] font-semibold text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-0.5 rounded-full tracking-wide">
@@ -136,6 +225,8 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </p>
         </div>
 
+        {/* Invoice Logo — moved to Invoice Template section */}
+
         {/* Hourly Rate */}
         <div>
           <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
@@ -155,6 +246,54 @@ export default function Settings({ settings, userId }: SettingsProps) {
           <p className="text-[10px] text-[var(--text-secondary)] mt-1">
             Used for cost calculations and AI estimates.
           </p>
+        </div>
+
+        {/* Mileage Rate */}
+        <div>
+          <label className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+            IRS Mileage Rate
+          </label>
+          <div className="relative mt-1.5">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)]">$</span>
+            <input
+              type="number"
+              value={mileageRate}
+              onChange={(e) => setMileageRate(e.target.value)}
+              step="0.01"
+              min="0"
+              className="w-full pl-7 pr-3 py-2.5 min-h-[44px] bg-[var(--bg-input)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            />
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1">
+            Per-mile rate for business mileage deductions (2025 IRS rate: $0.70).
+          </p>
+        </div>
+
+        {/* Time Rounding */}
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="block text-sm font-semibold text-[var(--text-primary)]">
+              Round time to quarter hour
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Rounds tracked time: 1-7 min down, 8-14 min up to nearest 15 min
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.roundTimeToQuarterHour ?? false}
+            onClick={() => updateSettings(userId, { roundTimeToQuarterHour: !(settings.roundTimeToQuarterHour ?? false) })}
+            className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+              (settings.roundTimeToQuarterHour ?? false) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                (settings.roundTimeToQuarterHour ?? false) ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
 
         {/* Accent Color */}
@@ -200,6 +339,309 @@ export default function Settings({ settings, userId }: SettingsProps) {
         </div>
       </div>
 
+      {/* ── Invoice Template ── */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          Invoice Template
+        </h2>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {/* Brand Logo */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Brand Logo
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              PNG or JPG, max 2MB. Shown in the invoice header.
+            </p>
+            <div className="flex items-center gap-3">
+              {settings.pdfLogoUrl ? (
+                <img
+                  src={settings.pdfLogoUrl}
+                  alt="Invoice logo"
+                  className="h-10 max-w-[160px] object-contain rounded border border-[var(--border)] bg-white p-1"
+                />
+              ) : (
+                <div className="h-10 px-4 flex items-center rounded border border-dashed border-[var(--border)] text-xs text-[var(--text-secondary)]">
+                  No logo
+                </div>
+              )}
+              <label className="px-3 py-2 rounded-lg bg-[var(--bg-input)] text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors cursor-pointer">
+                Upload
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) {
+                      addToast('Logo must be under 2MB', 'error');
+                      return;
+                    }
+                    try {
+                      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+                      const { storage } = await import('../../lib/firebase');
+                      const storageRef = ref(storage, `logos/${userId}/${file.name}`);
+                      await uploadBytes(storageRef, file);
+                      const url = await getDownloadURL(storageRef);
+                      await updateSettings(userId, { pdfLogoUrl: url });
+                      addToast('Logo uploaded', 'success');
+                    } catch (err) {
+                      console.error('Logo upload failed:', err);
+                      addToast('Upload failed', 'error');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              {settings.pdfLogoUrl && (
+                <button
+                  onClick={async () => {
+                    await updateSettings(userId, { pdfLogoUrl: '' });
+                    addToast('Logo removed', 'info');
+                  }}
+                  className="text-xs text-[var(--color-red)] hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* From Address */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              From Address
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Your business details shown on invoices. One line per row.
+            </p>
+            <textarea
+              value={invoiceFromAddress}
+              onChange={(e) => setInvoiceFromAddress(e.target.value)}
+              placeholder={'Devin Wilson\nCustom software & consulting\ninfo@dwtailored.com'}
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Terms & Conditions */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Terms &amp; Conditions
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Shown at the bottom of every invoice PDF. One paragraph per line.
+            </p>
+            <textarea
+              value={invoiceTerms}
+              onChange={(e) => setInvoiceTerms(e.target.value)}
+              placeholder={'This invoice is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.'}
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="p-5">
+            <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Default Notes
+            </label>
+            <p className="text-xs text-[var(--text-secondary)] mb-2">
+              Additional notes appended after terms. Good for payment instructions or disclaimers.
+            </p>
+            <textarea
+              value={invoiceNotes}
+              onChange={(e) => setInvoiceNotes(e.target.value)}
+              placeholder="Payment via ACH or check. Make payable to DW Tailored."
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Save Template */}
+          <div className="p-5">
+            <button
+              onClick={handleSaveTemplate}
+              disabled={savingTemplate}
+              className="w-full py-2.5 min-h-[44px] rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+            >
+              {savingTemplate ? 'Saving...' : savedTemplate ? 'Saved!' : 'Save Template'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Push Notifications ── */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          Push Notifications
+        </h2>
+
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          {/* Master toggle */}
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <IconBell size={18} color="var(--text-primary)" />
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Enable Notifications</h3>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)] mb-4">
+              Receive alerts on this device even when the app is closed.
+            </p>
+
+            {pushState === 'unsupported' ? (
+              <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {isIOSNotInPWA
+                    ? 'Add Ten99 to your Home Screen to enable push notifications.'
+                    : 'Push notifications are not supported on this browser.'}
+                </p>
+                {isIOSNotInPWA && (
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-1.5">
+                    Tap the Share button in Safari, then select &ldquo;Add to Home Screen&rdquo;.
+                  </p>
+                )}
+              </div>
+            ) : pushState === 'denied' ? (
+              <div className="bg-[var(--bg-input)] rounded-lg px-4 py-3">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Notifications are blocked. To enable them, update your browser or device notification settings for this site.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    {pushEnabled ? 'Enabled' : 'Disabled'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    {pushEnabled
+                      ? 'You\u2019ll receive push notifications on this device.'
+                      : 'Turn on to configure which notifications you receive.'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setTogglingPush(true);
+                    try {
+                      if (pushEnabled) {
+                        await updateSettings(userId, {
+                          pushNotificationsEnabled: false,
+                          fcmToken: undefined,
+                        });
+                        setPushEnabled(false);
+                        addToast('Push notifications disabled.', 'info');
+                      } else {
+                        const token = await requestPushPermissionAndGetToken();
+                        setPushState(getPushPermissionState());
+
+                        if (!token) {
+                          if (getPushPermissionState() === 'denied') {
+                            addToast('Notification permission was denied.', 'error');
+                          } else {
+                            addToast('Could not enable push notifications.', 'error');
+                          }
+                          return;
+                        }
+
+                        await updateSettings(userId, {
+                          pushNotificationsEnabled: true,
+                          pushNotifyWorkOrderDue: true,
+                          pushNotifyNewInboundOrder: true,
+                          fcmToken: token,
+                        });
+                        setPushEnabled(true);
+                        addToast('Push notifications enabled!', 'success');
+                      }
+                    } catch (err) {
+                      console.error('Push toggle error:', err);
+                      addToast('Something went wrong. Please try again.', 'error');
+                    } finally {
+                      setTogglingPush(false);
+                    }
+                  }}
+                  disabled={togglingPush}
+                  role="switch"
+                  aria-checked={pushEnabled}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:opacity-50 ${
+                    pushEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Individual notification preferences — only shown when push is enabled */}
+          {pushEnabled && pushState !== 'unsupported' && pushState !== 'denied' && (
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide">
+                Notify me about
+              </p>
+
+              {/* Work order due reminders */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    Work order due reminders
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    Get reminded when a scheduled work order is approaching its due date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.pushNotifyWorkOrderDue ?? true}
+                  onClick={() => updateSettings(userId, { pushNotifyWorkOrderDue: !(settings.pushNotifyWorkOrderDue ?? true) })}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    (settings.pushNotifyWorkOrderDue ?? true) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      (settings.pushNotifyWorkOrderDue ?? true) ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* New inbound work order */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    New inbound work order
+                  </p>
+                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                    Get notified when a new work order is created from an inbound email via Postmark.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.pushNotifyNewInboundOrder ?? true}
+                  onClick={() => updateSettings(userId, { pushNotifyNewInboundOrder: !(settings.pushNotifyNewInboundOrder ?? true) })}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                    (settings.pushNotifyNewInboundOrder ?? true) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-input)]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      (settings.pushNotifyNewInboundOrder ?? true) ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Integrations ── */}
       <div className="mt-8">
         <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
@@ -215,35 +657,35 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <h3 className="text-sm font-bold text-[var(--text-primary)]">GitHub</h3>
           </div>
 
-          {integration?.connected ? (
+          {integration.github?.connected ? (
             <div className="space-y-4 mt-3">
               {/* User info */}
               <div className="flex items-center gap-3">
-                {integration.avatarUrl ? (
+                {integration.github?.avatarUrl ? (
                   <img
-                    src={integration.avatarUrl}
-                    alt={integration.login}
+                    src={integration.github?.avatarUrl}
+                    alt={integration.github?.login}
                     className="w-9 h-9 rounded-full border border-[var(--border)]"
                   />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-[var(--bg-input)] flex items-center justify-center text-[var(--text-secondary)] text-sm font-bold">
-                    {integration.login.charAt(0).toUpperCase()}
+                    {integration.github?.login.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{integration.login}</p>
-                  {integration.lastSyncAt && (
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{integration.github?.login}</p>
+                  {integration.github?.lastSyncAt && (
                     <p className="text-[10px] text-[var(--text-secondary)]">
-                      Last synced {formatRelativeTime(integration.lastSyncAt)}
+                      Last synced {formatRelativeTime(integration.github?.lastSyncAt)}
                     </p>
                   )}
                 </div>
               </div>
 
               {/* Orgs */}
-              {integration.orgs.length > 0 && (
+              {integration.github?.orgs.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {integration.orgs.map((org) => (
+                  {integration.github?.orgs.map((org) => (
                     <span
                       key={org}
                       className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] border border-[var(--border)]"
@@ -322,14 +764,14 @@ export default function Settings({ settings, userId }: SettingsProps) {
           ) : (
             <div className="mt-3 space-y-3">
               <p className="text-sm text-[var(--text-secondary)]">
-                Connect your GitHub account to sync repositories and track activity across your work items.
+                Connect your GitHub account to sync repositories and track activity across your work orders.
               </p>
               <button
                 onClick={async () => {
                   try {
-                    const getGitHubAuthUrl = httpsCallable<object, { url: string }>(functions, 'getGitHubAuthUrl');
+                    const getGitHubAuthUrl = httpsCallable<object, { authUrl: string }>(functions, 'getGitHubAuthUrl');
                     const result = await getGitHubAuthUrl({});
-                    const url = result.data.url;
+                    const url = result.data.authUrl;
                     try {
                       const parsed = new URL(url);
                       if (parsed.origin !== 'https://github.com') {
@@ -354,6 +796,87 @@ export default function Settings({ settings, userId }: SettingsProps) {
             </div>
           )}
         </div>
+
+        {/* Postmark Email */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mt-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <IconMail className="w-[18px] h-[18px] text-[var(--text-primary)]" />
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Postmark Email</h3>
+            </div>
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${
+              integration.postmarkConfigured
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                integration.postmarkConfigured
+                  ? 'bg-emerald-500'
+                  : 'bg-amber-500'
+              }`} />
+              {integration.postmarkConfigured ? 'Active' : 'Not configured'}
+            </span>
+          </div>
+
+          {postmarkError && (
+            <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg mt-3">
+              {postmarkError}
+            </div>
+          )}
+
+          {integration.postmarkConfigured ? (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Inbound emails are forwarded as draft work orders. Copy the URL below into your Postmark server's Inbound webhook settings.
+              </p>
+              <div>
+                <p className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
+                  Webhook URL
+                </p>
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2 min-w-0">
+                  <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate min-w-0">
+                    {postmarkWebhookUrl}
+                  </code>
+                  <button
+                    onClick={handleCopyPostmarkUrl}
+                    className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0 min-h-[44px] flex items-center"
+                  >
+                    {postmarkCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleGenerateWebhookUrl}
+                  disabled={postmarkLoading}
+                  className="flex-1 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+                >
+                  {postmarkLoading ? 'Generating…' : 'Regenerate URL'}
+                </button>
+                <button
+                  onClick={handleDisconnectPostmark}
+                  disabled={postmarkLoading}
+                  className="px-4 py-2.5 min-h-[44px] rounded-lg bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm font-semibold hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Connect Postmark to automatically create draft work orders from inbound client emails.
+              </p>
+              <button
+                onClick={handleGenerateWebhookUrl}
+                disabled={postmarkLoading}
+                className="w-full py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+              >
+                {postmarkLoading ? 'Generating…' : 'Generate Webhook URL'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── About & Support ── */}
@@ -364,7 +887,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
         {/* App Info */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-5 flex items-center gap-4">
-          <BrandIcon size={28} />
+          <BrandIcon size={40} />
           <div>
             <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
             <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>
@@ -426,6 +949,48 @@ export default function Settings({ settings, userId }: SettingsProps) {
             &copy; 2026 DW Tailored Systems. All rights reserved.
           </p>
         </div>
+
+        {/* Dev Tools */}
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">
+          <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Dev Tools
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!confirm('This will populate sample clients, work orders, time entries, expenses, and mileage trips. Continue?')) return;
+                addToast('Seeding data...', 'info');
+                import('../../lib/seedData').then(({ seedSampleData }) =>
+                  seedSampleData()
+                    .then(() => addToast('Sample data created!', 'success'))
+                    .catch((err) => {
+                      console.error('Seed failed:', err);
+                      addToast(`Seed failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+                    })
+                );
+              }}
+              className="px-4 py-2 rounded-lg bg-[var(--bg-input)] text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors"
+            >
+              Seed Sample Data
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm('This will delete ALL your data (clients, work orders, time entries, expenses, mileage). Are you sure?')) return;
+                const { clearAllData } = await import('../../lib/seedData');
+                await clearAllData();
+                addToast('All data cleared', 'success');
+              }}
+              className="px-4 py-2 rounded-lg bg-[var(--color-red)]/10 text-sm font-medium text-[var(--color-red)] hover:bg-[var(--color-red)]/20 transition-colors"
+            >
+              Clear All Data
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-2">
+            Seed populates sample data. Clear removes everything.
+          </p>
+        </div>
+
+        <div className="h-4" />
 
         {/* Credits / Attribution */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5">

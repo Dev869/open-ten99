@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import type { Transaction } from '../../lib/types';
+import type { Transaction, ExpenseAnomaly, CategoryTrend } from '../../lib/types';
 import { EXPENSE_CATEGORIES } from '../../lib/types';
-import { fetchTransactions, createManualExpense } from '../../services/firestore';
+import { fetchTransactions, createManualExpense, reassignReceipt } from '../../services/firestore';
+import { useInsights } from '../../hooks/useFirestore';
+import { InsightBadge } from '../../components/insights/InsightBadge';
 import { ExpenseForm } from '../../components/finance/ExpenseForm';
+import ReceiptBadge from '../../components/finance/ReceiptBadge';
 import { DateRangeSelector } from '../../components/finance/DateRangeSelector';
 import { getDateRange } from '../../lib/finance';
 import type { DateRangePreset } from '../../lib/finance';
 import { formatCurrency, formatDate, sanitizeUrl } from '../../lib/utils';
+import { IconBook } from '../../components/icons';
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -38,7 +42,7 @@ interface CategoryTotal {
   total: number;
 }
 
-function CategorySummary({ expenses, loading }: { expenses: Transaction[]; loading: boolean }) {
+function CategorySummary({ expenses, loading, categoryTrends }: { expenses: Transaction[]; loading: boolean; categoryTrends?: CategoryTrend[] }) {
   const totals: CategoryTotal[] = useMemo(() => {
     const map = new Map<string, number>();
     for (const expense of expenses) {
@@ -80,26 +84,36 @@ function CategorySummary({ expenses, loading }: { expenses: Transaction[]; loadi
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {totals.map(({ category, total }) => (
-        <div
-          key={category}
-          className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3"
-        >
-          <p className="text-xs text-[var(--text-secondary)] leading-tight mb-1 truncate" title={category}>
-            {category}
-          </p>
-          <p className="text-base font-bold text-[var(--text-primary)]">
-            {formatCurrency(total)}
-          </p>
-        </div>
-      ))}
+      {totals.map(({ category, total }) => {
+        const trend = categoryTrends?.find((t) => t.category === category);
+        return (
+          <div
+            key={category}
+            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3"
+          >
+            <p className="text-xs text-[var(--text-secondary)] leading-tight mb-1 truncate" title={category}>
+              {category}
+            </p>
+            <p className="text-base font-bold text-[var(--text-primary)] flex items-center gap-1">
+              {formatCurrency(total)}
+              {trend && (
+                <span className="text-xs" style={{
+                  color: trend.trend === 'up' ? 'var(--color-red)' : trend.trend === 'down' ? 'var(--color-green)' : 'var(--text-secondary)'
+                }}>
+                  {trend.trend === 'up' ? '↑' : trend.trend === 'down' ? '↓' : '→'} {Math.abs(trend.percentChange)}%
+                </span>
+              )}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 // ── Expense Row ───────────────────────────────────────────────────────────────
 
-function ExpenseRow({ expense }: { expense: Transaction }) {
+function ExpenseRow({ expense, anomaly }: { expense: Transaction; anomaly?: ExpenseAnomaly }) {
   return (
     <tr className="border-b border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors">
       {/* Date */}
@@ -109,7 +123,16 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
 
       {/* Description */}
       <td className="px-4 py-3 text-sm text-[var(--text-primary)] max-w-xs">
-        <span className="block truncate">{expense.description}</span>
+        <span className="inline-flex items-center gap-1 flex-wrap max-w-full">
+          <span className="truncate">{expense.description}</span>
+          {anomaly && (
+            <InsightBadge
+              label={anomaly.severity === 'warning' ? 'Anomaly' : 'Note'}
+              level={anomaly.severity}
+              tooltip={anomaly.reason}
+            />
+          )}
+        </span>
       </td>
 
       {/* Category */}
@@ -127,12 +150,19 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
       {/* Badges + Receipt */}
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2 flex-wrap">
+          {expense.isRecurring && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Recurring
+            </span>
+          )}
           {expense.isManual && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
               Manual
             </span>
           )}
-          {expense.receiptUrl && sanitizeUrl(expense.receiptUrl) && (
+          {expense.receiptIds && expense.receiptIds.length > 0 ? (
+            <ReceiptBadge status="confirmed" />
+          ) : expense.receiptUrl && sanitizeUrl(expense.receiptUrl) ? (
             <a
               href={sanitizeUrl(expense.receiptUrl)}
               target="_blank"
@@ -141,7 +171,7 @@ function ExpenseRow({ expense }: { expense: Transaction }) {
             >
               View Receipt
             </a>
-          )}
+          ) : null}
         </div>
       </td>
     </tr>
@@ -156,6 +186,7 @@ export default function Expenses() {
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const { insights } = useInsights();
 
   const range = useMemo(() => getDateRange(preset), [preset]);
 
@@ -180,10 +211,15 @@ export default function Expenses() {
     date: Date;
     taxDeductible: boolean;
     receiptUrl?: string;
+    receiptId?: string;
   }) {
     setFormLoading(true);
     try {
-      await createManualExpense(data);
+      const transactionId = await createManualExpense(data);
+      // Link the receipt document to the new transaction if one was uploaded
+      if (data.receiptId) {
+        await reassignReceipt(data.receiptId, undefined, transactionId);
+      }
       // Refetch to include the new expense
       const result = await fetchTransactions({ type: 'expense', dateFrom: range.start, dateTo: range.end });
       setExpenses(result.transactions);
@@ -196,7 +232,7 @@ export default function Expenses() {
     <div>
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Expenses
         </h1>
         <DateRangeSelector value={preset} onChange={setPreset} />
@@ -226,7 +262,7 @@ export default function Expenses() {
         <h2 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           By Category
         </h2>
-        <CategorySummary expenses={expenses} loading={loading} />
+        <CategorySummary expenses={expenses} loading={loading} categoryTrends={insights?.expenses?.categoryTrends} />
       </div>
 
       {/* Expense List */}
@@ -234,47 +270,58 @@ export default function Expenses() {
         <h2 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           All Expenses
         </h2>
-        <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs whitespace-nowrap">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Description
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Category
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Amount
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
-                  Receipt
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
-              ) : expenses.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-12 text-center text-[var(--text-secondary)] text-sm"
-                  >
-                    No expenses found for this period.
-                  </td>
+        {!loading && expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4 rounded-lg border border-[var(--border)] bg-[var(--bg-card)]">
+            <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+              <IconBook size={32} color="var(--accent)" />
+            </div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No expenses tracked</h2>
+            <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
+              Add expenses to track your business costs
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all"
+            >
+              + Add Expense
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto scrollbar-hide rounded-lg border border-[var(--border)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs whitespace-nowrap">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Amount
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                    Receipt
+                  </th>
                 </tr>
-              ) : (
-                expenses.map((expense) => (
-                  <ExpenseRow key={expense.id} expense={expense} />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(6)].map((_, i) => <SkeletonRow key={i} />)
+                ) : (
+                  expenses.map((expense) => {
+                    const anomaly = insights?.expenses?.anomalies?.find((a) => a.transactionId === expense.id);
+                    return <ExpenseRow key={expense.id} expense={expense} anomaly={anomaly} />;
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

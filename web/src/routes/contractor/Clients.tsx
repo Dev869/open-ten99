@@ -1,8 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../../lib/types';
 import { createClient } from '../../services/firestore';
-import { IconPlus, IconSearch, IconChevronRight, IconClose, IconCheckSmall } from '../../components/icons';
+import { cn } from '../../lib/utils';
+import { IconPlus, IconSearch, IconChevronRight, IconClose } from '../../components/icons';
+import { useInsights } from '../../hooks/useFirestore';
+import { ConcentrationDonut } from '../../components/insights/ConcentrationDonut';
+import { InsightBadge } from '../../components/insights/InsightBadge';
+import { InsightShimmer } from '../../components/insights/InsightShimmer';
 
 interface ClientsProps {
   workItems: WorkItem[];
@@ -18,6 +23,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
   const [newCompany, setNewCompany] = useState('');
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const { insights, isGenerating } = useInsights();
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -64,7 +70,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
   return (
     <div className="animate-fade-in-up">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Clients
         </h1>
         <button
@@ -88,6 +94,13 @@ export default function Clients({ workItems, clients }: ClientsProps) {
         />
       </div>
 
+      {/* Concentration Chart */}
+      {isGenerating ? (
+        <InsightShimmer className="h-[260px]" label="Client analysis loading..." />
+      ) : insights?.clients?.scores?.length ? (
+        <ConcentrationDonut scores={insights.clients.scores} />
+      ) : null}
+
       {/* Client List */}
       <div className="space-y-2">
         {filtered.map((client, i) => (
@@ -101,23 +114,33 @@ export default function Clients({ workItems, clients }: ClientsProps) {
               {client.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-[var(--text-primary)]">{client.name}</div>
-              <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--text-primary)] truncate">{client.name}</span>
+                {client.retainerHours && (
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${client.retainerPaused ? 'bg-[var(--bg-input)] text-[var(--text-secondary)]' : 'bg-[var(--color-orange)]/10 text-[var(--color-orange)]'}`}>
+                    {client.retainerPaused ? 'Paused' : `${client.retainerHours}h`}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
                 {client.email}
                 {client.company && ` · ${client.company}`}
               </div>
+              {(() => {
+                const score = insights?.clients?.scores?.find((s) => s.clientId === client.id);
+                return score ? (
+                  <div className="flex gap-1.5 mt-1">
+                    <InsightBadge label={`$${score.lifetimeValue.toLocaleString()}`} level="info" tooltip="Lifetime value" />
+                    <InsightBadge label={`Churn: ${score.churnRisk}`} level={score.churnRisk} tooltip={score.reason} />
+                  </div>
+                ) : null;
+              })()}
             </div>
-            <div className="text-right flex-shrink-0 flex items-center gap-3">
-              {client.retainerHours && (
-                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${client.retainerPaused ? 'bg-[var(--bg-input)] text-[var(--text-secondary)]' : 'bg-[var(--color-orange)]/10 text-[var(--color-orange)]'}`}>
-                  {client.retainerPaused ? 'Paused' : `${client.retainerHours}h retainer`}
-                </span>
-              )}
-              <div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="text-right">
                 <div className="text-sm font-bold text-[var(--text-primary)]">{counts[client.id!] ?? 0}</div>
                 <div className="text-[10px] text-[var(--text-secondary)]">items</div>
               </div>
-              {/* Chevron */}
               <IconChevronRight size={16} className="text-[var(--text-secondary)]/50" />
             </div>
           </button>
@@ -139,7 +162,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
           <div className="text-sm text-[var(--text-secondary)] mt-1.5 max-w-xs mx-auto">
             {search
               ? 'Try a different search term.'
-              : 'Add your first client and start tracking work items, retainers, and more.'}
+              : 'Add your first client and start tracking work orders, retainers, and more.'}
           </div>
           {!search && (
             <button
@@ -155,105 +178,169 @@ export default function Clients({ workItems, clients }: ClientsProps) {
 
       {/* New Client Modal */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => setShowNew(false)}
-          />
-          <div className="relative bg-[var(--bg-page)] rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-scale-in">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-5 border-b border-[var(--border)]">
-              <h2 className="text-lg font-extrabold text-[var(--text-primary)] uppercase tracking-wide">
-                New Client
-              </h2>
-              <button
-                onClick={() => setShowNew(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
-                aria-label="Close"
-              >
-                <IconClose size={18} />
-              </button>
-            </div>
+        <NewClientModal
+          onClose={() => setShowNew(false)}
+          onSave={handleCreate}
+          saving={saving}
+          name={newName}
+          onNameChange={setNewName}
+          email={newEmail}
+          onEmailChange={setNewEmail}
+          phone={newPhone}
+          onPhoneChange={setNewPhone}
+          company={newCompany}
+          onCompanyChange={setNewCompany}
+        />
+      )}
+    </div>
+  );
+}
 
-            {/* Modal Body */}
-            <div className="p-5 space-y-4">
+/* ── New Client Modal ─────────────────────────────── */
+
+interface NewClientModalProps {
+  onClose: () => void;
+  onSave: () => void;
+  saving: boolean;
+  name: string;
+  onNameChange: (v: string) => void;
+  email: string;
+  onEmailChange: (v: string) => void;
+  phone: string;
+  onPhoneChange: (v: string) => void;
+  company: string;
+  onCompanyChange: (v: string) => void;
+}
+
+function NewClientModal({
+  onClose, onSave, saving,
+  name, onNameChange, email, onEmailChange, phone, onPhoneChange, company, onCompanyChange,
+}: NewClientModalProps) {
+  const isValid = name.trim() && email.trim();
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const inputClass = 'w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors placeholder:text-[var(--text-secondary)]';
+
+  return (
+    <>
+      {/* Desktop backdrop */}
+      <div
+        className="hidden md:block fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
+
+      <div
+        className={cn(
+          'fixed z-[60] flex flex-col bg-[var(--bg-page)]',
+          'inset-0',
+          'md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
+          'md:w-full md:max-w-md md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
+          'animate-fade-in-up md:animate-scale-in'
+        )}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between h-14 px-4 flex-shrink-0 border-b border-[var(--border)]">
+          <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+            New Client
+          </h1>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+          >
+            <IconClose size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-4 space-y-4">
+            <div>
+              <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                autoFocus
+                placeholder="Client name"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                placeholder="email@example.com"
+                className={inputClass}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  autoFocus
-                  className="w-full px-4 py-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow min-h-[44px]"
-                  placeholder="Client name"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow min-h-[44px]"
-                  placeholder="email@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
-                  Phone
+                <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
+                  Phone <span className="normal-case tracking-normal font-normal">(optional)</span>
                 </label>
                 <input
                   type="tel"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow min-h-[44px]"
+                  value={phone}
+                  onChange={(e) => onPhoneChange(e.target.value)}
                   placeholder="(555) 123-4567"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
-                  Company
+                <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
+                  Company <span className="normal-case tracking-normal font-normal">(optional)</span>
                 </label>
                 <input
                   type="text"
-                  value={newCompany}
-                  onChange={(e) => setNewCompany(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow min-h-[44px]"
+                  value={company}
+                  onChange={(e) => onCompanyChange(e.target.value)}
                   placeholder="Company name"
+                  className={inputClass}
                 />
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="flex gap-3 p-5 border-t border-[var(--border)]">
-              <button
-                onClick={() => setShowNew(false)}
-                className="flex-1 py-3 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.98] transition-all min-h-[44px]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={!newName.trim() || !newEmail.trim() || saving}
-                className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 active:scale-[0.98] transition-all min-h-[44px]"
-              >
-                {saving ? (
-                  'Saving...'
-                ) : (
-                  <>
-                    <IconCheckSmall size={16} />
-                    Save Client
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Footer */}
+        <div
+          className="flex gap-3 px-4 py-3 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <button
+            onClick={onClose}
+            className="flex-1 h-10 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={!isValid || saving}
+            className="flex-1 h-10 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? 'Saving...' : 'Save Client'}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

@@ -7,6 +7,9 @@ import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
 import { formatDate, exportToCsv } from '../../lib/utils';
 import { bulkUpdateStatus } from '../../services/firestore';
+import { IconDocument } from '../../components/icons';
+import { useInsights } from '../../hooks/useFirestore';
+import { InsightBadge } from '../../components/insights/InsightBadge';
 
 interface WorkItemsProps {
   workItems: WorkItem[];
@@ -22,6 +25,7 @@ const invoiceStatusLabels: Record<string, string> = { draft: 'Draft', sent: 'Sen
 
 export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { insights } = useInsights();
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
@@ -186,58 +190,82 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     setDateRange({ start: '', end: '' });
   }
 
+  const [showAdvanced, setShowAdvanced] = useState(hasActiveFilters);
+  const activeFilterCount = selectedClients.length + selectedApps.length + selectedInvoiceStatus.length + (dateRange.start ? 1 : 0) + (dateRange.end ? 1 : 0);
+
   return (
-    <div className="animate-fade-in-up pt-2">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-          Work Items
+    <div className="animate-fade-in-up">
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+          Work Orders
+          <span className="text-sm font-semibold text-[var(--text-secondary)] ml-2 normal-case tracking-normal">
+            {filtered.length}
+          </span>
         </h1>
+        <div className="md:hidden" />
         <div className="flex items-center gap-2">
           <button
             onClick={handleExport}
-            className="inline-flex items-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
+            className="h-9 w-9 flex-shrink-0 inline-flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all"
+            aria-label="Export CSV"
+            title="Export CSV"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span className="hidden sm:inline">Export</span>
           </button>
           <button
             onClick={() => setShowNewOrder(true)}
-            className="px-4 py-2 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-full hover:bg-[var(--accent-dark)] transition-colors whitespace-nowrap"
+            className="h-9 flex-shrink-0 px-4 bg-[var(--accent)] text-white text-xs font-bold rounded-lg hover:bg-[var(--accent-dark)] active:scale-[0.97] transition-all whitespace-nowrap"
           >
-            + New Work Order
+            + New
           </button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
+      {/* ── Search ── */}
+      <div className="mb-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search work items..."
-          className="w-full px-4 py-2.5 min-h-[44px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          placeholder="Search work orders..."
+          className="w-full px-4 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-shadow"
         />
       </div>
 
-      {/* Filters */}
-      <div className="space-y-2 mb-4">
-        <FilterTabs tabs={typeTabs} selected={selectedType} onSelect={setSelectedType} />
-        <FilterTabs tabs={statusTabs} selected={selectedStatus} onSelect={setSelectedStatus} />
+      {/* ── Filter row: type + status + advanced toggle ── */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <FilterTabs tabs={typeTabs} selected={selectedType} onSelect={setSelectedType} label="Types" />
+        <FilterTabs tabs={statusTabs} selected={selectedStatus} onSelect={setSelectedStatus} label="Statuses" />
+        <button
+          onClick={() => setShowAdvanced(prev => !prev)}
+          className={`md:hidden h-9 px-2.5 rounded-lg border text-xs font-medium flex-shrink-0 transition-colors ${
+            showAdvanced || activeFilterCount > 0
+              ? 'border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]'
+              : 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
+          }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline -mt-px">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          {activeFilterCount > 0 && (
+            <span className="ml-1">{activeFilterCount}</span>
+          )}
+        </button>
       </div>
 
-      {/* Advanced Filter Bar */}
-      <div className="mb-4 p-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] space-y-2">
-        <div className="flex flex-wrap items-start gap-3">
-
-          {/* Client filter */}
+      {/* ── Advanced filters (collapsible on mobile) ── */}
+      <div className={`mb-2 md:block ${showAdvanced ? 'block' : 'hidden md:block'}`}>
+        <div className="p-2.5 bg-[var(--bg-card)] rounded-lg border border-[var(--border)] space-y-2 overflow-hidden">
+          {/* Dropdowns row */}
           <div className="flex flex-wrap items-center gap-1.5">
+            {/* Client filter chips + dropdown */}
             {selectedClients.map(id => (
-              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+              <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
                 {clientMap[id] ?? id}
                 <button
                   onClick={() => {
@@ -246,39 +274,28 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                     setSelectedApps(prev => prev.filter(appId => apps.some(a => a.id === appId && next.includes(a.clientId))));
                   }}
                   className="hover:text-[var(--color-red)] leading-none"
-                >
-                  &times;
-                </button>
+                >&times;</button>
               </span>
             ))}
             <select
               value=""
               onChange={(e) => {
                 const val = e.target.value;
-                if (val && !selectedClients.includes(val)) {
-                  setSelectedClients(prev => [...prev, val]);
-                }
+                if (val && !selectedClients.includes(val)) setSelectedClients(prev => [...prev, val]);
               }}
-              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+              className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px] min-w-0"
             >
               <option value="">+ Client</option>
               {clients.filter(c => c.id && !selectedClients.includes(c.id)).map(c => (
                 <option key={c.id} value={c.id!}>{c.name}</option>
               ))}
             </select>
-          </div>
 
-          {/* App filter */}
-          <div className="flex flex-wrap items-center gap-1.5">
+            {/* App filter chips + dropdown */}
             {selectedApps.map(id => (
-              <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+              <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
                 {appMap[id] ?? id}
-                <button
-                  onClick={() => setSelectedApps(prev => prev.filter(a => a !== id))}
-                  className="hover:text-[var(--color-red)] leading-none"
-                >
-                  &times;
-                </button>
+                <button onClick={() => setSelectedApps(prev => prev.filter(a => a !== id))} className="hover:text-[var(--color-red)] leading-none">&times;</button>
               </span>
             ))}
             {availableApps.filter(a => a.id && !selectedApps.includes(a.id)).length > 0 && (
@@ -286,11 +303,9 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 value=""
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val && !selectedApps.includes(val)) {
-                    setSelectedApps(prev => [...prev, val]);
-                  }
+                  if (val && !selectedApps.includes(val)) setSelectedApps(prev => [...prev, val]);
                 }}
-                className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+                className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px] min-w-0"
               >
                 <option value="">+ App</option>
                 {availableApps.filter(a => a.id && !selectedApps.includes(a.id)).map(a => (
@@ -298,19 +313,12 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 ))}
               </select>
             )}
-          </div>
 
-          {/* Invoice status filter */}
-          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Invoice status filter chips + dropdown */}
             {selectedInvoiceStatus.map(status => (
-              <span key={status} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+              <span key={status} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
                 {invoiceStatusLabels[status] ?? status}
-                <button
-                  onClick={() => setSelectedInvoiceStatus(prev => prev.filter(s => s !== status))}
-                  className="hover:text-[var(--color-red)] leading-none"
-                >
-                  &times;
-                </button>
+                <button onClick={() => setSelectedInvoiceStatus(prev => prev.filter(s => s !== status))} className="hover:text-[var(--color-red)] leading-none">&times;</button>
               </span>
             ))}
             {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).length > 0 && (
@@ -318,11 +326,9 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 value=""
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val && !selectedInvoiceStatus.includes(val)) {
-                    setSelectedInvoiceStatus(prev => [...prev, val]);
-                  }
+                  if (val && !selectedInvoiceStatus.includes(val)) setSelectedInvoiceStatus(prev => [...prev, val]);
                 }}
-                className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+                className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px] min-w-0"
               >
                 <option value="">+ Invoice</option>
                 {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).map(s => (
@@ -332,37 +338,34 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
             )}
           </div>
 
-          {/* Date range filter */}
-          <div className="flex items-center gap-2">
+          {/* Date range row */}
+          <div className="flex items-center gap-1.5">
             <input
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+              className="flex-1 min-w-0 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px]"
             />
-            <span className="text-xs text-[var(--text-secondary)]">to</span>
+            <span className="text-[11px] text-[var(--text-secondary)] flex-shrink-0">to</span>
             <input
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-xs"
+              className="flex-1 min-w-0 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px]"
             />
           </div>
-        </div>
 
-        {/* Footer row: clear all + result count */}
-        <div className="flex items-center gap-3 pt-1">
+          {/* Footer: clear */}
           {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-[var(--accent)] hover:underline"
-            >
-              Clear all
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={clearAllFilters} className="text-[11px] text-[var(--accent)] hover:underline">
+                Clear all filters
+              </button>
+              <span className="text-[11px] text-[var(--text-secondary)] ml-auto">
+                {filtered.length} of {totalNonArchived}
+              </span>
+            </div>
           )}
-          <span className="text-xs text-[var(--text-secondary)] ml-auto">
-            Showing {filtered.length} of {totalNonArchived} work orders
-          </span>
         </div>
       </div>
 
@@ -397,27 +400,61 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
 
       {/* List */}
       <div className="space-y-2">
-        {filtered.map((item, i) => (
-          <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
-            <WorkItemCard
-              item={item}
-              clientName={clientMap[item.clientId] ?? 'Unknown'}
-              appName={item.appId ? appMap[item.appId] : undefined}
-              selectable
-              selected={selectedIds.has(item.id!)}
-              onSelect={toggleSelect}
-            />
-          </div>
-        ))}
+        {filtered.map((item, i) => {
+          const estimate = insights?.projects?.completionEstimates?.find((e) => e.workItemId === item.id);
+          const creep = insights?.projects?.scopeCreep?.find((s) => s.workItemId === item.id);
+          return (
+            <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
+              <WorkItemCard
+                item={item}
+                clientName={clientMap[item.clientId] ?? 'Unknown'}
+                appName={item.appId ? appMap[item.appId] : undefined}
+                selectable
+                selected={selectedIds.has(item.id!)}
+                onSelect={toggleSelect}
+              />
+              {(estimate || creep) && (
+                <div className="flex gap-1.5 px-1 pt-1">
+                  {estimate && (
+                    <InsightBadge
+                      label={`~${estimate.estimatedDays}d`}
+                      level="info"
+                      tooltip={`Estimated ${estimate.estimatedDays} days (${Math.round(estimate.confidence * 100)}% confidence)`}
+                    />
+                  )}
+                  {creep && (
+                    <InsightBadge
+                      label="Scope creep"
+                      level={creep.severity}
+                      tooltip={creep.reason}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-20">
-          <div className="text-5xl mb-4 opacity-40 text-[var(--text-primary)]">✦</div>
-          <div className="text-lg font-bold text-[var(--text-primary)]">Nothing here yet</div>
-          <div className="text-sm text-[var(--text-secondary)] mt-1">
-            Try adjusting your filters or create a new work order.
+        <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+            <IconDocument size={32} color="var(--accent)" />
           </div>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No work orders yet</h2>
+          <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
+            {hasActiveFilters || search || selectedType !== 'All' || selectedStatus !== 'All'
+              ? 'Try adjusting your filters or search terms.'
+              : 'Create your first work order to start tracking client projects'}
+          </p>
+          {!(hasActiveFilters || search || selectedType !== 'All' || selectedStatus !== 'All') && (
+            <button
+              onClick={() => setShowNewOrder(true)}
+              className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all"
+            >
+              + New Work Order
+            </button>
+          )}
         </div>
       )}
 

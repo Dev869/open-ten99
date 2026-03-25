@@ -24,3 +24,10 @@ export { onManualSync, onDeleteConnectedAccount, onPlaidUpdateLinkToken } from "
 export { onTransactionCreated } from './matchTransaction';
 export { onSmartCategorize } from './smartCategorize';
 export { sendCompletionEmail } from './sendCompletionEmail';
+export { onReceiptUploaded } from './processReceipt';
+export { onReceiptMatchOnTransaction } from './receiptMatchOnTransaction';
+export { purgeDiscarded } from './purgeDiscarded';
+export { onGenerateInsights } from './generateInsights';
+export { onAnalyzeReport } from './analyzeReport';
+export { generateMagicLink, verifyMagicLink } from './magicLink';
+export { onSavePostmarkSecret } from "./postmarkSecret";

@@ -15,7 +15,12 @@ const VERIFICATION_PHRASE = 'openchanges-vault-verified';
 /* ── Helpers ──────────────────────────────────────── */
 
 function toBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes));
+  const CHUNK = 0x8000;
+  let result = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    result += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(result);
 }
 
 function fromBase64(b64: string): Uint8Array {

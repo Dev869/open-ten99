@@ -23,20 +23,20 @@ interface GitHubImportModalProps {
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
-  TypeScript: 'bg-blue-100 text-blue-800',
-  JavaScript: 'bg-yellow-100 text-yellow-800',
-  Python: 'bg-green-100 text-green-800',
-  Go: 'bg-cyan-100 text-cyan-800',
-  Rust: 'bg-orange-100 text-orange-800',
-  Swift: 'bg-orange-100 text-orange-800',
-  Kotlin: 'bg-purple-100 text-purple-800',
-  Java: 'bg-red-100 text-red-800',
-  Ruby: 'bg-red-100 text-red-800',
-  PHP: 'bg-indigo-100 text-indigo-800',
-  CSS: 'bg-pink-100 text-pink-800',
-  HTML: 'bg-orange-100 text-orange-800',
-  Shell: 'bg-gray-100 text-gray-700',
-  Dart: 'bg-blue-100 text-blue-800',
+  TypeScript: 'bg-blue-500/20 text-blue-400',
+  JavaScript: 'bg-yellow-500/20 text-yellow-400',
+  Python: 'bg-green-500/20 text-green-400',
+  Go: 'bg-cyan-500/20 text-cyan-400',
+  Rust: 'bg-orange-500/20 text-orange-400',
+  Swift: 'bg-orange-500/20 text-orange-400',
+  Kotlin: 'bg-purple-500/20 text-purple-400',
+  Java: 'bg-red-500/20 text-red-400',
+  Ruby: 'bg-red-500/20 text-red-400',
+  PHP: 'bg-indigo-500/20 text-indigo-400',
+  CSS: 'bg-pink-500/20 text-pink-400',
+  HTML: 'bg-orange-500/20 text-orange-400',
+  Shell: 'bg-gray-500/20 text-gray-400',
+  Dart: 'bg-blue-500/20 text-blue-400',
 };
 
 function formatPushedAt(pushedAt: string): string {
@@ -289,12 +289,12 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
                             {repo.fullName}
                           </span>
                           {repo.archived && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 flex-shrink-0">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-[var(--text-secondary)] flex-shrink-0">
                               Archived
                             </span>
                           )}
                           {isLinked && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 flex-shrink-0 flex items-center gap-1">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0 flex items-center gap-1">
                               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                                 <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>

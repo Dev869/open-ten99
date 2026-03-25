@@ -1,3 +1,11 @@
+/** Convert a payment terms string (e.g. "Net 30") to a number of days. */
+export function paymentTermsToDays(terms?: string): number {
+  if (!terms) return 30;
+  if (terms === 'Due on Receipt') return 0;
+  const match = terms.match(/Net\s+(\d+)/i);
+  return match ? parseInt(match[1], 10) : 30;
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

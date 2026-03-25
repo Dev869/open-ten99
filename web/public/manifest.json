@@ -1,0 +1,35 @@
+{
+  "name": "Ten99",
+  "short_name": "Ten99",
+  "description": "Work order management for independent contractors",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "scope": "/",
+  "background_color": "#2C2417",
+  "theme_color": "#2C2417",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "share_target": {
+    "action": "/dashboard/finance/receipts/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "receipt",
+          "accept": ["image/*", "application/pdf"]
+        }
+      ]
+    }
+  }
+}

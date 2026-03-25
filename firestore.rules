@@ -43,13 +43,14 @@ service cloud.firestore {
       // Create: contractor must set themselves as owner
       allow create: if isContractor() && claimsOwnership();
 
-      // Update: contractor must strictly own the existing doc; cannot reassign ownerId
+      // Update: contractor owns the doc (or legacy) AND must claim ownership
+      // in the incoming data — this backfills ownerId on legacy docs.
       allow update: if isContractor()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
+        && isOwnerOrLegacy(resource.data)
+        && claimsOwnership();
 
-      // Delete: contractor must strictly own the existing doc
-      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+      // Delete: contractor owns the doc (or legacy doc without ownerId)
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -58,12 +59,12 @@ service cloud.firestore {
     match /projects/{projectId} {
       allow read: if isContractor() && isOwnerOrLegacy(resource.data);
       allow create: if isContractor() && claimsOwnership();
-      // Update: strict ownership only — no legacy fallback for mutations
+      // Update: contractor owns the doc (or legacy) AND must claim ownership
       allow update: if isContractor()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
-      // Delete: strict ownership only
-      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+        && isOwnerOrLegacy(resource.data)
+        && claimsOwnership();
+      // Delete: contractor owns the doc (or legacy doc without ownerId)
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -78,22 +79,31 @@ service cloud.firestore {
       allow read: if isContractor() && isOwnerOrLegacy(resource.data);
 
       // Portal client read: authenticated non-contractor whose clientId claim
-      // matches the item's clientId field. Read-only — no writes from portal.
+      // matches the item's clientId field.
       allow read: if request.auth != null
         && !isContractor()
         && request.auth.token.clientId != null
         && resource.data.clientId == request.auth.token.clientId;
 
+      // Portal client update: can only set clientNotes, clientApproval,
+      // clientApprovalDate on their own work items — nothing else.
+      allow update: if request.auth != null
+        && !isContractor()
+        && request.auth.token.clientId != null
+        && resource.data.clientId == request.auth.token.clientId
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['clientNotes', 'clientApproval', 'clientApprovalDate', 'updatedAt']);
+
       // Contractor create: must set themselves as owner
       allow create: if isContractor() && claimsOwnership();
 
-      // Contractor update: strict ownership only — no legacy fallback for mutations
+      // Contractor update: owns the doc (or legacy) AND must claim ownership
       allow update: if isContractor()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
+        && isOwnerOrLegacy(resource.data)
+        && claimsOwnership();
 
-      // Contractor delete: strict ownership only
-      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+      // Contractor delete: owns the doc (or legacy doc without ownerId)
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -103,11 +113,12 @@ service cloud.firestore {
     match /apps/{appId} {
       allow read: if isContractor() && isOwnerOrLegacy(resource.data);
       allow create: if isContractor() && claimsOwnership();
-      // Update/delete: strict ownership only — no legacy fallback for mutations
+      // Update: contractor owns the doc (or legacy) AND must claim ownership
       allow update: if isContractor()
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
-      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+        && isOwnerOrLegacy(resource.data)
+        && claimsOwnership();
+      // Delete: contractor owns the doc (or legacy doc without ownerId)
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -257,6 +268,43 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid;
       allow delete: if isContractor()
         && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /receipts/{receiptId} {
+      allow read: if isContractor() && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor() && resource.data.ownerId == request.auth.uid
+                     && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // magicLinks — contractors create, Cloud Functions verify
+    match /magicLinks/{linkId} {
+      allow read: if false; // only server-side via admin SDK
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if false; // only server-side
+    }
+
+    // timeEntries — standard ownerId pattern
+    match /timeEntries/{entryId} {
+      allow read: if isContractor() && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor() && resource.data.ownerId == request.auth.uid
+                     && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /mileageTrips/{tripId} {
+      allow read: if isContractor() && resource.data.ownerId == request.auth.uid;
+      allow create: if isContractor() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isContractor() && resource.data.ownerId == request.auth.uid
+                     && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isContractor() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /insights/{userId} {
+      allow read: if isContractor() && userId == request.auth.uid;
+      allow write: if false;
     }
   }
 }

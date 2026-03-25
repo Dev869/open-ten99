@@ -10,6 +10,12 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     localStorage.setItem('oc-theme', dark ? 'dark' : 'light');
+
+    // Update Android Chrome status bar / recent-apps color
+    const themeColor = dark ? '#1C1710' : '#F4F1EC';
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      meta.setAttribute('content', themeColor);
+    });
   }, [dark]);
 
   return { dark, toggle: () => setDark(d => !d) };

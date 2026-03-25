@@ -32,7 +32,7 @@ interface GitHubOrg {
  * for CSRF protection.
  */
 export const getGitHubAuthUrl = onCall(
-  { maxInstances: 10 },
+  { cors: true, maxInstances: 10 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -87,7 +87,7 @@ export const getGitHubAuthUrl = onCall(
  * authorization code for an access token, and persists user/org metadata.
  */
 export const handleGitHubCallback = onCall(
-  { maxInstances: 10 },
+  { cors: true, maxInstances: 10 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -328,7 +328,7 @@ function inferPlatform(
  * and returns a deduplicated summary list.
  */
 export const importGitHubRepos = onCall(
-  { maxInstances: 10, timeoutSeconds: 120 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -425,7 +425,7 @@ export const importGitHubRepos = onCall(
  * If clientId is provided, creates a new app with auto-populated fields.
  */
 export const linkRepoToApp = onCall(
-  { maxInstances: 10, timeoutSeconds: 120 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -589,7 +589,7 @@ export const linkRepoToApp = onCall(
  * apps. Rate-limited to once per 5 minutes.
  */
 export const triggerGitHubSync = onCall(
-  { maxInstances: 10, timeoutSeconds: 300 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 300 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -637,7 +637,7 @@ export const triggerGitHubSync = onCall(
  * integration as disconnected.
  */
 export const disconnectGitHub = onCall(
-  { maxInstances: 10 },
+  { cors: true, maxInstances: 10 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(

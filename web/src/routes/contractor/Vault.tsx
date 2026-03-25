@@ -282,7 +282,7 @@ export default function Vault({ user, clients }: VaultProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+          <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
             Key Vault
           </h1>
         </div>

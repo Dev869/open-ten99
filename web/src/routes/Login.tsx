@@ -26,7 +26,7 @@ export default function Login({ onSignIn, error }: LoginProps) {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-5">
-            <BrandWordmark size={36} variant="light" />
+            <BrandWordmark size={64} variant="light" />
           </div>
           <p className="text-white/40 text-sm mt-2">Contractor work order management</p>
         </div>

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getDoc, doc } from 'firebase/firestore';
 import type { Transaction, ConnectedAccount } from '../../lib/types';
-import { useConnectedAccounts } from '../../hooks/useFirestore';
+import { useConnectedAccounts, useInsights } from '../../hooks/useFirestore';
 import { fetchTransactions, updateTransactionCategory, confirmMatch, rejectMatch } from '../../services/firestore';
+import { InsightBadge } from '../../components/insights/InsightBadge';
 import { TransactionRow } from '../../components/finance/TransactionRow';
 import { MatchSuggestion } from '../../components/finance/MatchSuggestion';
 import { CsvImportModal } from '../../components/finance/CsvImportModal';
@@ -11,6 +12,7 @@ import { formatDate } from '../../lib/utils';
 import { db, functions } from '../../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { DocumentSnapshot } from 'firebase/firestore';
+import { IconRepeat } from '../../components/icons';
 
 const PAGE_SIZE = 50;
 
@@ -45,7 +47,7 @@ function AccountStatusDot({ status }: { status: ConnectedAccount['status'] }) {
 function SkeletonRow() {
   return (
     <tr className="border-b border-[var(--border)]">
-      {[...Array(5)].map((_, i) => (
+      {[...Array(6)].map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-[var(--border)] rounded animate-pulse" />
         </td>
@@ -56,6 +58,7 @@ function SkeletonRow() {
 
 export default function Transactions() {
   const { accounts, loading: accountsLoading } = useConnectedAccounts();
+  const { insights } = useInsights();
 
   // Filter state
   const [filterAccountId, setFilterAccountId] = useState<string>('');
@@ -248,7 +251,7 @@ export default function Transactions() {
     <div>
       {/* Page header */}
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
+        <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Transactions
         </h1>
         <button
@@ -354,7 +357,7 @@ export default function Transactions() {
       </div>
 
       {/* Transaction Table */}
-      <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+      <div className="overflow-x-auto scrollbar-hide rounded-lg border border-[var(--border)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--bg-card)] border-b border-[var(--border)]">
@@ -373,6 +376,9 @@ export default function Transactions() {
               <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
                 Category
               </th>
+              <th className="px-4 py-3 text-center font-medium text-[var(--text-secondary)] uppercase tracking-wide text-xs">
+                Receipt
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -381,11 +387,26 @@ export default function Transactions() {
               [...Array(8)].map((_, i) => <SkeletonRow key={i} />)
             ) : transactions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-[var(--text-secondary)] text-sm">
-                  No transactions found.
-                  {(filterAccountId || filterType) && (
-                    <span> Try adjusting your filters.</span>
-                  )}
+                <td colSpan={6} className="px-4 py-0">
+                  <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
+                    <div className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center mb-4">
+                      <IconRepeat size={32} color="var(--accent)" />
+                    </div>
+                    <h2 className="text-lg font-bold text-[var(--text-primary)] mb-1 text-center">No transactions yet</h2>
+                    <p className="text-sm text-[var(--text-secondary)] text-center max-w-xs mb-6">
+                      {filterAccountId || filterType
+                        ? 'Try adjusting your filters.'
+                        : 'Connect a bank account or import transactions to get started'}
+                    </p>
+                    {!(filterAccountId || filterType) && (
+                      <button
+                        onClick={() => setShowCsvImport(true)}
+                        className="px-6 py-3 min-h-[44px] bg-[var(--accent)] text-white text-sm font-semibold rounded-xl hover:brightness-90 transition-all"
+                      >
+                        Import CSV
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -398,6 +419,8 @@ export default function Transactions() {
                   workItemId &&
                   cachedWorkItem;
 
+                const deduction = insights?.tax?.missedDeductions?.find((d) => d.transactionId === transaction.id);
+
                 return (
                   <>
                     <TransactionRow
@@ -406,10 +429,17 @@ export default function Transactions() {
                       accounts={accounts}
                       onCategoryChange={handleCategoryChange}
                       onRowClick={handleRowClick}
+                      insightBadge={deduction ? (
+                        <InsightBadge
+                          label="Deductible"
+                          level="deductible"
+                          tooltip={`${deduction.reason} — suggest: ${deduction.suggestedCategory}`}
+                        />
+                      ) : undefined}
                     />
                     {showSuggestion && (
                       <tr key={`${transaction.id}-match`}>
-                        <td colSpan={5} className="px-4 pb-3">
+                        <td colSpan={6} className="px-4 pb-3">
                           <MatchSuggestion
                             transactionId={transaction.id}
                             workItemId={workItemId}

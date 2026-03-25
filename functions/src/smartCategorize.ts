@@ -25,7 +25,7 @@ const EXPENSE_CATEGORIES = [
  * Batches up to 50 transactions per call to minimize API usage.
  */
 export const onSmartCategorize = onCall(
-  { maxInstances: 5, timeoutSeconds: 120 },
+  { cors: true, maxInstances: 5, timeoutSeconds: 120 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in');

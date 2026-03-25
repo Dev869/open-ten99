@@ -5,6 +5,11 @@ import { WORK_ITEM_STATUS_LABELS } from './types';
 interface PdfSettings {
   companyName: string;
   hourlyRate: number;
+  taxRate?: number;
+  pdfLogoUrl?: string;
+  invoiceFromAddress?: string;
+  invoiceNotes?: string;
+  invoiceTerms?: string;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -37,7 +42,7 @@ const LINE_H = 16;          // standard text line height
 const SECTION_GAP = 24;     // gap between major sections
 
 /**
- * Generates a branded, professional change order PDF and returns a blob URL.
+ * Generates a branded, professional invoice PDF and returns a blob URL.
  */
 export async function buildChangeOrderPdf(
   workItem: WorkItem,
@@ -77,12 +82,8 @@ export async function buildChangeOrderPdf(
    * HEADER
    * ════════════════════════════════════════════════════════ */
 
-  // Company name — top left (size 22)
-  const companyDisplayName = 'DW TAILORED SYSTEMS';
-  const companyNameW = fontBold.widthOfTextAtSize(companyDisplayName, 22);
-
-  // "CHANGE ORDER" label — top right, inside a teal box
-  const coLabel = 'CHANGE ORDER';
+  // "INVOICE" label — top right, inside a teal box
+  const coLabel = 'INVOICE';
   const coFontSize = 16;
   const coTextW = fontBold.widthOfTextAtSize(coLabel, coFontSize);
   const coPadX = 14;
@@ -91,21 +92,41 @@ export async function buildChangeOrderPdf(
   const coBoxH = coFontSize + coPadY * 2;
   const coBoxX = rightX - coBoxW;
 
-  // Ensure company name doesn't overlap with the CHANGE ORDER box
-  // Company name ends at MARGIN + companyNameW, box starts at coBoxX
-  // If they would overlap, reduce company name font size (safety check)
-  const companyNameEndX = MARGIN + companyNameW;
-  const gapBetweenHeaderElements = coBoxX - companyNameEndX;
-
-  if (gapBetweenHeaderElements < 10) {
-    // Truncate company name to fit — but this should not happen with current values
-    const maxCompanyW = coBoxX - MARGIN - 10;
-    const truncatedCompany = truncateText(companyDisplayName, fontBold, 22, maxCompanyW);
-    page.drawText(truncatedCompany, {
-      x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
-    });
+  // Company logo or name — top left
+  let headerH = 22; // default text height
+  if (settings.pdfLogoUrl) {
+    try {
+      const logoResp = await fetch(settings.pdfLogoUrl);
+      const logoBytes = new Uint8Array(await logoResp.arrayBuffer());
+      const isPng = settings.pdfLogoUrl.toLowerCase().includes('.png') ||
+        (logoBytes[0] === 0x89 && logoBytes[1] === 0x50);
+      const logoImage = isPng
+        ? await pdfDoc.embedPng(logoBytes)
+        : await pdfDoc.embedJpg(logoBytes);
+      const logoMaxH = 40;
+      const logoMaxW = coBoxX - MARGIN - 20;
+      const scale = Math.min(logoMaxW / logoImage.width, logoMaxH / logoImage.height, 1);
+      const logoW = logoImage.width * scale;
+      const logoH = logoImage.height * scale;
+      page.drawImage(logoImage, {
+        x: MARGIN,
+        y: y - logoH + 22, // align bottom with text baseline area
+        width: logoW,
+        height: logoH,
+      });
+      headerH = logoH;
+    } catch {
+      // Logo fetch/embed failed — fall back to text
+      const companyDisplayName = settings.companyName.toUpperCase();
+      page.drawText(companyDisplayName, {
+        x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
+      });
+    }
   } else {
-    page.drawText(companyDisplayName, {
+    const companyDisplayName = settings.companyName.toUpperCase();
+    const maxCompanyW = coBoxX - MARGIN - 10;
+    const displayText = truncateText(companyDisplayName, fontBold, 22, maxCompanyW);
+    page.drawText(displayText, {
       x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
     });
   }
@@ -119,8 +140,8 @@ export async function buildChangeOrderPdf(
     x: coBoxX + coPadX, y: coBoxY + coPadY, size: coFontSize, font: fontBold, color: WHITE,
   });
 
-  // Move past the header — account for the taller of company name (22px) or box
-  y -= Math.max(22, coBoxH) + 12;
+  // Move past the header
+  y -= Math.max(headerH, coBoxH) + 12;
 
   // Horizontal rule
   page.drawRectangle({
@@ -145,17 +166,17 @@ export async function buildChangeOrderPdf(
     x: MARGIN, y, size: 11, font: fontBold, color: CHARCOAL,
   });
   y -= LINE_H;
-  page.drawText('Devin Wilson', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
-  y -= 14;
-  page.drawText('Custom software & consulting', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
-  y -= 14;
-  page.drawText('info@dwtailored.com', {
-    x: MARGIN, y, size: 9, font, color: GRAY,
-  });
+
+  // Render from-address lines (user-customizable)
+  const fromLines = (settings.invoiceFromAddress || 'Devin Wilson\nCustom software & consulting\ninfo@dwtailored.com')
+    .split('\n')
+    .filter(Boolean);
+  for (const line of fromLines) {
+    page.drawText(truncateText(line.trim(), font, 9, leftColMaxW), {
+      x: MARGIN, y, size: 9, font, color: GRAY,
+    });
+    y -= 14;
+  }
   const leftColEndY = y;
 
   // ── Right column: document details ──
@@ -171,7 +192,7 @@ export async function buildChangeOrderPdf(
   const statusLabel = WORK_ITEM_STATUS_LABELS[workItem.status] ?? workItem.status;
 
   const detailRows: Array<{ label: string; value: string }> = [
-    { label: 'Change Order #:', value: workItem.id ?? '—' },
+    { label: 'Invoice #:', value: workItem.id ?? '—' },
     { label: 'Date:', value: orderDate },
     { label: 'Status:', value: statusLabel },
   ];
@@ -249,9 +270,9 @@ export async function buildChangeOrderPdf(
   // Column positions — keep everything within MARGIN to rightX
   const colNum   = MARGIN;
   const colDesc  = MARGIN + 32;
-  const colHrs   = MARGIN + CONTENT_W - 190;
-  const colRate  = MARGIN + CONTENT_W - 120;
-  const colAmt   = rightX;  // right-align amounts flush to right margin
+  const colHrs   = MARGIN + CONTENT_W - 200;
+  const colRate  = MARGIN + CONTENT_W - 130;
+  const colAmt   = rightX - 8;  // right-align amounts with inner padding
   const rowH     = 24;      // enough height to prevent row bleed
 
   // Right-align positions for numeric columns (right edge of each zone)
@@ -302,7 +323,7 @@ export async function buildChangeOrderPdf(
     const lineNum = String(i + 1);
     const desc = truncateText(item.description, font, 9, descMaxW);
     const hrs  = item.hours.toFixed(1);
-    const rate = fmtCurrency(settings.hourlyRate);
+    const rate = fmtCurrency(item.hours > 0 ? item.cost / item.hours : item.cost);
     const amt  = fmtCurrency(item.cost);
 
     page.drawText(lineNum, { x: colNum + 8, y, size: 9, font, color: GRAY });
@@ -353,7 +374,23 @@ export async function buildChangeOrderPdf(
   page.drawText('Total Hours', { x: totalsLabelX, y, size: 10, font, color: GRAY });
   const totalHrsW = font.widthOfTextAtSize(totalHrsStr, 10);
   page.drawText(totalHrsStr, { x: rightX - totalHrsW, y, size: 10, font, color: CHARCOAL });
-  y -= 22;
+  y -= 18;
+
+  // Tax
+  const taxAmount = settings.taxRate && settings.taxRate > 0
+    ? workItem.totalCost * (settings.taxRate / 100)
+    : 0;
+
+  if (settings.taxRate && settings.taxRate > 0) {
+    const taxLabel = `Tax (${settings.taxRate}%)`;
+    const taxStr = fmtCurrency(taxAmount);
+    page.drawText(taxLabel, { x: totalsLabelX, y, size: 10, font, color: GRAY });
+    const taxW = font.widthOfTextAtSize(taxStr, 10);
+    page.drawText(taxStr, { x: rightX - taxW, y, size: 10, font, color: CHARCOAL });
+    y -= 18;
+  }
+
+  y -= 4;
 
   // Separator above total
   page.drawRectangle({
@@ -362,7 +399,7 @@ export async function buildChangeOrderPdf(
   y -= 8;
 
   // TOTAL — large, bold, prominent
-  const totalStr = fmtCurrency(workItem.totalCost);
+  const totalStr = fmtCurrency(workItem.totalCost + taxAmount);
   page.drawText('TOTAL', { x: totalsLabelX, y, size: 14, font: fontBold, color: CHARCOAL });
   const totalW = fontBold.widthOfTextAtSize(totalStr, 14);
   page.drawText(totalStr, { x: rightX - totalW, y, size: 14, font: fontBold, color: DARK_TEAL });
@@ -400,15 +437,32 @@ export async function buildChangeOrderPdf(
     });
     y -= 14;
 
-    page.drawText(
-      'This change order is subject to acceptance. Please review and confirm before work begins.',
-      { x: MARGIN, y, size: 8, font, color: GRAY },
-    );
-    y -= 12;
-    page.drawText(
-      'Payment is due upon completion unless other terms have been arranged.',
-      { x: MARGIN, y, size: 8, font, color: GRAY },
-    );
+    const termsText = settings.invoiceTerms
+      || 'This invoice is subject to acceptance. Please review and confirm before work begins.\nPayment is due upon completion unless other terms have been arranged.';
+    const termsLines = termsText.split('\n').filter(Boolean);
+    for (const tLine of termsLines) {
+      page.drawText(truncateText(tLine.trim(), font, 8, CONTENT_W - 10), {
+        x: MARGIN, y, size: 8, font, color: GRAY,
+      });
+      y -= 12;
+    }
+  }
+
+  // Notes section (user-customizable)
+  if (settings.invoiceNotes && y - 40 > FOOTER_ZONE) {
+    y -= 8;
+    page.drawText('Notes', {
+      x: MARGIN, y, size: 9, font: fontBold, color: CHARCOAL,
+    });
+    y -= 14;
+    const notesLines = settings.invoiceNotes.split('\n').filter(Boolean);
+    for (const nLine of notesLines) {
+      if (y - 12 < FOOTER_ZONE) break;
+      page.drawText(truncateText(nLine.trim(), font, 8, CONTENT_W - 10), {
+        x: MARGIN, y, size: 8, font, color: GRAY,
+      });
+      y -= 12;
+    }
   }
 
   // Draw footer on every page that doesn't already have one

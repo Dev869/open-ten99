@@ -167,7 +167,7 @@ export function GlobalSearch({ workItems, clients, onClose }: GlobalSearchProps)
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search work items, clients..."
+            placeholder="Search work orders, clients..."
             className="flex-1 bg-transparent text-[var(--text-primary)] text-base placeholder:text-[var(--text-secondary)] outline-none"
           />
           {/* Keyboard shortcut badge */}
@@ -196,7 +196,7 @@ export function GlobalSearch({ workItems, clients, onClose }: GlobalSearchProps)
           {workItemResults.length > 0 && (
             <div>
               <div className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider px-4 py-2">
-                Work Items
+                Work Orders
               </div>
               {workItemResults.map((result) => {
                 flatIndex++;

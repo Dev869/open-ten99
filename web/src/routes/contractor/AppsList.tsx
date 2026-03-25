@@ -72,7 +72,7 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {integration?.connected && (
+          {integration.github?.connected && (
             <button
               onClick={() => setShowImport(true)}
               className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--bg-input)] transition-colors min-h-[44px] whitespace-nowrap"

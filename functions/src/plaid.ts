@@ -150,7 +150,7 @@ async function verifyPlaidWebhook(
 // ---------------------------------------------------------------------------
 
 export const onPlaidLinkToken = onCall(
-  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv] },
+  { cors: true, maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to create a link token.');
@@ -165,7 +165,7 @@ export const onPlaidLinkToken = onCall(
     try {
       const response = await client.linkTokenCreate({
         user: { client_user_id: request.auth.uid },
-        client_name: 'OpenChanges',
+        client_name: 'TEN99',
         products: [Products.Transactions],
         country_codes: [CountryCode.Us],
         language: 'en',
@@ -185,7 +185,7 @@ export const onPlaidLinkToken = onCall(
 // ---------------------------------------------------------------------------
 
 export const onPlaidExchange = onCall(
-  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
+  { cors: true, maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'You must be signed in to connect a bank account.');
@@ -437,7 +437,7 @@ export const onPlaidSync = onSchedule(
 // ---------------------------------------------------------------------------
 
 export const onPlaidWebhook = onRequest(
-  { maxInstances: 10 },
+  { cors: true, maxInstances: 10 },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');

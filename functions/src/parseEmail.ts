@@ -1,11 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
-
-const webhookSecret = defineString("POSTMARK_WEBHOOK_SECRET");
 
 interface PostmarkInboundPayload {
   From: string;
@@ -31,18 +27,40 @@ interface GeminiParseResult {
 }
 
 /**
+ * Attempts to extract the original sender from a forwarded email.
+ * Looks for common forwarded-email patterns in the text/HTML body.
+ */
+function extractOriginalSender(textBody: string, htmlBody: string): { email: string; name: string } | null {
+  const combined = textBody + "\n" + htmlBody;
+
+  // Pattern: "From: Name <email>" or "From: email"
+  const fromWithAngle = combined.match(/From:\s*(?:([^<\n]+?)\s*)?<([^>\s]+@[^>\s]+)>/i);
+  if (fromWithAngle) {
+    return { name: (fromWithAngle[1] || "").trim(), email: fromWithAngle[2].trim() };
+  }
+
+  // Pattern: "From: email@domain.com" (no angle brackets)
+  const fromPlain = combined.match(/From:\s*([^\s<>\n]+@[^\s<>\n]+)/i);
+  if (fromPlain) {
+    return { name: "", email: fromPlain[1].trim() };
+  }
+
+  return null;
+}
+
+/**
  * HTTP function that receives Postmark inbound email webhooks.
  *
  * Flow:
  * 1. Validate webhook secret
  * 2. Extract sender, subject, body
- * 3. Look up or create client in Firestore
+ * 3. Look up existing client in Firestore (unassigned if no match)
  * 4. Call Gemini to extract change items and hour estimates
  * 5. Calculate costs using the user's hourly rate
- * 6. Create a workItems doc in Firestore
+ * 6. Create a work order doc in Firestore
  */
 export const onEmailReceived = onRequest(
-  { maxInstances: 10, timeoutSeconds: 120 },
+  { maxInstances: 10, timeoutSeconds: 120, invoker: "public" },
   async (req, res) => {
     // Only accept POST requests
     if (req.method !== "POST") {
@@ -50,34 +68,68 @@ export const onEmailReceived = onRequest(
       return;
     }
 
-    // Validate webhook secret via header only (never accept via query param to
-    // avoid secrets appearing in server logs and URL history).
-    const providedSecret = req.headers["x-postmark-secret"];
-    const expectedSecret = webhookSecret.value();
-    let secretValid = false;
-    if (typeof providedSecret === "string" && expectedSecret.length > 0) {
-      try {
-        const provided = Buffer.from(providedSecret);
-        const expected = Buffer.from(expectedSecret);
-        secretValid =
-          provided.length === expected.length &&
-          crypto.timingSafeEqual(provided, expected);
-      } catch {
-        secretValid = false;
-      }
-    }
-    if (!secretValid) {
-      logger.warn("Invalid webhook secret received");
+    // --- Authenticate via URL token and resolve contractor in one query ---
+    const providedToken = req.query.token;
+    if (typeof providedToken !== "string" || providedToken.length === 0) {
+      logger.warn("Missing webhook token query parameter");
       res.status(401).send("Unauthorized");
+      return;
+    }
+
+    let contractorUid: string | null = null;
+    try {
+      const integrationsSnap = await admin
+        .firestore()
+        .collection("integrations")
+        .get();
+
+      for (const doc of integrationsSnap.docs) {
+        const data = doc.data();
+        const storedToken = data?.postmarkWebhook?.token;
+        logger.info("Token comparison", {
+          docId: doc.id,
+          hasPostmarkWebhook: !!data?.postmarkWebhook,
+          storedTokenPrefix: typeof storedToken === "string" ? storedToken.substring(0, 8) : "none",
+          providedTokenPrefix: providedToken.substring(0, 8),
+          match: storedToken === providedToken,
+        });
+        if (typeof storedToken === "string" && storedToken === providedToken) {
+          contractorUid = doc.id;
+          break;
+        }
+      }
+
+      if (!contractorUid) {
+        logger.warn("No matching webhook token found", {
+          docsChecked: integrationsSnap.size,
+        });
+        res.status(401).send("Unauthorized");
+        return;
+      }
+    } catch (firestoreErr) {
+      logger.error("Failed to look up webhook token", {
+        error: firestoreErr instanceof Error ? firestoreErr.message : String(firestoreErr),
+      });
+      res.status(503).send("Service Unavailable");
       return;
     }
 
     try {
       const payload = req.body as PostmarkInboundPayload;
-      const senderEmail = payload.FromFull?.Email || payload.From;
-      const senderName = payload.FromFull?.Name || payload.FromName || "";
+      const forwarderEmail = payload.FromFull?.Email || payload.From;
+      const forwarderName = payload.FromFull?.Name || payload.FromName || "";
       const subject = payload.Subject || "(No Subject)";
       const textBody = payload.TextBody || "";
+      const htmlBody = payload.HtmlBody || "";
+      const messageId = payload.MessageID || "";
+
+      // Detect forwarded emails and extract the original sender
+      const isForward = /^(Fwd?|FW):/i.test(subject);
+      const originalSender = isForward ? extractOriginalSender(textBody, htmlBody) : null;
+
+      // Use original sender if this is a forward, otherwise use the direct sender
+      const senderEmail = originalSender?.email || forwarderEmail;
+      const senderName = originalSender?.name || forwarderName;
 
       if (!senderEmail) {
         logger.error("No sender email found in payload");
@@ -92,42 +144,43 @@ export const onEmailReceived = onRequest(
 
       const db = admin.firestore();
 
-      // --- Step 0: Resolve contractor uid ---
-      // Inbound emails don't carry a contractor identifier, so we identify the
-      // target contractor by finding Firebase Auth users whose sign-in provider
-      // is google.com (the only contractor auth method). If exactly one exists
-      // we proceed; otherwise we cannot safely scope the data.
-      const contractorUid = await resolveContractorUid();
-      if (!contractorUid) {
-        logger.warn(
-          "Could not resolve a single contractor uid — skipping email processing"
-        );
-        res.status(200).send("OK"); // return 200 so Postmark does not retry
-        return;
+      // --- Step 0.5: Dedup — skip if we already processed this email ---
+      if (messageId) {
+        const existing = await db
+          .collection("workItems")
+          .where("postmarkMessageId", "==", messageId)
+          .limit(1)
+          .get();
+        if (!existing.empty) {
+          logger.info("Duplicate email skipped — work order already exists", {
+            messageId,
+            existingWorkItemId: existing.docs[0].id,
+          });
+          res.status(200).json({ success: true, duplicate: true });
+          return;
+        }
       }
 
-      // --- Step 1: Look up or create client ---
-      const clientId = await findOrCreateClient(
-        db,
-        senderEmail,
-        senderName,
-        contractorUid
-      );
+      // --- Step 1: Look up client by email (never auto-create) ---
+      const clientId = await findClientByEmail(db, senderEmail, contractorUid);
+      if (!clientId) {
+        logger.info("No matching client found for sender — work order will be unassigned", {
+          senderEmail,
+        });
+      }
 
       // --- Step 2: Get user settings for hourly rate (scoped to contractor) ---
-      const settingsSnap = await db
-        .collection("settings")
-        .where("ownerId", "==", contractorUid)
-        .limit(1)
-        .get();
-      let hourlyRate = 150; // sensible default
-      if (!settingsSnap.empty) {
-        const settingsData = settingsSnap.docs[0].data();
-        hourlyRate = settingsData.hourlyRate ?? hourlyRate;
+      const settingsSnap = await db.doc(`settings/${contractorUid}`).get();
+      let hourlyRate = 150;
+      if (settingsSnap.exists) {
+        hourlyRate = settingsSnap.data()?.hourlyRate ?? hourlyRate;
       }
 
       // --- Step 3: Call Gemini to extract change items ---
-      const parseResult = await extractChangeItems(subject, textBody);
+      // Use the richer content source: if textBody is very short (common in forwards),
+      // fall back to htmlBody which contains the forwarded message
+      const emailContent = textBody.length > 100 ? textBody : (htmlBody || textBody);
+      const parseResult = await extractChangeItems(subject, emailContent);
 
       // --- Step 4: Calculate costs ---
       const lineItems: ParsedLineItem[] = parseResult.items.map((item) => ({
@@ -139,24 +192,28 @@ export const onEmailReceived = onRequest(
       const totalHours = lineItems.reduce((sum, li) => sum + li.hours, 0);
       const totalCost = parseFloat((totalHours * hourlyRate).toFixed(2));
 
-      // --- Step 5: Create workItem doc ---
+      // --- Step 5: Create work order doc ---
       const now = admin.firestore.FieldValue.serverTimestamp();
       const workItemRef = await db.collection("workItems").add({
         type: "changeRequest",
         status: "draft",
         ownerId: contractorUid,
-        clientId,
-        sourceEmail: textBody.slice(0, 10_000), // truncate to prevent oversized docs
+        ...(clientId ? { clientId } : {}),
+        senderEmail,
+        senderName,
+        sourceEmail: textBody.slice(0, 10_000),
+        sourceHtml: htmlBody.slice(0, 50_000),
         subject,
         lineItems,
         totalHours,
         totalCost,
         isBillable: true,
+        ...(messageId ? { postmarkMessageId: messageId } : {}),
         createdAt: now,
         updatedAt: now,
       });
 
-      logger.info("Work item created", {
+      logger.info("Work order created", {
         workItemId: workItemRef.id,
         clientId,
         totalHours,
@@ -182,38 +239,15 @@ export const onEmailReceived = onRequest(
 );
 
 /**
- * Finds the single contractor uid by listing Firebase Auth users whose
- * sign-in provider is google.com. Returns the uid when exactly one such user
- * exists, otherwise returns null.
+ * Looks up a client by email scoped to the contractor.
+ * Returns the client ID if found, or null if no match exists.
+ * Never creates new clients automatically.
  */
-async function resolveContractorUid(): Promise<string | null> {
-  const listResult = await admin.auth().listUsers(1000);
-  const contractors = listResult.users.filter((user) =>
-    user.providerData.some((p) => p.providerId === "google.com")
-  );
-  if (contractors.length === 1) {
-    return contractors[0].uid;
-  }
-  if (contractors.length === 0) {
-    logger.warn("resolveContractorUid: no google.com users found");
-  } else {
-    logger.warn("resolveContractorUid: multiple google.com users found", {
-      count: contractors.length,
-    });
-  }
-  return null;
-}
-
-/**
- * Looks up a client by email scoped to the contractor. If none exists,
- * creates a draft client doc with ownerId set.
- */
-async function findOrCreateClient(
+async function findClientByEmail(
   db: admin.firestore.Firestore,
   email: string,
-  name: string,
   ownerId: string
-): Promise<string> {
+): Promise<string | null> {
   const normalizedEmail = email.toLowerCase().trim();
   const clientsSnap = await db
     .collection("clients")
@@ -226,21 +260,7 @@ async function findOrCreateClient(
     return clientsSnap.docs[0].id;
   }
 
-  // Create a draft client
-  const newClient = await db.collection("clients").add({
-    name: name || normalizedEmail.split("@")[0],
-    email: normalizedEmail,
-    ownerId,
-    notes: "Auto-created from inbound email",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  logger.info("Created draft client", {
-    clientId: newClient.id,
-    email: normalizedEmail,
-  });
-
-  return newClient.id;
+  return null;
 }
 
 /**
