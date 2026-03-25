@@ -330,6 +330,62 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                 Pause renewal (retainer not active)
               </label>
             )}
+
+            {/* Retainer Billing Mode */}
+            {client.retainerHours && client.retainerHours > 0 && (
+              <>
+                <div>
+                  <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
+                    Billing Mode
+                  </label>
+                  <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-0.5 h-10 items-center">
+                    <button
+                      type="button"
+                      onClick={() => setClient({ ...client, retainerBillingMode: 'flat' })}
+                      className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                        client.retainerBillingMode === 'flat'
+                          ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      Flat Fee
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClient({ ...client, retainerBillingMode: 'usage' })}
+                      className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                        client.retainerBillingMode === 'usage'
+                          ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
+                          : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      Usage-Based
+                    </button>
+                  </div>
+                </div>
+                {client.retainerBillingMode === 'flat' && (
+                  <div>
+                    <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
+                      Monthly Flat Rate
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)]">$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={client.retainerFlatRate ?? ''}
+                        onChange={(e) =>
+                          setClient({ ...client, retainerFlatRate: e.target.value ? Number(e.target.value) : undefined })
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Save Button - Full Width */}
