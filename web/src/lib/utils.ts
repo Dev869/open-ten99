@@ -46,6 +46,14 @@ export function getRetainerPeriodStart(renewalDay: number, now = new Date()): Da
   return new Date(year, month - 1, renewalDay);
 }
 
+export function getRetainerPeriodEnd(renewalDay: number, now = new Date()): Date {
+  const start = getRetainerPeriodStart(renewalDay, now);
+  const endDate = new Date(start);
+  endDate.setMonth(endDate.getMonth() + 1);
+  endDate.setDate(endDate.getDate() - 1);
+  return endDate;
+}
+
 export function exportToCsv(filename: string, headers: string[], rows: string[][]) {
   const escape = (val: string) => {
     if (val.includes(',') || val.includes('"') || val.includes('\n')) {
