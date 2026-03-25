@@ -358,6 +358,8 @@ export default function Invoices({ workItems, clients, settings, hourlyRate, pay
       {showNewInvoice && (
         <NewInvoiceModal
           clients={clients}
+          workItems={workItems}
+          settings={settings}
           hourlyRate={hourlyRate}
           paymentTerms={paymentTerms}
           onClose={() => setShowNewInvoice(false)}

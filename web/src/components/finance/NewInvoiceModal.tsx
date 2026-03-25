@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import type { Client, LineItem, WorkItemType, RecurrenceFrequency } from '../../lib/types';
+import type { Client, WorkItem, AppSettings, LineItem, WorkItemType, RecurrenceFrequency } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
-import { formatCurrency, paymentTermsToDays } from '../../lib/utils';
+import { formatCurrency, paymentTermsToDays, getRetainerPeriodStart, getRetainerPeriodEnd } from '../../lib/utils';
+import { buildRetainerLineItems } from '../../lib/retainerInvoice';
 import { createWorkItem } from '../../services/firestore';
 import { cn } from '../../lib/utils';
 import { IconClose, IconPlus, IconTrash } from '../icons';
 
 interface NewInvoiceModalProps {
   clients: Client[];
+  workItems: WorkItem[];
+  settings: AppSettings | null;
   hourlyRate: number;
   paymentTerms?: string;
   onClose: () => void;
@@ -19,7 +22,7 @@ function defaultDueDate(paymentTerms?: string): string {
   return date.toISOString().split('T')[0];
 }
 
-export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: NewInvoiceModalProps) {
+export function NewInvoiceModal({ clients, workItems, settings, hourlyRate, paymentTerms, onClose }: NewInvoiceModalProps) {
   const [invoiceType, setInvoiceType] = useState<WorkItemType>('changeRequest');
   const [clientId, setClientId] = useState('');
   const [subject, setSubject] = useState('');
@@ -28,6 +31,7 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency | ''>('');
   const [customDays, setCustomDays] = useState<number>(30);
   const [deductFromRetainer, setDeductFromRetainer] = useState(false);
+  const [isRetainerInvoice, setIsRetainerInvoice] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -53,6 +57,45 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
+
+  // Auto-populate retainer invoice fields when client selected
+  useEffect(() => {
+    if (!isRetainerInvoice || !clientId) return;
+    const selectedClient = clients.find((c) => c.id === clientId);
+    if (!selectedClient?.retainerHours || !selectedClient.retainerBillingMode) return;
+
+    const renewalDay = selectedClient.retainerRenewalDay ?? 1;
+    const periodStart = getRetainerPeriodStart(renewalDay);
+    const periodEnd = getRetainerPeriodEnd(renewalDay);
+    const periodLabel = periodStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const periodWorkItems = workItems.filter((wi) =>
+      wi.clientId === clientId &&
+      wi.deductFromRetainer &&
+      wi.status !== 'draft' &&
+      wi.updatedAt >= periodStart &&
+      wi.updatedAt <= periodEnd &&
+      !wi.isRetainerInvoice
+    );
+
+    const usedHours = periodWorkItems.reduce((sum, wi) => sum + wi.totalHours, 0);
+
+    const result = buildRetainerLineItems({
+      mode: selectedClient.retainerBillingMode,
+      retainerHours: selectedClient.retainerHours,
+      retainerFlatRate: selectedClient.retainerFlatRate,
+      hourlyRate: settings?.hourlyRate ?? 25,
+      periodLabel,
+      workItems: periodWorkItems.flatMap((wi) =>
+        wi.lineItems.map((li) => ({ description: li.description, hours: li.hours, cost: li.cost }))
+      ),
+      usedHours,
+    });
+
+    setSubject(`${selectedClient.retainerBillingMode === 'flat' ? 'Monthly Retainer' : 'Retainer Usage'} — ${periodLabel}`);
+    setLineItems(result.lineItems);
+    setDeductFromRetainer(true);
+  }, [isRetainerInvoice, clientId]);
 
   function addLineItem() {
     setLineItems([
@@ -95,6 +138,16 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
         deductFromRetainer,
         invoiceStatus: 'draft',
         invoiceDueDate: dueDate ? new Date(dueDate) : undefined,
+        isRetainerInvoice,
+        ...(isRetainerInvoice && clientId ? (() => {
+          const selectedClient = clients.find((c) => c.id === clientId);
+          const renewalDay = selectedClient?.retainerRenewalDay ?? 1;
+          return {
+            retainerPeriodStart: getRetainerPeriodStart(renewalDay),
+            retainerPeriodEnd: getRetainerPeriodEnd(renewalDay),
+            retainerOverageHours: Math.max(0, totalHours - (selectedClient?.retainerHours ?? 0)),
+          };
+        })() : {}),
         recurrence: recurrenceFrequency
           ? {
               frequency: recurrenceFrequency,
@@ -158,10 +211,10 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
               <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-0.5">
                 <button
                   type="button"
-                  onClick={() => { setInvoiceType('changeRequest'); setRecurrenceFrequency(''); }}
+                  onClick={() => { setInvoiceType('changeRequest'); setRecurrenceFrequency(''); setIsRetainerInvoice(false); }}
                   className={cn(
                     'flex-1 py-2 rounded-md text-xs font-semibold transition-all',
-                    !isMaintenance
+                    !isMaintenance && !isRetainerInvoice
                       ? 'bg-[var(--bg-card)] text-[var(--accent)] shadow-sm'
                       : 'text-[var(--text-secondary)]'
                   )}
@@ -170,15 +223,27 @@ export function NewInvoiceModal({ clients, hourlyRate, paymentTerms, onClose }: 
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInvoiceType('maintenance')}
+                  onClick={() => { setInvoiceType('maintenance'); setIsRetainerInvoice(false); }}
                   className={cn(
                     'flex-1 py-2 rounded-md text-xs font-semibold transition-all',
-                    isMaintenance
+                    isMaintenance && !isRetainerInvoice
                       ? 'bg-[var(--bg-card)] text-[var(--color-orange)] shadow-sm'
                       : 'text-[var(--text-secondary)]'
                   )}
                 >
                   Recurring
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setInvoiceType('maintenance'); setIsRetainerInvoice(true); setDeductFromRetainer(true); }}
+                  className={cn(
+                    'flex-1 py-2 rounded-md text-xs font-semibold transition-all',
+                    isRetainerInvoice
+                      ? 'bg-[var(--bg-card)] text-[var(--color-green)] shadow-sm'
+                      : 'text-[var(--text-secondary)]'
+                  )}
+                >
+                  Retainer
                 </button>
               </div>
             </div>
