@@ -51,6 +51,10 @@ export interface WorkItem {
   invoiceDueDate?: Date;
   preDiscardStatus?: WorkItemStatus;
   discardedAt?: Date;
+  isRetainerInvoice?: boolean;
+  retainerPeriodStart?: Date;
+  retainerPeriodEnd?: Date;
+  retainerOverageHours?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +77,8 @@ export interface Client {
   retainerHours?: number;
   retainerRenewalDay?: number;
   retainerPaused?: boolean;
+  retainerBillingMode?: 'flat' | 'usage';
+  retainerFlatRate?: number;
   teamId?: string;
   createdAt: Date;
 }
