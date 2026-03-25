@@ -48,9 +48,20 @@ export function InvoicePreview({ workItem, client, taxRate, onClose, onNavigate,
       {/* Slide-over panel */}
       <div className="fixed inset-y-0 right-0 w-full sm:max-w-md z-50 flex flex-col bg-[var(--bg-page)] border-l border-[var(--border)] shadow-2xl animate-slide-in-right">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-          <div className="flex items-center gap-3">
+        <div className="px-6 py-4 border-b border-[var(--border)]">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-[var(--text-primary)]">Invoice Preview</h2>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              aria-label="Close preview"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
             <span
               className="px-2.5 py-0.5 rounded-full text-xs font-medium"
               style={{ backgroundColor: `color-mix(in srgb, ${statusColor.color} 15%, transparent)`, color: statusColor.color }}
@@ -58,15 +69,23 @@ export function InvoicePreview({ workItem, client, taxRate, onClose, onNavigate,
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            aria-label="Close preview"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
+          {workItem.isRetainerInvoice && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="text-[10px] font-semibold text-[var(--color-green)] bg-[var(--color-green)]/10 px-2 py-0.5 rounded-full">
+                Retainer Invoice
+              </span>
+              {workItem.retainerPeriodStart && workItem.retainerPeriodEnd && (
+                <span className="text-[10px] text-[var(--text-secondary)]">
+                  {workItem.retainerPeriodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {workItem.retainerPeriodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+              {workItem.retainerOverageHours && workItem.retainerOverageHours > 0 && (
+                <span className="text-[10px] font-semibold text-[var(--color-orange)] bg-[var(--color-orange)]/10 px-2 py-0.5 rounded-full">
+                  {workItem.retainerOverageHours.toFixed(1)} hrs overage
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}

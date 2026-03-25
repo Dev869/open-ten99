@@ -72,6 +72,17 @@ export function InvoiceCard({ workItem, client, settings, invoiceNumber }: Invoi
       {/* INVOICE title */}
       <h1 className="text-2xl font-bold tracking-wide text-[var(--accent)] mb-4">INVOICE</h1>
 
+      {workItem.isRetainerInvoice && (
+        <div className="mt-1 text-xs text-[var(--text-secondary)]">
+          Retainer Invoice
+          {workItem.retainerPeriodStart && workItem.retainerPeriodEnd && (
+            <span className="ml-1">
+              &middot; {workItem.retainerPeriodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {workItem.retainerPeriodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="border-t border-gray-200 mb-6" />
 
       {/* Bill To / Invoice meta */}
@@ -183,6 +194,11 @@ export function InvoiceCard({ workItem, client, settings, invoiceNumber }: Invoi
 
       {/* Totals section */}
       <div className="border-t border-dashed border-gray-300 pt-4 mb-6">
+        {workItem.isRetainerInvoice && workItem.retainerOverageHours && workItem.retainerOverageHours > 0 && (
+          <div className="mb-3 text-xs text-[var(--color-orange)]">
+            Includes {workItem.retainerOverageHours.toFixed(1)} hrs overage beyond retainer allocation
+          </div>
+        )}
         <div className="flex flex-col items-end gap-1">
           {/* Subtotal row (shown when tax applies) */}
           {taxRate != null && taxRate > 0 && (

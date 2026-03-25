@@ -108,7 +108,14 @@ export function InvoiceTable({ workItems, clients, selectedIds, onSelectionChang
                     <div className="font-medium text-[var(--text-primary)] truncate max-w-xs">
                       {item.subject || '(No subject)'}
                     </div>
-                    <div className="text-xs text-[var(--text-secondary)] mt-0.5">{clientName}</div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      {clientName}
+                      {item.isRetainerInvoice && (
+                        <span className="ml-1.5 text-[10px] font-semibold text-[var(--color-green)] bg-[var(--color-green)]/10 px-1.5 py-0.5 rounded">
+                          Retainer
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-[var(--text-primary)]">
                     {formatCurrency(item.totalCost)}
