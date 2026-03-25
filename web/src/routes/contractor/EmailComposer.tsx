@@ -275,22 +275,34 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
   const [toName, setToName] = useState(client?.name ?? '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccInput, setCcInput] = useState('');
-  const [subject, setSubject] = useState(
-    item
-      ? isInvoice
-        ? `Invoice — ${item.subject}`
-        : `Work Order Completed! — ${item.subject}`
-      : ''
-  );
+  const [subject, setSubject] = useState(() => {
+    if (!item) return '';
+    if (item.isRetainerInvoice) {
+      const periodLabel = item.retainerPeriodStart
+        ? item.retainerPeriodStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : '';
+      return `Monthly Retainer Invoice — ${periodLabel} — ${client?.name ?? ''}`;
+    }
+    return isInvoice
+      ? `Invoice — ${item.subject}`
+      : `Work Order Completed! — ${item.subject}`;
+  });
   const fromEmail = 'noreply@dwtailored.com';
   const fromName = 'DW Tailored Systems';
 
   const [greeting, setGreeting] = useState(`Hello ${client?.name ?? ''},`);
-  const [message, setMessage] = useState(
-    isInvoice
+  const [message, setMessage] = useState(() => {
+    if (!item) return '';
+    if (item.isRetainerInvoice) {
+      const overageNote = item.retainerOverageHours && item.retainerOverageHours > 0
+        ? ` This period includes ${item.retainerOverageHours.toFixed(1)} hours of overage beyond your retainer allocation.`
+        : '';
+      return `Please find your monthly retainer invoice for the current billing period.${overageNote}`;
+    }
+    return isInvoice
       ? 'Please find your invoice details below for the completed work.'
-      : 'Great news — your work order has been completed! Here are the details:'
-  );
+      : 'Great news — your work order has been completed! Here are the details:';
+  });
   const [closing, setClosing] = useState(
     isInvoice
       ? "Payment is due within 30 days. Please don't hesitate to reach out with any questions."
