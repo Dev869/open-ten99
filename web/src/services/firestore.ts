@@ -76,6 +76,10 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     invoiceDueDate: data.invoiceDueDate ? toDate(data.invoiceDueDate) : undefined,
     preDiscardStatus: data.preDiscardStatus ?? undefined,
     discardedAt: data.discardedAt ? toDate(data.discardedAt) : undefined,
+    isRetainerInvoice: data.isRetainerInvoice ?? false,
+    retainerPeriodStart: data.retainerPeriodStart ? toDate(data.retainerPeriodStart) : undefined,
+    retainerPeriodEnd: data.retainerPeriodEnd ? toDate(data.retainerPeriodEnd) : undefined,
+    retainerOverageHours: data.retainerOverageHours ?? undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -92,6 +96,8 @@ function docToClient(id: string, data: DocumentData): Client {
     retainerHours: data.retainerHours ?? undefined,
     retainerRenewalDay: data.retainerRenewalDay ?? undefined,
     retainerPaused: data.retainerPaused ?? false,
+    retainerBillingMode: data.retainerBillingMode ?? undefined,
+    retainerFlatRate: data.retainerFlatRate ?? undefined,
     createdAt: toDate(data.createdAt),
   };
 }
@@ -275,6 +281,8 @@ export async function createWorkItem(item: Omit<WorkItem, 'id' | 'createdAt' | '
     ...clean,
     lineItems: item.lineItems.map(lineItemToData),
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
+    retainerPeriodStart: item.retainerPeriodStart ? Timestamp.fromDate(item.retainerPeriodStart) : null,
+    retainerPeriodEnd: item.retainerPeriodEnd ? Timestamp.fromDate(item.retainerPeriodEnd) : null,
     ownerId: auth.currentUser?.uid ?? null,
     createdAt: now,
     updatedAt: now,
