@@ -26,6 +26,7 @@ const defaultNavItems: NavItem[] = [
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
   { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },
+  { to: '/dashboard/invoices', key: 'invoices', label: 'Invoices', Icon: IconDollar },
   {
     to: '/dashboard/finance',
     key: 'finance',
@@ -33,7 +34,6 @@ const defaultNavItems: NavItem[] = [
     Icon: IconAnalytics,
     children: [
       { to: '/dashboard/finance', key: 'finance-overview', label: 'Overview', Icon: IconFinanceOverview },
-      { to: '/dashboard/finance/invoices', key: 'finance-invoices', label: 'Invoices', Icon: IconDollar },
       { to: '/dashboard/finance/transactions', key: 'finance-transactions', label: 'Transactions', Icon: IconRepeat },
       { to: '/dashboard/finance/expenses', key: 'finance-expenses', label: 'Expenses', Icon: IconBook },
       { to: '/dashboard/finance/receipts', key: 'finance-receipts', label: 'Receipts', Icon: IconCamera },

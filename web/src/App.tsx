@@ -27,6 +27,7 @@ const pageNames: Record<string, string> = {
   '/dashboard/calendar': 'Calendar',
   '/dashboard/clients': 'Clients',
   '/dashboard/apps': 'Apps',
+  '/dashboard/invoices': 'Invoices',
   '/dashboard/finance': 'Finance',
   '/dashboard/finance/invoices': 'Invoices',
   '/dashboard/finance/transactions': 'Transactions',
@@ -425,6 +426,10 @@ function ContractorRoutes() {
       <Route
         path="finance"
         element={<FinanceOverview workItems={workItems} clients={clients} />}
+      />
+      <Route
+        path="invoices"
+        element={<Invoices workItems={workItems} clients={clients} settings={settings} hourlyRate={settings.hourlyRate} taxRate={settings.invoiceTaxRate} />}
       />
       <Route
         path="finance/invoices"
