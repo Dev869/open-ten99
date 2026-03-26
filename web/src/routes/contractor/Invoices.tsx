@@ -306,7 +306,7 @@ export default function Invoices({ workItems, clients, settings, hourlyRate, pay
                 </p>
               </div>
               <div className="divide-y divide-[var(--border)]">
-                {retainerStatus.map(({ client, periodStart, periodEnd, renewalDay, existingDraft, usedHours, remaining, overage }) => (
+                {retainerStatus.map(({ client, periodStart, periodEnd, renewalDay, existingDraft, usedHours, overage }) => (
                   <div key={client.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
                     {/* Client info */}
                     <div className="flex-1 min-w-0">
