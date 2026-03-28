@@ -2,7 +2,23 @@
 
 A full-stack work order management platform for independent contractors. Track client requests, generate PDF estimates, manage retainers, and give clients visibility into project status through a dedicated portal.
 
-**Live:** [openchanges.web.app](https://openchanges.web.app)
+## Screenshots
+
+| Dashboard | Dark Mode |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Dashboard Dark](docs/screenshots/dashboard-dark.png) |
+
+| Work Orders | Calendar |
+|---|---|
+| ![Work Orders](docs/screenshots/work-orders.png) | ![Calendar](docs/screenshots/calendar.png) |
+
+| Invoices | Clients |
+|---|---|
+| ![Invoices](docs/screenshots/invoices.png) | ![Clients](docs/screenshots/clients.png) |
+
+| Settings | Key Vault |
+|---|---|
+| ![Settings](docs/screenshots/settings.png) | ![Vault](docs/screenshots/vault.png) |
 
 ## Architecture
 
