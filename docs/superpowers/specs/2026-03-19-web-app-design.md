@@ -105,7 +105,7 @@ Magic link flow:
 3. App opens a `mailto:` link pre-filled with:
    - **To:** client email
    - **Subject:** "Work Order: {subject} — Review & Approve"
-   - **Body:** Branded message with work order summary (type, line items, total) and magic link URL (e.g., `https://openchanges.web.app/portal/auth?token={token}`)
+   - **Body:** Branded message with work order summary (type, line items, total) and magic link URL (e.g., `https://your-domain.web.app/portal/auth?token={token}`)
 4. Contractor reviews/edits in their mail app and sends
 5. Client clicks link → Cloud Function `verifyMagicLink` validates token, creates Firebase custom auth token → client is signed in with custom claims (`role: "client"`, `clientId: "xxx"`)
 6. Client sees their work orders at `/portal`
@@ -308,7 +308,7 @@ Single doc `admins/{contractorUid}` with `{ role: "contractor" }`. Used by Fires
 
 ## Deployment
 
-Firebase Hosting at `openchanges.web.app` (or custom domain).
+Firebase Hosting at your configured domain.
 
 ```json
 "hosting": {

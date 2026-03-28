@@ -263,7 +263,7 @@ export function CompletionEmailEditor({
   }, [isInvoice]);
 
   const typeName = WORK_ITEM_TYPE_LABELS[item.type];
-  const portalUrl = `https://openchanges.web.app/portal/${item.id}`;
+  const portalUrl = `${window.location.origin}/portal/${item.id}`;
 
   // Build HTML from current form values
   const generatedHtml = useMemo(

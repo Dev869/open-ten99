@@ -168,7 +168,7 @@ export const getGitHubAuthUrl = onCall(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-    const redirectUri = `https://openchanges.web.app/dashboard/github/callback`;
+    const redirectUri = `https://your-domain.web.app/dashboard/github/callback`;
     const url =
       `https://github.com/login/oauth/authorize` +
       `?client_id=${githubClientId.value()}` +
