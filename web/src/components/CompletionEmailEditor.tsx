@@ -182,7 +182,7 @@ function buildEmailHtml(opts: {
   <tr>
     <td style="border-top:1px solid #E8E4DE;padding:16px 32px;text-align:center;">
       <span style="font-size:11px;color:#86868B;font-family:system-ui,-apple-system,sans-serif;">
-        DW Tailored Systems &mdash; dwtailored.com
+        Open TEN99
       </span>
     </td>
   </tr>
@@ -227,8 +227,8 @@ export function CompletionEmailEditor({
       ? `Invoice — ${item.subject}`
       : `Work Order Completed! — ${item.subject}`
   );
-  const [fromEmail, setFromEmail] = useState('noreply@dwtailored.com');
-  const [fromName, setFromName] = useState('DW Tailored Systems');
+  const [fromEmail, setFromEmail] = useState('noreply@example.com');
+  const [fromName, setFromName] = useState('Open TEN99');
 
   const [greeting, setGreeting] = useState(`Hello ${client.name},`);
   const [message, setMessage] = useState(
@@ -241,7 +241,7 @@ export function CompletionEmailEditor({
       ? 'Payment is due within 30 days. Please don\'t hesitate to reach out with any questions.'
       : "If you have any questions or need follow-up work, please don't hesitate to reach out."
   );
-  const [signoff, setSignoff] = useState('Best regards,\nDW Tailored Systems');
+  const [signoff, setSignoff] = useState('Best regards,\nOpen TEN99');
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

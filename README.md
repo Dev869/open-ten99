@@ -138,4 +138,4 @@ functions/src/
 
 ## License
 
-Private. All rights reserved.
+MIT License. See [LICENSE](LICENSE) for details.

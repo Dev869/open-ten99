@@ -50,7 +50,7 @@ web/
 
 ## Visual Design
 
-Matches the DW Tailored Systems brand identity, adapted for desktop information density.
+Matches the Open TEN99 brand identity, adapted for desktop information density.
 
 ### Theme Tokens
 

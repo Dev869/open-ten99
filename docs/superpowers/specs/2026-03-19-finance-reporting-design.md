@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-19
 **Status:** Draft
-**Author:** Claude + Devin Wilson
+**Author:** Open TEN99 Contributors
 
 ## Overview
 

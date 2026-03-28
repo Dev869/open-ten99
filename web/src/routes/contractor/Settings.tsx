@@ -419,7 +419,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <textarea
               value={invoiceFromAddress}
               onChange={(e) => setInvoiceFromAddress(e.target.value)}
-              placeholder={'Devin Wilson\nCustom software & consulting\ninfo@dwtailored.com'}
+              placeholder={'Your Name\nYour Business\nyou@example.com'}
               rows={4}
               className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
             />
@@ -453,7 +453,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <textarea
               value={invoiceNotes}
               onChange={(e) => setInvoiceNotes(e.target.value)}
-              placeholder="Payment via ACH or check. Make payable to DW Tailored."
+              placeholder="Payment via ACH or check."
               rows={3}
               className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none"
             />
@@ -890,7 +890,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
           <BrandIcon size={40} />
           <div>
             <p className="text-sm font-bold text-[var(--text-primary)]">Open TEN99 v1.0</p>
-            <p className="text-xs text-[var(--text-secondary)]">Built by DW Tailored Systems</p>
+            <p className="text-xs text-[var(--text-secondary)]">Open-source work order management</p>
           </div>
         </div>
 
@@ -901,14 +901,18 @@ export default function Settings({ settings, userId }: SettingsProps) {
           </h3>
           <div className="divide-y divide-[var(--border)]">
             <a
-              href="mailto:support@dwtailored.com?subject=Open%20TEN99%20Support%20Request"
+              href="https://github.com/open-ten99/open-ten99/issues/new?labels=bug"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
             >
               <IconMail size={18} color="var(--text-secondary)" />
               <span className="text-sm text-[var(--text-primary)]">Report an Issue</span>
             </a>
             <a
-              href="mailto:support@dwtailored.com?subject=Open%20TEN99%20Feature%20Request"
+              href="https://github.com/open-ten99/open-ten99/issues/new?labels=enhancement"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-[var(--bg-input)] transition-colors min-h-[44px]"
             >
               <IconLightbulb size={18} color="var(--text-secondary)" />
@@ -946,7 +950,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
             </a>
           </div>
           <p className="text-[10px] text-[var(--text-secondary)] text-center mt-4">
-            &copy; 2026 DW Tailored Systems. All rights reserved.
+            &copy; 2026 Open TEN99 Contributors. MIT License.
           </p>
         </div>
 
@@ -1001,13 +1005,13 @@ export default function Settings({ settings, userId }: SettingsProps) {
             Built with React, Firebase, and Tailwind CSS
           </p>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-1">
-            Designed and developed by Devin Wilson
+            Open-source. MIT Licensed.
           </p>
         </div>
       </div>
 
       <p className="text-[10px] text-[var(--text-secondary)] text-center mt-6">
-        &copy; 2026 DW Tailored Systems. All rights reserved.
+        &copy; 2026 Open TEN99 Contributors. MIT License.
       </p>
     </div>
   );

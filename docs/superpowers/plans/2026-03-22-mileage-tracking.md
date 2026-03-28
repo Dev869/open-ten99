@@ -373,7 +373,7 @@ In the `useSettings` hook, add `mileageRate` to the default `AppSettings` object
 const [settings, setSettings] = useState<AppSettings>({
   accentColor: '#4BA8A8',
   hourlyRate: 150,
-  companyName: 'DW Tailored',
+  companyName: 'Your Company',
   sidebarOrder: undefined,
   sidebarHidden: undefined,
   mileageRate: 0.70,       // <-- add this

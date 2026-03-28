@@ -10,7 +10,7 @@ Open Ten99 (AKA Ten99) is a work order management platform for independent contr
 - **`functions/`** — Firebase Cloud Functions (email parsing via Gemini AI, PDF generation via pdf-lib)
 - **`OpenChanges/`** — SwiftUI iOS app (deprecated)
 
-Live at https://openchanges.web.app
+Deploy to your own Firebase project. See README for setup instructions.
 
 ## Commands
 

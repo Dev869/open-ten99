@@ -156,7 +156,7 @@ export default function WorkItemDetail({
         createdAt: new Date(),
       };
       const blobUrl = await buildChangeOrderPdf(snapshot, pdfClient, {
-        companyName: 'DW Tailored',
+        companyName: 'Your Company',
         hourlyRate,
         taxRate,
         pdfLogoUrl,
@@ -208,10 +208,10 @@ export default function WorkItemDetail({
         workItemId: item.id,
       });
 
-      const portalLink = `https://ten99.dwtailored.com/portal/auth?token=${token}`;
+      const portalLink = `${window.location.origin}/portal/auth?token=${token}`;
 
       const subject = encodeURIComponent(
-        `DW Tailored Systems — Invoice: ${item.subject}`
+        `Invoice: ${item.subject}`
       );
 
       const snapshot = buildSnapshotItem();
@@ -229,7 +229,7 @@ export default function WorkItemDetail({
 
       const body = encodeURIComponent(
         `Hello ${recipientName || 'there'},\n\n` +
-        `A new work order from DW Tailored Systems is ready for your review.\n\n` +
+        `A new work order is ready for your review.\n\n` +
         `————————————————————————————————\n` +
         `WORK ORDER SUMMARY\n` +
         `————————————————————————————————\n\n` +
@@ -245,10 +245,8 @@ export default function WorkItemDetail({
         `Review and approve this work order:\n` +
         `${portalLink}\n\n` +
         `This link expires in 7 days. Reply to this email with any questions.\n\n\n` +
-        `Thank you for choosing DW Tailored Systems.\n\n` +
-        `Best regards,\n` +
-        `DW Tailored Systems\n` +
-        `https://dwtailored.com`
+        `Thank you for your business.\n\n` +
+        `Best regards`
       );
       window.open(`mailto:${recipientEmail}?subject=${subject}&body=${body}`, '_self');
     } catch (err) {
@@ -921,7 +919,7 @@ export default function WorkItemDetail({
               createdAt: new Date(),
             };
             const blobUrl = await buildChangeOrderPdf(item, pdfClient, {
-              companyName: 'DW Tailored',
+              companyName: 'Your Company',
               hourlyRate,
               taxRate,
               pdfLogoUrl,

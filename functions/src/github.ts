@@ -11,7 +11,7 @@ const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
 const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
 const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
 
-const REDIRECT_URI = "https://ten99-7cd44.web.app/dashboard/github/callback";
+const REDIRECT_URI = defineString("GITHUB_REDIRECT_URI");
 const OAUTH_SCOPE = "repo,read:org";
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -61,7 +61,7 @@ export const getGitHubAuthUrl = onCall(
         client_id: GITHUB_CLIENT_ID.value(),
         scope: OAUTH_SCOPE,
         state,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: REDIRECT_URI.value(),
       });
 
       const authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
@@ -165,7 +165,7 @@ export const handleGitHubCallback = onCall(
             client_id: GITHUB_CLIENT_ID.value(),
             client_secret: GITHUB_CLIENT_SECRET.value(),
             code,
-            redirect_uri: REDIRECT_URI,
+            redirect_uri: REDIRECT_URI.value(),
           }),
         }
       );

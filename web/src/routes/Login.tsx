@@ -72,7 +72,7 @@ export default function Login({ onSignIn, error }: LoginProps) {
         </div>
 
         <p className="text-center text-[10px] text-white/30 mt-6 font-medium tracking-wide">
-          DW Tailored Systems
+          Open TEN99
         </p>
       </div>
     </div>

@@ -242,7 +242,7 @@ export function subscribeSettings(
     callback({
       accentColor: data?.accentColor ?? '#4BA8A8',
       hourlyRate: data?.hourlyRate ?? 150,
-      companyName: data?.companyName ?? 'DW Tailored',
+      companyName: data?.companyName ?? 'Your Company',
       pdfLogoUrl: data?.pdfLogoUrl ?? undefined,
       invoicePrefix: data?.invoicePrefix ?? undefined,
       invoiceNextNumber: data?.invoiceNextNumber ?? undefined,

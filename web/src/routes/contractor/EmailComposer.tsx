@@ -45,8 +45,9 @@ function escapeHtml(str: string): string {
 }
 
 /* ── Logo placeholder (hosted URL for emails) ────────────── */
-const LOGO_WIDE_URL = 'https://ten99.dwtailored.com/dw-logo-wide.png';
-const LOGO_ICON_URL = 'https://ten99.dwtailored.com/dw-logo-icon.png';
+// Set your hosted logo URLs here, or leave empty for text fallback
+const LOGO_WIDE_URL = '';
+const LOGO_ICON_URL = '';
 
 /* ── Signature fields ────────────────────────────────────── */
 interface SignatureData {
@@ -57,10 +58,10 @@ interface SignatureData {
 }
 
 const DEFAULT_SIGNATURE: SignatureData = {
-  name: 'Devin Wilson',
-  title: 'Owner, DW Tailored Systems',
-  website: 'https://dwtailored.com',
-  websiteLabel: 'dwtailored.com',
+  name: 'Your Name',
+  title: 'Your Title',
+  website: '',
+  websiteLabel: '',
 };
 
 /* ── Build email HTML ────────────────────────────────────── */
@@ -105,11 +106,11 @@ function buildEmailHtml(opts: {
     : '';
 
   const logoWideTag = LOGO_WIDE_URL
-    ? `<img src="${LOGO_WIDE_URL}" width="160" alt="DW Tailored Systems" style="display:block;height:auto;border:0;" />`
-    : `<span style="font-size:18px;font-weight:700;color:#FFFFFF;font-family:system-ui,-apple-system,sans-serif;letter-spacing:0.03em;">DW Tailored Systems</span>`;
+    ? `<img src="${LOGO_WIDE_URL}" width="160" alt="Open TEN99" style="display:block;height:auto;border:0;" />`
+    : `<span style="font-size:18px;font-weight:700;color:#FFFFFF;font-family:system-ui,-apple-system,sans-serif;letter-spacing:0.03em;">Open TEN99</span>`;
 
   const logoIconTag = LOGO_ICON_URL
-    ? `<img src="${LOGO_ICON_URL}" width="52" alt="DW Tailored Systems" style="display:block;height:auto;border:0;" />`
+    ? `<img src="${LOGO_ICON_URL}" width="52" alt="Open TEN99" style="display:block;height:auto;border:0;" />`
     : '';
 
   const signatureIconCell = logoIconTag
@@ -229,7 +230,7 @@ function buildEmailHtml(opts: {
   <tr>
     <td style="border-top:1px solid ${BORDER_COLOR};padding:20px 32px;text-align:center;">
       <span style="font-size:12px;color:${TEXT_LIGHT};font-family:system-ui,-apple-system,sans-serif;">
-        DW Tailored Systems &mdash; dwtailored.com
+        Open TEN99
       </span>
     </td>
   </tr>
@@ -287,8 +288,8 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
       ? `Invoice — ${item.subject}`
       : `Work Order Completed! — ${item.subject}`;
   });
-  const fromEmail = 'noreply@dwtailored.com';
-  const fromName = 'DW Tailored Systems';
+  const fromEmail = 'noreply@example.com';
+  const fromName = 'Open TEN99';
 
   const [greeting, setGreeting] = useState(`Hello ${client?.name ?? ''},`);
   const [message, setMessage] = useState(() => {

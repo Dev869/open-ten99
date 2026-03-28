@@ -92,7 +92,7 @@ export default function PortalAuth() {
         </div>
 
         <p className="text-center text-[10px] text-white/50 mt-4 font-medium tracking-wide">
-          DW Tailored Systems
+          Open TEN99
         </p>
       </div>
     </div>

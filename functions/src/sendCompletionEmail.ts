@@ -37,8 +37,8 @@ export const sendCompletionEmail = onCall(
           name: data.toName || undefined,
         },
         from: {
-          email: data.fromEmail || "noreply@dwtailored.com",
-          name: data.fromName || "DW Tailored Systems",
+          email: data.fromEmail || "noreply@example.com",
+          name: data.fromName || "Open TEN99",
         },
         subject: data.subject,
         html: data.html,

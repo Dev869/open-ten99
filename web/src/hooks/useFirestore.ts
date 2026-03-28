@@ -106,7 +106,7 @@ export function useSettings(userId: string | undefined) {
   const [settings, setSettings] = useState<AppSettings>({
     accentColor: '#4BA8A8',
     hourlyRate: 150,
-    companyName: 'DW Tailored',
+    companyName: 'Your Company',
     sidebarOrder: undefined,
     sidebarHidden: undefined,
     mileageRate: 0.70,
