@@ -1,0 +1,18 @@
+{
+  "name": "open-ten99-scripts",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Operational scripts: seed data, rules isolation tests.",
+  "scripts": {
+    "seed": "node seed-demo-user.mjs",
+    "test:rules": "node --test test-rules-isolation.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.0.0"
+  }
+}
