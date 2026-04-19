@@ -38,8 +38,8 @@ export default function Login({ onSignIn, error }: LoginProps) {
             </p>
 
             {error && (
-              <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
-                Sign-in failed. Please try again or check your popup blocker.
+              <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center break-words">
+                {error}
               </div>
             )}
 

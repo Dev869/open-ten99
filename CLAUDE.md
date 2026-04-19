@@ -104,3 +104,11 @@ All TypeScript interfaces in `web/src/lib/types.ts`. Domain types: `WorkItem`, `
 **Web** (`.env` from `.env.example`): `VITE_FIREBASE_*` keys (API key, auth domain, project ID, storage bucket, messaging sender ID, app ID).
 
 **Functions** (`.env` from `.env.example`): `GOOGLE_AI_API_KEY`, `POSTMARK_WEBHOOK_SECRET`. For production, use `firebase functions:secrets:set`.
+
+## Design Skills
+
+ALWAYS invoke all three of these skills for any UI/UX work in this project (new components, visual changes, layout work, styling, or UI reviews). This is mandatory — do not skip them even for small changes:
+
+- `/frontend-design:frontend-design` — production-grade frontend interfaces with high design quality
+- `/ui-ux-pro-max:ui-ux-pro-max` — UI/UX design intelligence (styles, palettes, font pairings)
+- `/web-design-guidelines` — review UI code for Web Interface Guidelines compliance
