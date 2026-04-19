@@ -54,8 +54,16 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/firebase
 
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy all
-        run: npx -y firebase-tools@latest deploy --only hosting,functions,firestore,storage --project open-ten99 --non-interactive --force
+        env:
+          FIREBASE_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          npx -y firebase-tools@13 deploy \
+            --only hosting,functions,firestore \
+            --project open-ten99 \
+            --non-interactive --force
