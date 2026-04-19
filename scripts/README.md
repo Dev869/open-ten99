@@ -16,13 +16,29 @@ mileage trips for a single contractor UID. Every document is stamped with
 `ownerId = <uid>` so Firestore rules scope it to that user — data for UID A
 is invisible to UID B.
 
-### Against the Firebase emulator
+### Against the Firebase emulator (auto-provisions a login)
+
+Start both emulators, then let the script create the auth user and seed data:
 
 ```sh
-# In one terminal:
-firebase emulators:start --only firestore
+# Terminal 1:
+firebase emulators:start --only auth,firestore
 
-# In another:
+# Terminal 2:
+FIRESTORE_EMULATOR_HOST=localhost:8080 \
+FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
+FIREBASE_PROJECT=demo-ten99 \
+  node seed-demo-user.mjs --create-auth-user \
+    --email demo@ten99.local --password demo1234
+```
+
+The script prints the UID, email, and password at the end. Sign in via the
+Google provider in the Auth emulator UI at <http://localhost:4000/auth>
+— Firestore rules require `sign_in_provider == 'google.com'`.
+
+Or pass your own UID (e.g. after signing in via Google in the emulator UI):
+
+```sh
 FIRESTORE_EMULATOR_HOST=localhost:8080 \
 FIREBASE_PROJECT=demo-ten99 \
   node seed-demo-user.mjs --uid demo-user-1
@@ -30,23 +46,30 @@ FIREBASE_PROJECT=demo-ten99 \
 
 ### Against a real project
 
-Requires Application Default Credentials (`gcloud auth application-default login`)
-or a service account via `GOOGLE_APPLICATION_CREDENTIALS`.
+Sign in to the web app with Google first, grab the UID from the Firebase
+Console (Authentication tab), then seed:
 
 ```sh
 FIREBASE_PROJECT=open-ten99-abc \
   node seed-demo-user.mjs --uid <real-firebase-uid> --months 9 --clients 5
 ```
 
+Requires ADC (`gcloud auth application-default login`) or a service account
+via `GOOGLE_APPLICATION_CREDENTIALS`. `--create-auth-user` works in
+production but produces a password-only user that **will not** pass the
+`isContractor()` rule check — only Google sign-in does.
+
 ### Flags
 
-| Flag            | Default | Description                                     |
-| --------------- | ------- | ----------------------------------------------- |
-| `--uid <uid>`   | —       | Target contractor UID (required)                |
-| `--email <addr>`| generated | Email used in the seeded profile              |
-| `--clients <n>` | `5`     | Number of demo clients to create                |
-| `--months <n>`  | `9`     | Months of history to generate                   |
-| `--wipe`        | off     | Delete the UID's existing docs before seeding   |
+| Flag                 | Default           | Description                                      |
+| -------------------- | ----------------- | ------------------------------------------------ |
+| `--uid <uid>`        | —                 | Target UID (required unless `--create-auth-user`) |
+| `--create-auth-user` | off               | Provision a Firebase Auth user via admin SDK     |
+| `--email <addr>`     | `demo@ten99.local`| Email for the auth user / profile                |
+| `--password <pw>`    | `demo1234`        | Password when creating the auth user             |
+| `--clients <n>`      | `5`               | Number of demo clients to create                 |
+| `--months <n>`       | `9`               | Months of history to generate                    |
+| `--wipe`             | off               | Delete the UID's existing docs before seeding    |
 
 ## Verify auth isolation
 

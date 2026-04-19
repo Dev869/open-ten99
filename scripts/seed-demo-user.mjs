@@ -10,34 +10,49 @@
  *   # Against a real Firebase project (uses ADC):
  *   FIREBASE_PROJECT=my-project node seed-demo-user.mjs --uid <UID>
  *
- *   # Against the local emulator:
+ *   # Against the emulator (auto-creates the auth user):
  *   FIRESTORE_EMULATOR_HOST=localhost:8080 \
+ *   FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
  *   FIREBASE_PROJECT=demo-ten99 \
- *     node seed-demo-user.mjs --uid demo-user-1
+ *     node seed-demo-user.mjs --create-auth-user \
+ *       --email demo@ten99.local --password demo1234
  *
  * Options:
- *   --uid <uid>         Target contractor UID (required)
- *   --email <email>     Email for the seeded contractor profile
- *   --clients <n>       Number of clients to create (default 5)
- *   --months <n>        Months of history to generate (default 9)
- *   --wipe              Delete existing docs owned by this UID before seeding
+ *   --uid <uid>              Target contractor UID (required unless --create-auth-user)
+ *   --create-auth-user       Provision a Firebase Auth user via admin SDK.
+ *                            Prints the UID, email, and password. With a Google
+ *                            provider linked so emulator sign-in passes the
+ *                            isContractor() rules check.
+ *   --email <email>          Email for the auth user / profile (default: demo@ten99.local)
+ *   --password <pw>          Password when creating the auth user (default: demo1234)
+ *   --clients <n>            Number of clients to create (default 5)
+ *   --months <n>             Months of history to generate (default 9)
+ *   --wipe                   Delete existing docs owned by this UID before seeding
  */
 
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
 
 const args = parseArgs(process.argv.slice(2));
-if (!args.uid) {
-  console.error('ERROR: --uid <uid> is required.');
-  process.exit(1);
-}
 
-const UID = args.uid;
-const EMAIL = args.email ?? `${UID}@demo.ten99.local`;
+const CREATE_AUTH = Boolean(args['create-auth-user']);
+const EMAIL = args.email ?? 'demo@ten99.local';
+const PASSWORD = args.password ?? 'demo1234';
 const CLIENT_COUNT = Number(args.clients ?? 5);
 const HISTORY_MONTHS = Number(args.months ?? 9);
 const WIPE = Boolean(args.wipe);
+
+if (!CREATE_AUTH && !args.uid) {
+  console.error(
+    'ERROR: --uid <uid> is required (or pass --create-auth-user to provision one).'
+  );
+  process.exit(1);
+}
+
+// Assigned after optional auth-user creation below.
+let UID = args.uid ?? null;
 const PROJECT_ID =
   process.env.FIREBASE_PROJECT ??
   process.env.GCLOUD_PROJECT ??
@@ -58,6 +73,63 @@ initializeApp({
     : applicationDefault(),
 });
 const db = getFirestore();
+const auth = getAuth();
+
+async function ensureAuthUser() {
+  const isEmulator = Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST);
+  if (!isEmulator) {
+    console.warn(
+      '\n⚠  --create-auth-user is only fully wired up for the Auth emulator.'
+    );
+    console.warn(
+      '   In production, Firestore rules require Google sign-in; password'
+    );
+    console.warn(
+      '   accounts created via admin SDK will not satisfy isContractor().'
+    );
+    console.warn(
+      '   For prod, sign in via Google first, grab the UID, and re-run with --uid.\n'
+    );
+  }
+
+  // Reuse an existing user with this email if one is already provisioned.
+  let user;
+  try {
+    user = await auth.getUserByEmail(EMAIL);
+    console.log(`Reusing existing auth user: ${user.uid} (${EMAIL})`);
+  } catch {
+    user = await auth.createUser({
+      email: EMAIL,
+      emailVerified: true,
+      password: PASSWORD,
+      displayName: 'Demo Contractor',
+    });
+    console.log(`Created auth user: ${user.uid} (${EMAIL})`);
+  }
+
+  // In the emulator, linking a Google provider lets sign-in reports
+  // sign_in_provider=google.com, which satisfies the rules isContractor() check
+  // when the user signs in via the Google flow in the emulator Auth UI.
+  if (isEmulator) {
+    try {
+      await auth.updateUser(user.uid, {
+        providerToLink: {
+          providerId: 'google.com',
+          uid: EMAIL,
+          email: EMAIL,
+          displayName: 'Demo Contractor',
+        },
+      });
+    } catch (err) {
+      // Already linked, or provider not supported by this admin SDK version — ignore.
+      if (!String(err).includes('PROVIDER_ALREADY_LINKED')) {
+        console.warn(`(note) could not link google.com provider: ${err.message ?? err}`);
+      }
+    }
+  }
+
+  return user.uid;
+}
 
 // ── Owner-scoped collections (the ones the seed writes to). ───────────────
 const OWNER_SCOPED = [
@@ -93,7 +165,8 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const rand = mulberry32(hashString(UID));
+// RNG is initialized once we know UID (which may come from --create-auth-user).
+let rand = () => Math.random();
 const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 const randInt = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -174,6 +247,11 @@ function owned(doc) {
 }
 
 async function seed() {
+  if (CREATE_AUTH) {
+    UID = await ensureAuthUser();
+  }
+  rand = mulberry32(hashString(UID));
+
   if (WIPE) await wipeOwnerData();
 
   console.log(`Seeding contractor ${UID} (${EMAIL})`);
@@ -432,6 +510,32 @@ async function seed() {
   console.log(`  ✓ ${mileageCount} mileageTrips`);
 
   console.log('\nDone. All documents owned by', UID);
+
+  if (CREATE_AUTH) {
+    console.log('\n─────────── Sign-in credentials ───────────');
+    console.log(`  UID:      ${UID}`);
+    console.log(`  Email:    ${EMAIL}`);
+    console.log(`  Password: ${PASSWORD}`);
+    if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+      console.log(
+        '\n  Emulator sign-in: open the Auth emulator UI at'
+      );
+      console.log(
+        '    http://localhost:4000/auth → pick this user → sign in with Google provider.'
+      );
+      console.log(
+        '  (Signing in via Google is required because the Firestore rules gate on sign_in_provider === google.com.)'
+      );
+    } else {
+      console.log(
+        '\n  Production note: password sign-in will NOT pass the contractor rules check.'
+      );
+      console.log(
+        '  Sign in via Google with this email instead, or point the app at the emulator.'
+      );
+    }
+    console.log('────────────────────────────────────────────\n');
+  }
 }
 
 function weightedPick(pairs) {
