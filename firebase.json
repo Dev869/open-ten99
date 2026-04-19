@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "your-firebase-site-id",
+    "site": "open-ten99",
     "public": "web/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
