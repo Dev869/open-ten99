@@ -15,7 +15,7 @@ const EXPENSE_CATEGORIES = [
 const MATCH_THRESHOLD = 0.7;
 
 export const onReceiptUploaded = onObjectFinalized(
-  { bucket: undefined }, // default bucket
+  { bucket: undefined, region: 'us-east1' }, // default bucket (us-east1)
   async (event) => {
     const filePath = event.data.name;
     if (!filePath) return;
