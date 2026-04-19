@@ -1,10 +1,15 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import { defineString } from "firebase-functions/params";
 import { decryptToken } from "./crypto";
 
 const GITHUB_API = "https://api.github.com";
-const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
+// Read TOKEN_ENCRYPTION_KEY from process.env at runtime (populated by the
+// Secret Manager binding declared on each calling function).
+function encryptionKeyValue(): string {
+  const v = process.env.TOKEN_ENCRYPTION_KEY;
+  if (!v) throw new Error("TOKEN_ENCRYPTION_KEY is not available in this function's secret bindings.");
+  return v;
+}
 
 export class GitHubTokenRevoked extends Error {
   constructor() {
@@ -25,7 +30,7 @@ export async function getGitHubToken(userId: string): Promise<string> {
     throw new Error("GitHub not connected");
   }
   const data = doc.data();
-  return decryptToken(data?.accessToken as string, encryptionKey.value());
+  return decryptToken(data?.accessToken as string, encryptionKeyValue());
 }
 
 export async function githubFetch(
