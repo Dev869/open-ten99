@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
+import { defineString, defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
@@ -9,7 +9,7 @@ import { encryptToken } from "./utils/crypto";
 
 const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
 const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
-const encryptionKey = defineString("TOKEN_ENCRYPTION_KEY");
+const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
 const REDIRECT_URI = defineString("GITHUB_REDIRECT_URI");
 const OAUTH_SCOPE = "repo,read:org";
@@ -32,7 +32,7 @@ interface GitHubOrg {
  * for CSRF protection.
  */
 export const getGitHubAuthUrl = onCall(
-  { cors: true, maxInstances: 10 },
+  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -87,7 +87,7 @@ export const getGitHubAuthUrl = onCall(
  * authorization code for an access token, and persists user/org metadata.
  */
 export const handleGitHubCallback = onCall(
-  { cors: true, maxInstances: 10 },
+  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -328,7 +328,7 @@ function inferPlatform(
  * and returns a deduplicated summary list.
  */
 export const importGitHubRepos = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 120 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -425,7 +425,7 @@ export const importGitHubRepos = onCall(
  * If clientId is provided, creates a new app with auto-populated fields.
  */
 export const linkRepoToApp = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 120 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -589,7 +589,7 @@ export const linkRepoToApp = onCall(
  * apps. Rate-limited to once per 5 minutes.
  */
 export const triggerGitHubSync = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 300 },
+  { cors: true, maxInstances: 10, timeoutSeconds: 300, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -637,7 +637,7 @@ export const triggerGitHubSync = onCall(
  * integration as disconnected.
  */
 export const disconnectGitHub = onCall(
-  { cors: true, maxInstances: 10 },
+  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
