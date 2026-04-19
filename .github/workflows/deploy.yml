@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   deploy:
     name: Deploy hosting + functions + rules
@@ -45,16 +49,13 @@ jobs:
         working-directory: functions
         run: npm run build
 
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - id: auth
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: open-ten99
-          channelId: live
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - name: Deploy functions + rules
-        uses: w9jds/firebase-action@v14.10.1
-        with:
-          args: deploy --only functions,firestore,storage --project open-ten99
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy all
+        run: npx -y firebase-tools@latest deploy --only hosting,functions,firestore,storage --project open-ten99 --non-interactive --force
