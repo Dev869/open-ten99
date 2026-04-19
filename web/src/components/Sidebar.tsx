@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
   type IconProps,
@@ -8,7 +8,6 @@ import {
   IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook, IconClock,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconPaintBrush,
 } from './icons';
-import { BrandIcon, BrandWordmark } from './Brand';
 
 /* ── Nav Config ────────────────────────────────────── */
 
@@ -361,21 +360,6 @@ export function Sidebar({
           expanded ? 'w-[220px]' : 'w-[72px]'
         )}
       >
-        {/* Brand mark */}
-        <div className={cn(
-          'flex items-center h-16 flex-shrink-0',
-          expanded ? 'px-4' : 'px-1 md:justify-center'
-        )}>
-          <Link to="/dashboard" className={cn('block overflow-hidden', expanded ? 'w-full' : 'w-[64px]')}>
-            <div className={cn(expanded ? 'hidden' : 'hidden md:block')}>
-              <BrandIcon size={28} variant={dark ? 'light' : 'dark'} />
-            </div>
-            <div className={cn(expanded ? '' : 'md:hidden')}>
-              <BrandWordmark size={36} variant={dark ? 'light' : 'dark'} />
-            </div>
-          </Link>
-        </div>
-
         {/* Navigation */}
         <nav className={cn('flex-1 flex flex-col gap-1 px-3 mt-2', !expanded && 'md:items-center')}>
           {visibleNavItems.map((item) => {
