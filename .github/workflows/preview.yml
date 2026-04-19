@@ -52,8 +52,8 @@ jobs:
           npx -y firebase-tools@latest hosting:channel:deploy "$CHANNEL" \
             --project open-ten99 \
             --expires 7d \
-            --json > channel.json
-          URL=$(node -e "console.log(JSON.parse(require('fs').readFileSync('channel.json','utf8')).result['open-ten99'].url)")
+            --json | tee channel.json
+          URL=$(node -e "const r=JSON.parse(require('fs').readFileSync('channel.json','utf8')); const sites=r.result||{}; const first=Object.values(sites)[0]||{}; console.log(first.url||'')")
           echo "url=$URL" >> $GITHUB_OUTPUT
 
       - uses: marocchino/sticky-pull-request-comment@v2
