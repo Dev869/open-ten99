@@ -29,17 +29,45 @@ jobs:
         working-directory: web
         run: npm ci
 
+      - name: Sanitize Firebase env (strip whitespace/quotes)
+        env:
+          RAW_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          RAW_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          RAW_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          RAW_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          RAW_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          RAW_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          RAW_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+        run: |
+          # Trim leading/trailing whitespace and any wrapping quotes, then
+          # export to $GITHUB_ENV so the build step inlines clean values.
+          trim() {
+            local v="$1"
+            v="${v#"${v%%[![:space:]]*}"}"
+            v="${v%"${v##*[![:space:]]}"}"
+            v="${v%\"}"; v="${v#\"}"
+            v="${v%\'}"; v="${v#\'}"
+            printf '%s' "$v"
+          }
+          {
+            echo "VITE_FIREBASE_API_KEY=$(trim "$RAW_API_KEY")"
+            echo "VITE_FIREBASE_AUTH_DOMAIN=$(trim "$RAW_AUTH_DOMAIN")"
+            echo "VITE_FIREBASE_PROJECT_ID=$(trim "$RAW_PROJECT_ID")"
+            echo "VITE_FIREBASE_STORAGE_BUCKET=$(trim "$RAW_STORAGE_BUCKET")"
+            echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(trim "$RAW_MESSAGING_SENDER_ID")"
+            echo "VITE_FIREBASE_APP_ID=$(trim "$RAW_APP_ID")"
+            echo "VITE_FIREBASE_VAPID_KEY=$(trim "$RAW_VAPID_KEY")"
+          } >> "$GITHUB_ENV"
+          # Sanity check — fail fast if authDomain still looks malformed.
+          ad="$(trim "$RAW_AUTH_DOMAIN")"
+          if [[ -z "$ad" || "$ad" =~ [[:space:]] ]]; then
+            echo "::error::VITE_FIREBASE_AUTH_DOMAIN is empty or contains whitespace after trim: [$ad]"
+            exit 1
+          fi
+
       - name: Build web
         working-directory: web
         run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
       - name: Install functions deps
         working-directory: functions

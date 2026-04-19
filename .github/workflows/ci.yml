@@ -23,15 +23,34 @@ jobs:
       - run: npm ci
       - run: npm run lint
         continue-on-error: true
-      - run: npm run build
+      - name: Sanitize Firebase env (strip whitespace/quotes)
         env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+          RAW_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          RAW_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          RAW_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          RAW_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          RAW_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          RAW_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          RAW_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+        run: |
+          trim() {
+            local v="$1"
+            v="${v#"${v%%[![:space:]]*}"}"
+            v="${v%"${v##*[![:space:]]}"}"
+            v="${v%\"}"; v="${v#\"}"
+            v="${v%\'}"; v="${v#\'}"
+            printf '%s' "$v"
+          }
+          {
+            echo "VITE_FIREBASE_API_KEY=$(trim "$RAW_API_KEY")"
+            echo "VITE_FIREBASE_AUTH_DOMAIN=$(trim "$RAW_AUTH_DOMAIN")"
+            echo "VITE_FIREBASE_PROJECT_ID=$(trim "$RAW_PROJECT_ID")"
+            echo "VITE_FIREBASE_STORAGE_BUCKET=$(trim "$RAW_STORAGE_BUCKET")"
+            echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(trim "$RAW_MESSAGING_SENDER_ID")"
+            echo "VITE_FIREBASE_APP_ID=$(trim "$RAW_APP_ID")"
+            echo "VITE_FIREBASE_VAPID_KEY=$(trim "$RAW_VAPID_KEY")"
+          } >> "$GITHUB_ENV"
+      - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist
