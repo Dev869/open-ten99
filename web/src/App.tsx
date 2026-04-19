@@ -518,7 +518,7 @@ function PortalRoutes() {
 }
 
 export default function App() {
-  const { user, loading, authError, signInWithGoogle } = useAuth();
+  const { user, loading, authError, signInWithGoogle, signInWithEmail } = useAuth();
 
   // Trigger AI insight generation on contractor login
   useEffect(() => {
@@ -596,7 +596,11 @@ export default function App() {
             ) : isPortalUser ? (
               <Navigate to="/portal" replace />
             ) : (
-              <Login onSignIn={signInWithGoogle} error={authError} />
+              <Login
+                onSignIn={signInWithGoogle}
+                onDevSignIn={signInWithEmail}
+                error={authError}
+              />
             )
           }
         />
