@@ -8,6 +8,7 @@ permissions:
   contents: read
   id-token: write
   pull-requests: write
+  checks: write
 
 jobs:
   preview:
@@ -43,22 +44,8 @@ jobs:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy preview channel
-        id: deploy
-        run: |
-          CHANNEL="pr-${{ github.event.pull_request.number }}"
-          npx -y firebase-tools@latest hosting:channel:deploy "$CHANNEL" \
-            --project open-ten99 \
-            --expires 7d \
-            --json | tee channel.json
-          URL=$(node -e "const r=JSON.parse(require('fs').readFileSync('channel.json','utf8')); const sites=r.result||{}; const first=Object.values(sites)[0]||{}; console.log(first.url||'')")
-          echo "url=$URL" >> $GITHUB_OUTPUT
-
-      - uses: marocchino/sticky-pull-request-comment@v2
+      - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          header: firebase-preview
-          message: |
-            🔥 **Firebase Hosting preview:** ${{ steps.deploy.outputs.url }}
-            (expires in 7 days)
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          projectId: open-ten99
+          expires: 7d
