@@ -2,8 +2,75 @@ import { useState, useRef, useEffect, useCallback, createContext, useContext } f
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import { IconPlay, IconPause, IconStop, IconClock, IconChevronDown, IconClose } from './icons';
-import { createTimeEntry } from '../services/firestore';
+import { createTimeEntry, updateTimeEntry } from '../services/firestore';
 import type { Client, App } from '../lib/types';
+
+/* ── Persistence ─────────────────────────────────────── */
+
+const STORAGE_KEY = 'ten99.timer.v1';
+const AUTOSAVE_INTERVAL_MS = 30_000;
+
+interface PersistedTimer {
+  isRunning: boolean;
+  accumulatedSeconds: number;
+  lastStartedAtMs: number | null;
+  firstStartedAtMs: number | null;
+  clientId: string;
+  appId: string;
+  description: string;
+  isBillable: boolean;
+  workItemId?: string;
+  lineItemId?: string;
+  activeEntryId?: string;
+}
+
+const EMPTY_STATE: PersistedTimer = {
+  isRunning: false,
+  accumulatedSeconds: 0,
+  lastStartedAtMs: null,
+  firstStartedAtMs: null,
+  clientId: '',
+  appId: '',
+  description: '',
+  isBillable: true,
+};
+
+function loadPersisted(): PersistedTimer {
+  if (typeof window === 'undefined') return EMPTY_STATE;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return EMPTY_STATE;
+    const parsed = JSON.parse(raw) as Partial<PersistedTimer>;
+    return { ...EMPTY_STATE, ...parsed };
+  } catch {
+    return EMPTY_STATE;
+  }
+}
+
+function savePersisted(state: PersistedTimer) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // quota or private mode — ignore
+  }
+}
+
+function clearPersisted() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function computeElapsed(state: PersistedTimer, nowMs: number): number {
+  const live = state.isRunning && state.lastStartedAtMs
+    ? Math.floor((nowMs - state.lastStartedAtMs) / 1000)
+    : 0;
+  return Math.max(0, Math.floor(state.accumulatedSeconds) + live);
+}
 
 /* ── Shared timer state ──────────────────────────────── */
 
@@ -56,80 +123,183 @@ interface TimeTrackerProviderProps {
 
 export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [clientId, setClientId] = useState('');
-  const [appId, setAppId] = useState('');
-  const [description, setDescription] = useState('');
-  const [isBillable, setIsBillable] = useState(true);
-  const [workItemId, setWorkItemId] = useState<string | undefined>(undefined);
-  const [lineItemId, setLineItemId] = useState<string | undefined>(undefined);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startedAtRef = useRef<Date | null>(null);
+  const [persisted, setPersisted] = useState<PersistedTimer>(() => loadPersisted());
+  const [elapsedSeconds, setElapsedSeconds] = useState(() => computeElapsed(loadPersisted(), Date.now()));
 
-  const selectedClient = clients.find((c) => c.id === clientId);
+  const persistedRef = useRef(persisted);
+  persistedRef.current = persisted;
 
+  // Persist every state change to localStorage — survives reload & tab close
   useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning]);
+    savePersisted(persisted);
+  }, [persisted]);
 
-  // Keep refs in sync for stable handleStop callback
-  const stateRef = useRef({ clientId, appId, description, elapsedSeconds, isBillable, workItemId, lineItemId });
-  stateRef.current = { clientId, appId, description, elapsedSeconds, isBillable, workItemId, lineItemId };
+  // UI tick: recompute elapsed once per second while running
+  useEffect(() => {
+    if (!persisted.isRunning) return;
+    const id = setInterval(() => {
+      setElapsedSeconds(computeElapsed(persistedRef.current, Date.now()));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [persisted.isRunning]);
+
+  // Keep elapsed fresh when other state changes (e.g. resumed from storage)
+  useEffect(() => {
+    setElapsedSeconds(computeElapsed(persisted, Date.now()));
+  }, [persisted]);
+
+  const selectedClient = clients.find((c) => c.id === persisted.clientId);
+
+  /* ── Auto-save to work order ─────────────────────────
+     Creates a live TimeEntry once workItemId is set + timer has run,
+     then updates durationSeconds/endedAt every AUTOSAVE_INTERVAL_MS
+     and on beforeunload. Finalized on stop. */
+  const autosaveInFlightRef = useRef(false);
+  const autosave = useCallback(async (finalize = false) => {
+    if (autosaveInFlightRef.current) return;
+    const s = persistedRef.current;
+    if (!s.workItemId || !s.clientId) return;
+    const now = Date.now();
+    const elapsed = computeElapsed(s, now);
+    if (elapsed <= 0) return;
+
+    autosaveInFlightRef.current = true;
+    try {
+      const startedAt = new Date(s.firstStartedAtMs ?? now - elapsed * 1000);
+      const endedAt = new Date(now);
+
+      if (!s.activeEntryId) {
+        const id = await createTimeEntry({
+          clientId: s.clientId,
+          appId: s.appId || undefined,
+          description: s.description,
+          durationSeconds: elapsed,
+          isBillable: s.isBillable,
+          startedAt,
+          endedAt,
+          workItemId: s.workItemId,
+          lineItemId: s.lineItemId || undefined,
+        });
+        setPersisted((prev) => ({ ...prev, activeEntryId: id }));
+      } else {
+        await updateTimeEntry(s.activeEntryId, {
+          description: s.description,
+          durationSeconds: elapsed,
+          isBillable: s.isBillable,
+          appId: s.appId || undefined,
+          endedAt,
+          ...(finalize ? { workItemId: s.workItemId, lineItemId: s.lineItemId || undefined } : {}),
+        });
+      }
+    } catch (err) {
+      console.error('time tracker autosave failed:', err);
+    } finally {
+      autosaveInFlightRef.current = false;
+    }
+  }, []);
+
+  // Periodic autosave while running and attached to a work order
+  useEffect(() => {
+    if (!persisted.isRunning || !persisted.workItemId) return;
+    const id = setInterval(() => { void autosave(); }, AUTOSAVE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [persisted.isRunning, persisted.workItemId, autosave]);
+
+  // Flush on tab hide / page unload so close-without-stop still persists progress
+  useEffect(() => {
+    const flush = () => { void autosave(); };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [autosave]);
 
   const handlePlayPause = useCallback(() => {
-    setIsRunning((prev) => {
-      if (!prev && !startedAtRef.current) {
-        startedAtRef.current = new Date();
+    setPersisted((prev) => {
+      const now = Date.now();
+      if (prev.isRunning && prev.lastStartedAtMs) {
+        // Pause: fold elapsed into accumulated
+        const delta = Math.floor((now - prev.lastStartedAtMs) / 1000);
+        return {
+          ...prev,
+          isRunning: false,
+          accumulatedSeconds: prev.accumulatedSeconds + delta,
+          lastStartedAtMs: null,
+        };
       }
-      return !prev;
+      // Play / resume
+      return {
+        ...prev,
+        isRunning: true,
+        lastStartedAtMs: now,
+        firstStartedAtMs: prev.firstStartedAtMs ?? now,
+      };
     });
   }, []);
 
   const handleStop = useCallback(() => {
-    const { clientId: cId, appId: aId, description: desc, elapsedSeconds: secs, isBillable: billable, workItemId: wId, lineItemId: lId } = stateRef.current;
-    const now = new Date();
-    if (secs > 0 && startedAtRef.current) {
-      createTimeEntry({
-        clientId: cId,
-        appId: aId || undefined,
-        description: desc,
-        durationSeconds: secs,
-        isBillable: billable,
-        startedAt: startedAtRef.current,
-        endedAt: now,
-        workItemId: wId || undefined,
-        lineItemId: lId || undefined,
-      }).catch(console.error);
-    }
-    setIsRunning(false);
-    setElapsedSeconds(0);
-    setIsOpen(false);
-    startedAtRef.current = null;
-    setWorkItemId(undefined);
-    setLineItemId(undefined);
+    // Flush final update, then clear everything
+    void (async () => {
+      try {
+        await autosave(true);
+      } finally {
+        setPersisted(EMPTY_STATE);
+        clearPersisted();
+        setElapsedSeconds(0);
+        setIsOpen(false);
+      }
+    })();
+  }, [autosave]);
+
+  const setClientId = useCallback((id: string) => {
+    setPersisted((prev) => ({
+      ...prev,
+      clientId: id,
+      appId: '',
+      workItemId: undefined,
+      lineItemId: undefined,
+      activeEntryId: undefined,
+    }));
   }, []);
 
-  const handleSetClientId = useCallback((id: string) => {
-    setClientId(id);
-    setAppId('');
-    setWorkItemId(undefined);
-    setLineItemId(undefined);
+  const setAppId = useCallback((id: string) => {
+    setPersisted((prev) => ({ ...prev, appId: id }));
+  }, []);
+
+  const setDescription = useCallback((desc: string) => {
+    setPersisted((prev) => ({ ...prev, description: desc }));
+  }, []);
+
+  const setIsBillable = useCallback((v: boolean) => {
+    setPersisted((prev) => ({ ...prev, isBillable: v }));
+  }, []);
+
+  const setWorkItemId = useCallback((id: string | undefined) => {
+    setPersisted((prev) =>
+      prev.workItemId === id ? prev : { ...prev, workItemId: id, activeEntryId: undefined },
+    );
+  }, []);
+
+  const setLineItemId = useCallback((id: string | undefined) => {
+    setPersisted((prev) =>
+      prev.lineItemId === id ? prev : { ...prev, lineItemId: id },
+    );
   }, []);
 
   const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
+
+  const { isRunning, clientId, appId, description, isBillable, workItemId, lineItemId } = persisted;
 
   return (
     <TimeTrackerContext.Provider value={{
       isRunning, elapsedSeconds, clientId, appId, description, selectedClient,
       isOpen, isBillable, clients, apps, workItemId, lineItemId,
-      handlePlayPause, handleStop, setClientId: handleSetClientId, setAppId, setDescription, setIsBillable,
+      handlePlayPause, handleStop, setClientId, setAppId, setDescription, setIsBillable,
       setWorkItemId, setLineItemId, toggleOpen,
     }}>
       {children}
