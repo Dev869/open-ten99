@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../lib/types';
 import { RECURRENCE_LABELS } from '../lib/types';
 import { formatCurrency, addBusinessDays, formatDate, cn } from '../lib/utils';
 import { createWorkItem } from '../services/firestore';
-import { IconClose, IconPlus, IconTrash } from './icons';
+import { IconPlus, IconTrash } from './icons';
+import { Modal } from './Modal';
 
 interface NewWorkOrderModalProps {
   clients: Client[];
@@ -40,21 +40,6 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
     { value: 'featureRequest', label: 'Feature' },
     { value: 'maintenance', label: 'Maint.' },
   ];
-
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
 
   function addLineItem() {
     setLineItems([
@@ -112,44 +97,31 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
 
   const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
 
-  return createPortal(
-    <>
-      {/* Full-screen overlay — covers everything including sidebar/navbar */}
-      <div className="fixed inset-0 z-[100] flex items-center justify-center">
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={onClose}
-        />
-
-        {/* Modal — full page on mobile, centered card on desktop */}
-        <div
-          className={cn(
-            'relative z-10 flex flex-col bg-[var(--bg-page)]',
-            'w-full h-full md:w-full md:h-auto',
-            'md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
-            'animate-fade-in-up md:animate-scale-in'
-          )}
-          style={{ paddingTop: 'env(safe-area-inset-top)' }}
-        >
-        {/* Header */}
-        <div className="flex items-center justify-between h-14 px-5 flex-shrink-0 border-b border-[var(--border)]">
-          <div>
-            <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-              New Work Order
-            </h1>
-          </div>
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="New Work Order"
+      size="lg"
+      footer={
+        <>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
           >
-            <IconClose size={18} />
+            Cancel
           </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-5 py-5 space-y-5">
+          <button
+            onClick={handleSave}
+            disabled={!isValid || saving}
+            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold shadow-sm hover:bg-[var(--accent-dark)] disabled:bg-[var(--border)] disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+          >
+            {saving ? 'Saving...' : 'Create Work Order'}
+          </button>
+        </>
+      }
+    >
+      <div className="px-5 py-5 space-y-5">
 
             {/* Type */}
             <div>
@@ -453,31 +425,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex gap-3 px-5 py-4 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
-          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            onClick={onClose}
-            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!isValid || saving}
-            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold shadow-sm hover:bg-[var(--accent-dark)] disabled:bg-[var(--border)] disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-          >
-            {saving ? 'Saving...' : 'Create Work Order'}
-          </button>
-        </div>
       </div>
-      </div>
-    </>,
-    document.body
+    </Modal>
   );
 }

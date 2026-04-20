@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type {
   App,
@@ -17,6 +16,7 @@ import { createApp, updateApp } from '../services/firestore';
 import { useToast } from '../hooks/useToast';
 import { cn } from '../lib/utils';
 import { IconClose } from './icons';
+import { Modal } from './Modal';
 
 interface AppFormModalProps {
   app?: App;
@@ -47,21 +47,6 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
   const [saving, setSaving] = useState(false);
 
   const isValid = name.trim() && selectedClientId;
-
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    function handleKey(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
 
   function addTag(
     value: string,
@@ -158,40 +143,32 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
     );
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-
-      {/* Modal — full page on mobile, centered card on desktop */}
-      <div
-        className={cn(
-          'relative z-10 flex flex-col bg-[var(--bg-page)]',
-          'w-full h-full md:w-full md:h-auto',
-          'md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
-          'animate-fade-in-up md:animate-scale-in'
-        )}
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between h-14 px-5 flex-shrink-0 border-b border-[var(--border)]">
-          <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-            {isEditMode ? 'Edit App' : 'New App'}
-          </h1>
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={isEditMode ? 'Edit App' : 'New App'}
+      subtitle={isEditMode ? undefined : 'Track an application or service you build for a client.'}
+      size="lg"
+      footer={
+        <>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
           >
-            <IconClose size={18} />
+            Cancel
           </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-5 py-5 space-y-5">
+          <button
+            onClick={handleSave}
+            disabled={!isValid || saving}
+            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+          >
+            {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create App'}
+          </button>
+        </>
+      }
+    >
+      <div className="px-5 py-5 space-y-5">
 
             {/* ── Core ── */}
 
@@ -388,29 +365,6 @@ export function AppFormModal({ app, clients, clientId, onClose }: AppFormModalPr
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex gap-3 px-5 py-4 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
-          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            onClick={onClose}
-            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!isValid || saving}
-            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-          >
-            {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create App'}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }

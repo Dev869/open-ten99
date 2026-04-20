@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../../lib/types';
 import { createClient } from '../../services/firestore';
-import { cn } from '../../lib/utils';
-import { IconPlus, IconSearch, IconChevronRight, IconClose } from '../../components/icons';
+import { IconPlus, IconSearch, IconChevronRight } from '../../components/icons';
+import { Modal } from '../../components/Modal';
 import { useInsights } from '../../hooks/useFirestore';
 import { ConcentrationDonut } from '../../components/insights/ConcentrationDonut';
 import { InsightBadge } from '../../components/insights/InsightBadge';
@@ -177,21 +177,20 @@ export default function Clients({ workItems, clients }: ClientsProps) {
       )}
 
       {/* New Client Modal */}
-      {showNew && (
-        <NewClientModal
-          onClose={() => setShowNew(false)}
-          onSave={handleCreate}
-          saving={saving}
-          name={newName}
-          onNameChange={setNewName}
-          email={newEmail}
-          onEmailChange={setNewEmail}
-          phone={newPhone}
-          onPhoneChange={setNewPhone}
-          company={newCompany}
-          onCompanyChange={setNewCompany}
-        />
-      )}
+      <NewClientModal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onSave={handleCreate}
+        saving={saving}
+        name={newName}
+        onNameChange={setNewName}
+        email={newEmail}
+        onEmailChange={setNewEmail}
+        phone={newPhone}
+        onPhoneChange={setNewPhone}
+        company={newCompany}
+        onCompanyChange={setNewCompany}
+      />
     </div>
   );
 }
@@ -199,6 +198,7 @@ export default function Clients({ workItems, clients }: ClientsProps) {
 /* ── New Client Modal ─────────────────────────────── */
 
 interface NewClientModalProps {
+  open: boolean;
   onClose: () => void;
   onSave: () => void;
   saving: boolean;
@@ -213,134 +213,87 @@ interface NewClientModalProps {
 }
 
 function NewClientModal({
-  onClose, onSave, saving,
+  open, onClose, onSave, saving,
   name, onNameChange, email, onEmailChange, phone, onPhoneChange, company, onCompanyChange,
 }: NewClientModalProps) {
   const isValid = name.trim() && email.trim();
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
-
-  const inputClass = 'w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 transition-colors placeholder:text-[var(--text-secondary)]';
+  const labelClass = 'block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5';
+  const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all placeholder:text-[var(--text-secondary)]';
 
   return (
-    <>
-      {/* Desktop backdrop */}
-      <div
-        className="hidden md:block fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-
-      <div
-        className={cn(
-          'fixed z-[60] flex flex-col bg-[var(--bg-page)]',
-          'inset-0',
-          'md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
-          'md:w-full md:max-w-md md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
-          'animate-fade-in-up md:animate-scale-in'
-        )}
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between h-14 px-4 flex-shrink-0 border-b border-[var(--border)]">
-          <h1 className="text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
-            New Client
-          </h1>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="New Client"
+      subtitle="Add a client to invoice and track work for."
+      size="md"
+      footer={
+        <>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
-          >
-            <IconClose size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-4 space-y-4">
-            <div>
-              <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => onNameChange(e.target.value)}
-                autoFocus
-                placeholder="Client name"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => onEmailChange(e.target.value)}
-                placeholder="email@example.com"
-                className={inputClass}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                  Phone <span className="normal-case tracking-normal font-normal">(optional)</span>
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => onPhoneChange(e.target.value)}
-                  placeholder="(555) 123-4567"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                  Company <span className="normal-case tracking-normal font-normal">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={company}
-                  onChange={(e) => onCompanyChange(e.target.value)}
-                  placeholder="Company name"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex gap-3 px-4 py-3 border-t border-[var(--border)] flex-shrink-0 bg-[var(--bg-page)]"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            onClick={onClose}
-            className="flex-1 h-10 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-all"
           >
             Cancel
           </button>
           <button
             onClick={onSave}
             disabled={!isValid || saving}
-            className="flex-1 h-10 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-[2] h-11 rounded-xl bg-[var(--accent)] text-white text-sm font-bold hover:bg-[var(--accent-dark)] disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
           >
             {saving ? 'Saving...' : 'Save Client'}
           </button>
+        </>
+      }
+    >
+      <div className="px-5 py-5 space-y-4">
+        <div>
+          <label className={labelClass}>Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            autoFocus
+            placeholder="Client name"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+            placeholder="email@example.com"
+            className={inputClass}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>
+              Phone <span className="normal-case tracking-normal font-normal">(optional)</span>
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => onPhoneChange(e.target.value)}
+              placeholder="(555) 123-4567"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              Company <span className="normal-case tracking-normal font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={company}
+              onChange={(e) => onCompanyChange(e.target.value)}
+              placeholder="Company name"
+              className={inputClass}
+            />
+          </div>
         </div>
       </div>
-    </>
+    </Modal>
   );
 }
