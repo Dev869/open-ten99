@@ -49,6 +49,10 @@ jobs:
             v="${v%\'}"; v="${v#\'}"
             printf '%s' "$v"
           }
+          # Write a web/.env.production file so Vite picks up the cleaned
+          # values deterministically at build time (process.env handoff via
+          # $GITHUB_ENV did not consistently inline into the bundle).
+          mkdir -p web
           {
             echo "VITE_FIREBASE_API_KEY=$(trim "$RAW_API_KEY")"
             echo "VITE_FIREBASE_AUTH_DOMAIN=$(trim "$RAW_AUTH_DOMAIN")"
@@ -57,13 +61,21 @@ jobs:
             echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(trim "$RAW_MESSAGING_SENDER_ID")"
             echo "VITE_FIREBASE_APP_ID=$(trim "$RAW_APP_ID")"
             echo "VITE_FIREBASE_VAPID_KEY=$(trim "$RAW_VAPID_KEY")"
-          } >> "$GITHUB_ENV"
-          # Sanity check — fail fast if authDomain still looks malformed.
+          } > web/.env.production
+          # Sanity check — fail fast if authDomain or apiKey are missing/malformed.
           ad="$(trim "$RAW_AUTH_DOMAIN")"
+          ak="$(trim "$RAW_API_KEY")"
           if [[ -z "$ad" || "$ad" =~ [[:space:]] ]]; then
-            echo "::error::VITE_FIREBASE_AUTH_DOMAIN is empty or contains whitespace after trim: [$ad]"
+            echo "::error::VITE_FIREBASE_AUTH_DOMAIN is empty or contains whitespace after trim"
             exit 1
           fi
+          if [[ -z "$ak" || "$ak" =~ [[:space:]] ]]; then
+            echo "::error::VITE_FIREBASE_API_KEY is empty or contains whitespace after trim"
+            exit 1
+          fi
+          # Log key lengths (not values) so we can verify secrets are populated.
+          echo "Wrote web/.env.production with keys:"
+          awk -F= '{printf "  %s = <%d chars>\n", $1, length($2)}' web/.env.production
 
       - name: Build web
         working-directory: web

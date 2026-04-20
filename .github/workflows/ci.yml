@@ -41,6 +41,7 @@ jobs:
             v="${v%\'}"; v="${v#\'}"
             printf '%s' "$v"
           }
+          mkdir -p web
           {
             echo "VITE_FIREBASE_API_KEY=$(trim "$RAW_API_KEY")"
             echo "VITE_FIREBASE_AUTH_DOMAIN=$(trim "$RAW_AUTH_DOMAIN")"
@@ -49,7 +50,7 @@ jobs:
             echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$(trim "$RAW_MESSAGING_SENDER_ID")"
             echo "VITE_FIREBASE_APP_ID=$(trim "$RAW_APP_ID")"
             echo "VITE_FIREBASE_VAPID_KEY=$(trim "$RAW_VAPID_KEY")"
-          } >> "$GITHUB_ENV"
+          } > web/.env.production
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
