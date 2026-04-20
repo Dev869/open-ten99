@@ -1467,11 +1467,15 @@ export async function createTimeEntry(
 
 export async function updateTimeEntry(
   id: string,
-  updates: Partial<Pick<TimeEntry, 'workItemId' | 'lineItemId'>>
+  updates: Partial<Pick<TimeEntry, 'workItemId' | 'lineItemId' | 'description' | 'durationSeconds' | 'isBillable' | 'appId'>> & {
+    endedAt?: Date;
+  }
 ): Promise<void> {
   const ref = doc(db, 'timeEntries', id);
+  const { endedAt, ...rest } = updates;
   await updateDoc(ref, {
-    ...updates,
+    ...rest,
+    ...(endedAt ? { endedAt: Timestamp.fromDate(endedAt) } : {}),
     updatedAt: serverTimestamp(),
   });
 }
