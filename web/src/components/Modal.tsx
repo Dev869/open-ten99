@@ -114,7 +114,7 @@ export function Modal({
         ref={contentRef}
         tabIndex={-1}
         className={cn(
-          'relative z-10 flex flex-col bg-[var(--bg-card)] outline-none',
+          'relative z-10 flex flex-col bg-[var(--bg-card)] outline-none overflow-hidden',
           'w-full h-full md:h-auto md:max-h-[88vh]',
           'md:w-full md:rounded-2xl md:border md:border-[var(--border)]',
           'md:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.45)]',
