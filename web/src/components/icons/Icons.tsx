@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────────────────────
-   Bubbly Modern Icon Library
-   Powered by Phosphor Icons (duotone weight) for a plump,
-   friendly, modern feel. Keeps the same export names and
-   signatures as the previous pixel set so callers don't break.
+   Modern Outline Icon Library
+   Powered by Phosphor Icons (regular weight) for a clean,
+   minimal, modern outlined feel. Keeps the same export names
+   and signatures as prior iterations so callers don't break.
    ───────────────────────────────────────────────────────────── */
 
 import {
@@ -68,14 +68,14 @@ export interface IconProps {
 
 /**
  * Wrap a Phosphor icon into our internal IconProps signature.
- * Uses the "duotone" weight for a bubbly, modern, slightly playful feel.
+ * Uses the "regular" weight for a clean, modern outlined feel.
  */
 function wrap(PIcon: PhosphorIcon, defaultSize = 22) {
   return function WrappedIcon({ size = defaultSize, className, color }: IconProps) {
     return (
       <PIcon
         size={size}
-        weight="duotone"
+        weight="regular"
         className={className}
         color={color || 'currentColor'}
       />
