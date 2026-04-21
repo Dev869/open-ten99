@@ -683,14 +683,14 @@ export default function Settings({ settings, userId }: SettingsProps) {
               </div>
 
               {/* Orgs */}
-              {integration.github?.orgs.length > 0 && (
+              {integration.github && integration.github.orgs.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {integration.github?.orgs.map((org) => (
+                  {integration.github.orgs.map((org) => (
                     <span
-                      key={org}
+                      key={org.login}
                       className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] border border-[var(--border)]"
                     >
-                      {org}
+                      {org.login}
                     </span>
                   ))}
                 </div>

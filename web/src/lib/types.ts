@@ -241,11 +241,16 @@ export const APP_ENVIRONMENT_LABELS: Record<AppEnvironment, string> = {
 
 /* ── GitHub Integration ───────────────────────────── */
 
+export interface GitHubOrgSummary {
+  login: string;
+  avatarUrl?: string;
+}
+
 export interface GitHubIntegration {
   connected: boolean;
   login: string;
   avatarUrl?: string;
-  orgs: string[];
+  orgs: GitHubOrgSummary[];
   connectedAt: Date;
   lastSyncAt?: Date;
 }

@@ -803,12 +803,27 @@ export function subscribeIntegration(
       return;
     }
     const data = snapshot.data();
-    const github: GitHubIntegration | null = data.connected
+    // The Cloud Function writes GitHub fields prefixed with "github"
+    // (githubLogin, githubAvatarUrl) and orgs as [{login, avatarUrl}].
+    // Fall back to unprefixed field names for older docs.
+    const login: string = data.githubLogin ?? data.login ?? '';
+    const avatarUrl: string | undefined =
+      data.githubAvatarUrl ?? data.avatarUrl ?? undefined;
+    const rawOrgs: unknown = data.orgs ?? [];
+    const orgs: Array<{ login: string; avatarUrl?: string }> = Array.isArray(rawOrgs)
+      ? rawOrgs.map((o) =>
+          typeof o === 'string'
+            ? { login: o }
+            : { login: (o as { login?: string }).login ?? '', avatarUrl: (o as { avatarUrl?: string }).avatarUrl }
+        ).filter((o) => o.login)
+      : [];
+    const isConnected = data.connected === true || (data.connected !== false && !!login);
+    const github: GitHubIntegration | null = isConnected
       ? {
-          connected: data.connected ?? false,
-          login: data.login ?? '',
-          avatarUrl: data.avatarUrl ?? undefined,
-          orgs: data.orgs ?? [],
+          connected: true,
+          login,
+          avatarUrl,
+          orgs,
           connectedAt: toDate(data.connectedAt),
           lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
         }
