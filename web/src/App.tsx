@@ -24,6 +24,7 @@ import Login from './routes/Login';
 const pageNames: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/work-items': 'Work Orders',
+  '/dashboard/quotes': 'Quotes',
   '/dashboard/calendar': 'Calendar',
   '/dashboard/clients': 'Clients',
   '/dashboard/apps': 'Apps',
@@ -62,6 +63,8 @@ function getPageName(pathname: string): string {
 const Dashboard = lazy(() => import('./routes/contractor/Dashboard'));
 const WorkItems = lazy(() => import('./routes/contractor/WorkItems'));
 const WorkItemDetail = lazy(() => import('./routes/contractor/WorkItemDetail'));
+const Quotes = lazy(() => import('./routes/contractor/Quotes'));
+const QuoteDetail = lazy(() => import('./routes/contractor/QuoteDetail'));
 const Calendar = lazy(() => import('./routes/contractor/Calendar'));
 const Clients = lazy(() => import('./routes/contractor/Clients'));
 const ClientDetail = lazy(() => import('./routes/contractor/ClientDetail'));
@@ -87,6 +90,7 @@ const GitHubCallback = lazy(() => import('./routes/contractor/GitHubCallback'));
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
 const PortalHome = lazy(() => import('./routes/portal/PortalHome'));
 const PortalDetail = lazy(() => import('./routes/portal/PortalDetail'));
+const PortalQuote = lazy(() => import('./routes/portal/PortalQuote'));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -400,6 +404,14 @@ function ContractorRoutes() {
         element={<EmailComposer workItems={workItems} clients={clients} />}
       />
       <Route
+        path="quotes"
+        element={<Quotes clients={clients} hourlyRate={settings.hourlyRate} />}
+      />
+      <Route
+        path="quotes/:id"
+        element={<QuoteDetail clients={clients} apps={apps} settings={settings} />}
+      />
+      <Route
         path="calendar"
         element={<Calendar workItems={workItems} clients={clients} apps={apps} />}
       />
@@ -508,6 +520,10 @@ function PortalRoutes() {
       <Route
         index
         element={<PortalHome workItems={workItems} clientName={clientName} />}
+      />
+      <Route
+        path="quotes/:id"
+        element={<PortalQuote />}
       />
       <Route
         path=":id"

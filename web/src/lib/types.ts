@@ -333,6 +333,77 @@ export const WORK_ITEM_STATUS_LABELS: Record<WorkItemStatus, string> = {
   archived: 'Archived',
 };
 
+/* ── Quotes ─────────────────────────────────────────── */
+
+// A Quote is a pre-work pricing estimate sent to a client. When accepted it
+// can be converted to a WorkItem (preserving line items, hours, and cost).
+//
+// Lifecycle:
+//   draft → sent → accepted → converted (to a WorkItem)
+//                ↘ declined
+//                ↘ expired (auto/manual when validUntil passes)
+export type QuoteStatus =
+  | 'draft'
+  | 'sent'
+  | 'accepted'
+  | 'declined'
+  | 'expired'
+  | 'converted';
+
+export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  accepted: 'Accepted',
+  declined: 'Declined',
+  expired: 'Expired',
+  converted: 'Converted',
+};
+
+export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
+  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800/40 dark:text-gray-300',
+  sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  accepted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  declined: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  expired: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  converted: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+};
+
+export interface Quote {
+  id?: string;
+  // Ownership / scope
+  clientId: string;
+  projectId?: string;
+  appId?: string;
+
+  // Identity
+  quoteNumber?: string;        // Optional human-friendly identifier (e.g. "Q-2026-001")
+  title: string;
+  description?: string;        // Free-form scope summary shown to the client
+
+  // Status / lifecycle
+  status: QuoteStatus;
+  validUntil?: Date;           // Expiration date for the offer
+  sentAt?: Date;
+  respondedAt?: Date;          // accepted or declined timestamp
+  clientNotes?: string;        // Notes from the client on accept/decline
+  convertedWorkItemId?: string;
+
+  // Pricing
+  lineItems: LineItem[];
+  totalHours: number;
+  totalCost: number;
+  taxRate?: number;            // Optional override; falls back to settings.invoiceTaxRate
+  discount?: number;           // Flat-amount discount applied before tax
+  terms?: string;              // Optional override; falls back to settings.invoiceTerms
+
+  // Generated artifacts
+  pdfUrl?: string;
+  pdfStoragePath?: string;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /* ── Finance ────────────────────────────────────────── */
 
 // Invoice status

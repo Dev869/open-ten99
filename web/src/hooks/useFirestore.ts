@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import {
   subscribeWorkItems,
+  subscribeQuotes,
   subscribeClients,
   subscribeSettings,
   subscribeApps,
@@ -18,7 +19,7 @@ import {
   subscribeInsights,
   callGenerateInsights,
 } from '../services/firestore';
-import type { WorkItem, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
+import type { WorkItem, Quote, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -58,6 +59,24 @@ export function useWorkItems(clientId?: string) {
   }, [clientId]);
 
   return { workItems, loading };
+}
+
+export function useQuotes(clientId?: string) {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = whenAuthReady(() =>
+      subscribeQuotes((items) => {
+        setQuotes(items);
+        setLoading(false);
+      }, clientId, () => setLoading(false))
+    );
+    return unsubscribe;
+  }, [clientId]);
+
+  return { quotes, loading };
 }
 
 export function useDiscardedWorkItems() {

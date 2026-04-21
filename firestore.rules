@@ -107,6 +107,39 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------------
+    // Quotes collection
+    // ---------------------------------------------------------------------------
+    // Contractors: full CRUD on their own quotes (mirrors workItems).
+    // Portal clients: read-only access to quotes for their clientId, plus a
+    //   narrow update to record acceptance / decline (status, respondedAt,
+    //   clientNotes only).
+    match /quotes/{quoteId} {
+      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+
+      allow read: if request.auth != null
+        && !isContractor()
+        && request.auth.token.clientId != null
+        && resource.data.clientId == request.auth.token.clientId;
+
+      // Portal accept/decline — locked down to the response fields.
+      allow update: if request.auth != null
+        && !isContractor()
+        && request.auth.token.clientId != null
+        && resource.data.clientId == request.auth.token.clientId
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'respondedAt', 'clientNotes', 'updatedAt'])
+        && request.resource.data.status in ['accepted', 'declined'];
+
+      allow create: if isContractor() && claimsOwnership();
+
+      allow update: if isContractor()
+        && isOwnerOrLegacy(resource.data)
+        && claimsOwnership();
+
+      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+    }
+
+    // ---------------------------------------------------------------------------
     // Apps collection
     // ---------------------------------------------------------------------------
     // Only contractors can manage apps. Scoped to the owning contractor.
