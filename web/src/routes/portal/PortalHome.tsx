@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import type { WorkItem } from '../../lib/types';
-import { StatusBadge } from '../../components/StatusBadge';
-import { TypeTag } from '../../components/TypeTag';
+import { StatusBadge } from '../../components/workitems/StatusBadge';
+import { TypeTag } from '../../components/workitems/TypeTag';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { BrandWordmark } from '../../components/Brand';
+import { BrandWordmark } from '../../components/layout/Brand';
 
 interface PortalHomeProps {
   workItems: WorkItem[];

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { WorkItem } from '../../lib/types';
-import { StatusBadge } from '../../components/StatusBadge';
-import { TypeTag } from '../../components/TypeTag';
+import { StatusBadge } from '../../components/workitems/StatusBadge';
+import { TypeTag } from '../../components/workitems/TypeTag';
 import { formatCurrency, formatDate, sanitizeUrl } from '../../lib/utils';
 import { updateWorkItemClientResponse } from '../../services/firestore';
 import { IconCheck, IconCheckSmall } from '../../components/icons';

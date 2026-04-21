@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { WorkItem, Client, App, RecurrenceFrequency, TimeEntry } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
-import { StatusBadge } from '../../components/StatusBadge';
-import { TypeTag } from '../../components/TypeTag';
-import { LineItemRow } from '../../components/LineItemRow';
-import { TimeEntryLinkPicker } from '../../components/TimeEntryLinkPicker';
+import { StatusBadge } from '../../components/workitems/StatusBadge';
+import { TypeTag } from '../../components/workitems/TypeTag';
+import { LineItemRow } from '../../components/workitems/LineItemRow';
+import { TimeEntryLinkPicker } from '../../components/time/TimeEntryLinkPicker';
 import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays, cn } from '../../lib/utils';
 import { computeLineItemHours, computeLineItemCost } from '../../lib/timeComputation';
 import {

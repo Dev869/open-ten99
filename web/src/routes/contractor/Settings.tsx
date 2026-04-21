@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
 import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell } from '../../components/icons';
-import { BrandIcon } from '../../components/Brand';
+import { BrandIcon } from '../../components/layout/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';

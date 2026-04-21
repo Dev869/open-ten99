@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { cn } from '../lib/utils';
-import { IconPlay, IconPause, IconStop, IconClock, IconChevronDown, IconClose } from './icons';
-import { createTimeEntry, updateTimeEntry } from '../services/firestore';
-import type { Client, App } from '../lib/types';
+import { cn } from '../../lib/utils';
+import { IconPlay, IconPause, IconStop, IconClock, IconChevronDown, IconClose } from '../icons';
+import { createTimeEntry, updateTimeEntry } from '../../services/firestore';
+import type { Client, App } from '../../lib/types';
 
 /* ── Persistence ─────────────────────────────────────── */
 

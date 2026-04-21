@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { WorkItem, Client } from '../../lib/types';
 import { formatCurrency } from '../../lib/utils';
-import { StatCard } from '../../components/StatCard';
+import { StatCard } from '../../components/common/StatCard';
 import { WORK_ITEM_TYPE_LABELS } from '../../lib/types';
 
 interface AnalyticsProps {

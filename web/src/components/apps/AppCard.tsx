@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import type { App } from '../lib/types';
-import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../lib/types';
+import type { App } from '../../lib/types';
+import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../../lib/types';
 
 interface AppCardProps {
   app: App;

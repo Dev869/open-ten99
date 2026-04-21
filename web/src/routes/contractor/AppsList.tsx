@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import type { App, WorkItem, Client } from '../../lib/types';
 import { APP_PLATFORM_LABELS, APP_STATUS_LABELS } from '../../lib/types';
-import { AppCard } from '../../components/AppCard';
-import { AppFormModal } from '../../components/AppFormModal';
-import { GitHubImportModal } from '../../components/GitHubImportModal';
+import { AppCard } from '../../components/apps/AppCard';
+import { AppFormModal } from '../../components/apps/AppFormModal';
+import { GitHubImportModal } from '../../components/apps/GitHubImportModal';
 import { IconPlus, IconSearch } from '../../components/icons';
 import { useGitHubAccounts } from '../../hooks/useFirestore';
 import { useAuth } from '../../hooks/useAuth';

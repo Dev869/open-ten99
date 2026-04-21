@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 import {
   IconDashboard,
   IconWrench,
@@ -24,8 +24,8 @@ import {
   IconFinanceOverview,
   IconClock,
   IconCamera,
-} from './icons';
-import type { IconProps } from './icons';
+} from '../icons';
+import type { IconProps } from '../icons';
 
 /* ── Tab definitions ──────────────────────────────────── */
 

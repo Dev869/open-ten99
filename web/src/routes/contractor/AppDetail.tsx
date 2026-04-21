@@ -9,11 +9,11 @@ import {
   APP_ENVIRONMENT_LABELS,
   WORK_ITEM_TYPE_LABELS,
 } from '../../lib/types';
-import { StatCard } from '../../components/StatCard';
-import { WorkItemCard } from '../../components/WorkItemCard';
-import { AppFormModal } from '../../components/AppFormModal';
-import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
-import { FilterTabs } from '../../components/FilterTabs';
+import { StatCard } from '../../components/common/StatCard';
+import { WorkItemCard } from '../../components/workitems/WorkItemCard';
+import { AppFormModal } from '../../components/apps/AppFormModal';
+import { NewWorkOrderModal } from '../../components/workitems/NewWorkOrderModal';
+import { FilterTabs } from '../../components/workitems/FilterTabs';
 import { deleteApp } from '../../services/firestore';
 import { useGitHubActivity } from '../../hooks/useFirestore';
 import {

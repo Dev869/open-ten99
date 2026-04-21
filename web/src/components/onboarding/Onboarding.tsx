@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import type { AppSettings } from '../lib/types';
-import { createClient, updateSettings } from '../services/firestore';
-import { BrandWordmark } from './Brand';
-import { IconUser, IconDollar, IconPaintBrush, IconCheck } from './icons';
+import type { AppSettings } from '../../lib/types';
+import { createClient, updateSettings } from '../../services/firestore';
+import { BrandWordmark } from '../layout/Brand';
+import { IconUser, IconDollar, IconPaintBrush, IconCheck } from '../icons';
 
 interface OnboardingProps {
   user: User;

@@ -3,7 +3,7 @@ import type { WorkItem, Client, RecurrenceFrequency, App } from '../../lib/types
 import { typeColor } from '../../lib/theme';
 import { WORK_ITEM_TYPE_LABELS, RECURRENCE_LABELS } from '../../lib/types';
 import { formatCurrency, cn } from '../../lib/utils';
-import { StatusBadge } from '../../components/StatusBadge';
+import { StatusBadge } from '../../components/workitems/StatusBadge';
 import { useNavigate } from 'react-router-dom';
 import { IconChevronLeft, IconChevronRight, IconCalendar as IconCalendarIcon, IconRepeat } from '../../components/icons';
 
