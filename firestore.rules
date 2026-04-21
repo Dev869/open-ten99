@@ -160,6 +160,12 @@ service cloud.firestore {
     match /integrations/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false;
+
+      // Per-account GitHub metadata. Owner can read; server-only writes.
+      match /githubAccounts/{accountId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // ---------------------------------------------------------------------------

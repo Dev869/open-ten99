@@ -18,8 +18,26 @@ export class GitHubTokenRevoked extends Error {
   }
 }
 
-export async function getGitHubToken(userId: string): Promise<string> {
+export async function getGitHubToken(
+  userId: string,
+  accountId?: string
+): Promise<string> {
   const db = admin.firestore();
+  if (accountId) {
+    const doc = await db
+      .collection("_secrets")
+      .doc(userId)
+      .collection("githubAccounts")
+      .doc(accountId)
+      .get();
+    if (!doc.exists) {
+      throw new Error(`GitHub account ${accountId} not connected`);
+    }
+    return decryptToken(
+      doc.data()?.accessToken as string,
+      encryptionKeyValue()
+    );
+  }
   const doc = await db
     .collection("_secrets")
     .doc(userId)
@@ -31,6 +49,16 @@ export async function getGitHubToken(userId: string): Promise<string> {
   }
   const data = doc.data();
   return decryptToken(data?.accessToken as string, encryptionKeyValue());
+}
+
+export async function listGitHubAccountIds(userId: string): Promise<string[]> {
+  const db = admin.firestore();
+  const snap = await db
+    .collection("integrations")
+    .doc(userId)
+    .collection("githubAccounts")
+    .get();
+  return snap.docs.map((d) => d.id);
 }
 
 export async function githubFetch(
