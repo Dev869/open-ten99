@@ -87,11 +87,12 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
     }
   }, [githubAccountsLoading, githubAccounts, selectedAccountId]);
 
-  // (Re)load repos whenever the selected account changes. Wait until the
-  // accounts subscription has resolved — otherwise the first render fires
-  // without an accountId, which fails for users who have only connected
-  // under the new multi-account flow.
+  // (Re)load repos whenever the selected account changes. Wait until both
+  // auth and the accounts subscription have resolved — otherwise the first
+  // render fires without an accountId, which fails for users who have only
+  // connected under the new multi-account flow.
   useEffect(() => {
+    if (!user) return;
     if (githubAccountsLoading) return;
     if (githubAccounts.length > 0 && !selectedAccountId) return;
 
@@ -112,7 +113,7 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
         setLoadError('Failed to load repositories. Please try again.');
         setLoading(false);
       });
-  }, [githubAccountsLoading, githubAccounts.length, selectedAccountId]);
+  }, [user, githubAccountsLoading, githubAccounts.length, selectedAccountId]);
 
   // Derive org tabs from repo list
   const orgs = useMemo(() => {
