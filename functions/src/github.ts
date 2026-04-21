@@ -32,7 +32,7 @@ interface GitHubOrg {
  * for CSRF protection.
  */
 export const getGitHubAuthUrl = onCall(
-  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -87,7 +87,7 @@ export const getGitHubAuthUrl = onCall(
  * authorization code for an access token, and persists user/org metadata.
  */
 export const handleGitHubCallback = onCall(
-  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -328,7 +328,7 @@ function inferPlatform(
  * and returns a deduplicated summary list.
  */
 export const importGitHubRepos = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -425,7 +425,7 @@ export const importGitHubRepos = onCall(
  * If clientId is provided, creates a new app with auto-populated fields.
  */
 export const linkRepoToApp = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, timeoutSeconds: 120, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -589,7 +589,7 @@ export const linkRepoToApp = onCall(
  * apps. Rate-limited to once per 5 minutes.
  */
 export const triggerGitHubSync = onCall(
-  { cors: true, maxInstances: 10, timeoutSeconds: 300, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, timeoutSeconds: 300, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -637,7 +637,7 @@ export const triggerGitHubSync = onCall(
  * integration as disconnected.
  */
 export const disconnectGitHub = onCall(
-  { cors: true, maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
