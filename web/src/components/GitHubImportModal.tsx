@@ -59,7 +59,7 @@ function formatPushedAt(pushedAt: string): string {
 export function GitHubImportModal({ clients, apps, onClose, defaultClientId = '' }: GitHubImportModalProps) {
   const { addToast } = useToast();
   const { user } = useAuth();
-  const { accounts: githubAccounts } = useGitHubAccounts(user?.uid);
+  const { accounts: githubAccounts, loading: githubAccountsLoading } = useGitHubAccounts(user?.uid);
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,13 +81,20 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
 
   // Default the selected account to the first linked account once loaded.
   useEffect(() => {
+    if (githubAccountsLoading) return;
     if (!selectedAccountId && githubAccounts.length > 0) {
       setSelectedAccountId(githubAccounts[0].accountId);
     }
-  }, [githubAccounts, selectedAccountId]);
+  }, [githubAccountsLoading, githubAccounts, selectedAccountId]);
 
-  // (Re)load repos whenever the selected account changes.
+  // (Re)load repos whenever the selected account changes. Wait until the
+  // accounts subscription has resolved — otherwise the first render fires
+  // without an accountId, which fails for users who have only connected
+  // under the new multi-account flow.
   useEffect(() => {
+    if (githubAccountsLoading) return;
+    if (githubAccounts.length > 0 && !selectedAccountId) return;
+
     setLoading(true);
     setLoadError(null);
     setSelectedFullNames(new Set());
@@ -105,7 +112,7 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
         setLoadError('Failed to load repositories. Please try again.');
         setLoading(false);
       });
-  }, [selectedAccountId]);
+  }, [githubAccountsLoading, githubAccounts.length, selectedAccountId]);
 
   // Derive org tabs from repo list
   const orgs = useMemo(() => {
