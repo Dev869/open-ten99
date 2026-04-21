@@ -121,6 +121,11 @@ export default function Clients({ workItems, clients }: ClientsProps) {
                     {client.retainerPaused ? 'Paused' : `${client.retainerHours}h`}
                   </span>
                 )}
+                {client.maintenanceHoursAllotted && (
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${client.maintenancePaused ? 'bg-[var(--bg-input)] text-[var(--text-secondary)]' : 'bg-[var(--accent)]/10 text-[var(--accent)]'}`}>
+                    {client.maintenancePaused ? 'Maint. Paused' : `Maint. ${client.maintenanceHoursAllotted}h`}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
                 {client.email}

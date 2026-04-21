@@ -98,6 +98,10 @@ function docToClient(id: string, data: DocumentData): Client {
     retainerPaused: data.retainerPaused ?? false,
     retainerBillingMode: data.retainerBillingMode ?? undefined,
     retainerFlatRate: data.retainerFlatRate ?? undefined,
+    maintenanceHoursAllotted: data.maintenanceHoursAllotted ?? undefined,
+    maintenanceRenewalDay: data.maintenanceRenewalDay ?? undefined,
+    maintenancePaused: data.maintenancePaused ?? false,
+    maintenanceOverageRate: data.maintenanceOverageRate ?? undefined,
     createdAt: toDate(data.createdAt),
   };
 }
@@ -432,6 +436,12 @@ export async function updateClient(client: Client) {
     retainerHours: client.retainerHours ?? null,
     retainerRenewalDay: client.retainerRenewalDay ?? null,
     retainerPaused: client.retainerPaused ?? false,
+    retainerBillingMode: client.retainerBillingMode ?? null,
+    retainerFlatRate: client.retainerFlatRate ?? null,
+    maintenanceHoursAllotted: client.maintenanceHoursAllotted ?? null,
+    maintenanceRenewalDay: client.maintenanceRenewalDay ?? null,
+    maintenancePaused: client.maintenancePaused ?? false,
+    maintenanceOverageRate: client.maintenanceOverageRate ?? null,
     ownerId: auth.currentUser?.uid ?? null,
   });
 }

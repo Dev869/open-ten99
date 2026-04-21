@@ -79,6 +79,13 @@ export interface Client {
   retainerPaused?: boolean;
   retainerBillingMode?: 'flat' | 'usage';
   retainerFlatRate?: number;
+  // Monthly maintenance allotment. Maintenance-type work items in the current
+  // period count toward this; hours beyond it are billed at the overage rate
+  // (falls back to AppSettings.hourlyRate when unset).
+  maintenanceHoursAllotted?: number;
+  maintenanceRenewalDay?: number;
+  maintenancePaused?: boolean;
+  maintenanceOverageRate?: number;
   teamId?: string;
   createdAt: Date;
 }

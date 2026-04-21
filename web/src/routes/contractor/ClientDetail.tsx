@@ -5,7 +5,8 @@ import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../..
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { AppFormModal } from '../../components/AppFormModal';
 import { updateClient, deleteClient } from '../../services/firestore';
-import { formatDate, getRetainerPeriodStart } from '../../lib/utils';
+import { formatCurrency, formatDate, getRetainerPeriodStart } from '../../lib/utils';
+import { calculateMaintenanceUsage } from '../../lib/maintenanceUsage';
 import { useToast } from '../../hooks/useToast';
 import { IconChevronLeft, IconEdit, IconClose, IconCheckSmall, IconTrash } from '../../components/icons';
 
@@ -19,9 +20,10 @@ interface ClientDetailProps {
   workItems: WorkItem[];
   clients: Client[];
   apps: App[];
+  hourlyRate: number;
 }
 
-export default function ClientDetail({ workItems, clients, apps }: ClientDetailProps) {
+export default function ClientDetail({ workItems, clients, apps, hourlyRate }: ClientDetailProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToast } = useToast();
@@ -77,6 +79,11 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
       paused: client.retainerPaused ?? false,
     };
   }, [client, clientItems]);
+
+  const maintenanceUsage = useMemo(
+    () => (client ? calculateMaintenanceUsage(client, clientItems, hourlyRate) : null),
+    [client, clientItems, hourlyRate]
+  );
 
   if (!client) {
     return <div className="text-center py-20 text-[var(--text-secondary)]">Client not found.</div>;
@@ -221,6 +228,62 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
           <div className="text-xs text-[var(--text-secondary)] mt-2">
             Period: {formatDate(retainerUsage.periodStart)} — {formatDate(retainerUsage.periodEnd)}
             {' · '}Renews on the {client!.retainerRenewalDay}{ordinalSuffix(client!.retainerRenewalDay!)}
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Summary */}
+      {maintenanceUsage && (
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 mb-4 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+              Maintenance
+            </h2>
+            <div className="flex items-center gap-2">
+              {maintenanceUsage.paused && (
+                <span className="text-xs font-semibold text-[var(--color-orange)] bg-[var(--color-orange)]/10 px-2.5 py-1 rounded-full">
+                  Paused
+                </span>
+              )}
+              {maintenanceUsage.overageHours > 0 && !maintenanceUsage.paused && (
+                <span className="text-xs font-semibold text-[var(--color-red)] bg-[var(--color-red)]/10 px-2.5 py-1 rounded-full">
+                  Over by {maintenanceUsage.overageHours.toFixed(1)} hrs
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6">
+            <div>
+              <div className="text-2xl font-extrabold text-[var(--text-primary)]">
+                {Math.max(0, maintenanceUsage.remaining).toFixed(1)}
+                <span className="text-sm font-normal text-[var(--text-secondary)]"> hrs remaining</span>
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] mt-1">
+                {maintenanceUsage.used.toFixed(1)} of {maintenanceUsage.allotted} hrs used
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="h-2 bg-[var(--bg-input)] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (maintenanceUsage.used / maintenanceUsage.allotted) * 100)}%`,
+                    backgroundColor: maintenanceUsage.overageHours > 0 ? '#E74C3C' : '#4BA8A8',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          {maintenanceUsage.overageHours > 0 && (
+            <div className="mt-3 p-3 rounded-lg bg-[var(--color-red)]/5 border border-[var(--color-red)]/20 text-xs text-[var(--text-primary)]">
+              <span className="font-semibold">Overage:</span>{' '}
+              {maintenanceUsage.overageHours.toFixed(1)} hrs × ${maintenanceUsage.overageRate.toFixed(2)}/hr ={' '}
+              <span className="font-bold">{formatCurrency(maintenanceUsage.overageCost)}</span>
+            </div>
+          )}
+          <div className="text-xs text-[var(--text-secondary)] mt-2">
+            Period: {formatDate(maintenanceUsage.periodStart)} — {formatDate(maintenanceUsage.periodEnd)}
+            {' · '}Renews on the {client!.maintenanceRenewalDay}{ordinalSuffix(client!.maintenanceRenewalDay!)}
           </div>
         </div>
       )}
@@ -384,6 +447,91 @@ export default function ClientDetail({ workItems, clients, apps }: ClientDetailP
                     </div>
                   </div>
                 )}
+              </>
+            )}
+          </div>
+
+          {/* Maintenance Settings */}
+          <div className="border-t border-[var(--border)] pt-4">
+            <h3 className="text-xs text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
+              Maintenance Allotment
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mb-3">
+              Maintenance work orders count toward this monthly bucket. Hours beyond the allotment bill at the overage rate.
+            </p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
+                  Hours / Month
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={client.maintenanceHoursAllotted ?? ''}
+                  placeholder="e.g. 5"
+                  onChange={(e) =>
+                    setClient({
+                      ...client,
+                      maintenanceHoursAllotted: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
+                  Renewal Day
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="28"
+                  value={client.maintenanceRenewalDay ?? ''}
+                  placeholder="e.g. 1"
+                  onChange={(e) =>
+                    setClient({
+                      ...client,
+                      maintenanceRenewalDay: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full px-4 py-3 bg-[var(--bg-input)] rounded-xl text-sm text-[var(--text-primary)] border border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all min-h-[44px]"
+                />
+              </div>
+            </div>
+            {client.maintenanceHoursAllotted && client.maintenanceHoursAllotted > 0 && (
+              <>
+                <div className="mt-3">
+                  <label className="block text-xs text-[var(--text-secondary)] uppercase font-semibold mb-1.5">
+                    Overage Rate <span className="normal-case tracking-normal font-normal">(optional — defaults to ${hourlyRate}/hr)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)]">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={client.maintenanceOverageRate ?? ''}
+                      onChange={(e) =>
+                        setClient({
+                          ...client,
+                          maintenanceOverageRate: e.target.value ? Number(e.target.value) : undefined,
+                        })
+                      }
+                      className="w-full h-10 pl-7 pr-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all"
+                      placeholder={`${hourlyRate}`}
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] mt-3">
+                  <input
+                    type="checkbox"
+                    checked={client.maintenancePaused ?? false}
+                    onChange={(e) => setClient({ ...client, maintenancePaused: e.target.checked })}
+                    className="accent-[var(--color-orange)] w-4 h-4"
+                  />
+                  Pause maintenance allotment
+                </label>
               </>
             )}
           </div>
