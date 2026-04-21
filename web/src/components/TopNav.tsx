@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
   type IconProps,
@@ -13,6 +13,11 @@ import {
   IconAnalytics,
   IconTeam,
   IconLock,
+  IconBell,
+  IconSun,
+  IconMoon,
+  IconSettings,
+  IconUser,
 } from './icons';
 
 interface TopNavItem {
@@ -44,13 +49,26 @@ function isActive(pathname: string, item: TopNavItem): boolean {
   return pathname === item.to || pathname.startsWith(item.to + '/');
 }
 
+interface TopNavProps {
+  dark: boolean;
+  onToggleTheme: () => void;
+  notificationCount?: number;
+  onNotificationsClick?: () => void;
+  notificationBellRef?: React.RefObject<HTMLButtonElement | null>;
+}
+
 /**
- * Horizontal tab bar shown at the top of the contractor content area on
- * desktop. Complements the sidebar by giving an always-labeled, scan-able
- * view of the main sections — useful as the app has grown to ~10+ surfaces.
- * Hidden on mobile (mobile uses the bottom tab bar).
+ * Sole desktop navigation surface: primary section tabs on the left,
+ * utility cluster (notifications, theme, settings, profile) on the right.
+ * Hidden on mobile — mobile uses the fixed header + bottom tab bar.
  */
-export function TopNav() {
+export function TopNav({
+  dark,
+  onToggleTheme,
+  notificationCount = 0,
+  onNotificationsClick,
+  notificationBellRef,
+}: TopNavProps) {
   const location = useLocation();
   const listRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
@@ -74,7 +92,6 @@ export function TopNav() {
     };
   }, []);
 
-  // Scroll the active tab into view on route change.
   useEffect(() => {
     const a = activeRef.current;
     if (a && typeof a.scrollIntoView === 'function') {
@@ -82,48 +99,105 @@ export function TopNav() {
     }
   }, [location.pathname]);
 
+  const utilityBtn =
+    'relative w-9 h-9 inline-flex items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)] transition-colors';
+
   return (
     <div className="hidden md:block border-b border-[var(--border)] bg-[var(--bg-page)] sticky top-0 z-20">
-      <div className="relative">
-        {canScrollLeft && (
-          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
-        )}
-        {canScrollRight && (
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
-        )}
-        <div
-          ref={listRef}
-          className="flex items-center gap-1 px-4 lg:px-6 overflow-x-auto scrollbar-none"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {items.map((item) => {
-            const active = isActive(location.pathname, item);
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                ref={active ? activeRef : undefined}
-                end={item.exact}
-                className={cn(
-                  'group relative flex items-center gap-2 px-3 py-3 text-sm whitespace-nowrap transition-colors',
-                  active
-                    ? 'text-[var(--text-primary)] font-semibold'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium'
-                )}
-              >
-                <span className={cn('inline-flex', active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-                  <item.Icon size={16} />
-                </span>
-                <span>{item.label}</span>
-                <span
+      <div className="flex items-center gap-2 px-4 lg:px-6">
+        {/* Section tabs — scrollable */}
+        <div className="relative flex-1 min-w-0">
+          {canScrollLeft && (
+            <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--bg-page)] to-transparent" />
+          )}
+          {canScrollRight && (
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--bg-page)] to-transparent" />
+          )}
+          <div
+            ref={listRef}
+            className="flex items-center gap-1 overflow-x-auto scrollbar-none"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {items.map((item) => {
+              const active = isActive(location.pathname, item);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  ref={active ? activeRef : undefined}
+                  end={item.exact}
                   className={cn(
-                    'absolute left-2 right-2 -bottom-px h-[2px] rounded-full transition-opacity',
-                    active ? 'bg-[var(--accent)] opacity-100' : 'opacity-0'
+                    'group relative flex items-center gap-2 px-3 py-3 text-sm whitespace-nowrap transition-colors',
+                    active
+                      ? 'text-[var(--text-primary)] font-semibold'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium'
                   )}
-                />
-              </NavLink>
-            );
-          })}
+                >
+                  <span
+                    className={cn(
+                      'inline-flex',
+                      active
+                        ? 'text-[var(--accent)]'
+                        : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
+                    )}
+                  >
+                    <item.Icon size={16} />
+                  </span>
+                  <span>{item.label}</span>
+                  <span
+                    className={cn(
+                      'absolute left-2 right-2 -bottom-px h-[2px] rounded-full transition-opacity',
+                      active ? 'bg-[var(--accent)] opacity-100' : 'opacity-0'
+                    )}
+                  />
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Utility cluster */}
+        <div className="flex items-center gap-1 flex-shrink-0 border-l border-[var(--border)] pl-2 ml-1">
+          {onNotificationsClick && (
+            <button
+              ref={notificationBellRef}
+              onClick={onNotificationsClick}
+              className={utilityBtn}
+              title="Notifications"
+              aria-label="Notifications"
+            >
+              <IconBell size={18} />
+              {notificationCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 text-[10px] font-bold leading-[16px] text-white bg-red-500 rounded-full border border-[var(--bg-page)] text-center">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
+            </button>
+          )}
+          <button
+            onClick={onToggleTheme}
+            className={utilityBtn}
+            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle theme"
+          >
+            {dark ? <IconSun size={18} /> : <IconMoon size={18} />}
+          </button>
+          <NavLink
+            to="/dashboard/settings"
+            className={({ isActive: a }) =>
+              cn(
+                utilityBtn,
+                a && 'bg-[var(--accent)]/10 text-[var(--accent)] hover:text-[var(--accent)]'
+              )
+            }
+            title="Settings"
+            aria-label="Settings"
+          >
+            <IconSettings size={18} />
+          </NavLink>
+          <Link to="/dashboard/profile" className={utilityBtn} title="Profile" aria-label="Profile">
+            <IconUser size={18} />
+          </Link>
         </div>
       </div>
     </div>

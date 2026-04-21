@@ -5,8 +5,7 @@ import { signOut } from 'firebase/auth';
 import { useAuth, isContractorUser } from './hooks/useAuth';
 import type { WorkItem } from './lib/types';
 import { useWorkItems, useClients, useSettings, useApps, useTimeEntries } from './hooks/useFirestore';
-import { updateSettings, callGenerateInsights } from './services/firestore';
-import { Sidebar } from './components/Sidebar';
+import { callGenerateInsights } from './services/firestore';
 import { TopNav } from './components/TopNav';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { TimeTrackerProvider, TimeTrackerNavButton, TimeTrackerBar } from './components/TimeTracker';
@@ -145,10 +144,6 @@ function Loading() {
 
 function ContractorLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
-    const stored = localStorage.getItem('oc-sidebar-expanded');
-    return stored === 'true';
-  });
   const { dark, toggle } = useTheme();
   const { user } = useAuth();
   const { workItems } = useWorkItems();
@@ -157,9 +152,6 @@ function ContractorLayout() {
   const { settings } = useSettings(user?.uid);
   const toastState = useToastState();
   const location = useLocation();
-  const pendingCount = workItems.filter(
-    (i) => i.status === 'draft' || i.status === 'inReview'
-  ).length;
 
   // Notification center state
   const [notifOpen, setNotifOpen] = useState(false);
@@ -240,22 +232,6 @@ function ContractorLayout() {
     setNotifOpen((v) => !v);
   }, []);
 
-  const handleUpdateSidebar = useCallback(
-    (order: string[], hidden: string[]) => {
-      if (!user?.uid) return;
-      updateSettings(user.uid, { sidebarOrder: order, sidebarHidden: hidden });
-    },
-    [user?.uid]
-  );
-
-  function handleToggleExpanded() {
-    setSidebarExpanded(prev => {
-      const next = !prev;
-      localStorage.setItem('oc-sidebar-expanded', String(next));
-      return next;
-    });
-  }
-
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -271,19 +247,6 @@ function ContractorLayout() {
     <ToastContext.Provider value={toastState}>
       <TimeTrackerProvider clients={clients} apps={apps}>
         <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden">
-          <Sidebar
-            pendingCount={pendingCount}
-            sidebarOrder={settings.sidebarOrder}
-            sidebarHidden={settings.sidebarHidden}
-            onUpdateSidebar={handleUpdateSidebar}
-            dark={dark}
-            onToggleTheme={toggle}
-            expanded={sidebarExpanded}
-            onToggleExpanded={handleToggleExpanded}
-            notificationCount={notifCount}
-            notificationBellRef={notifBellRef}
-            onNotificationsClick={handleNotifToggle}
-          />
           <div className="flex-1 flex flex-col min-w-0">
             {/* Mobile header — fixed at top so it stays anchored while main scrolls */}
             <header className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[var(--bg-page)]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -328,7 +291,13 @@ function ContractorLayout() {
 
             {/* Main content */}
             <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
-              <TopNav />
+              <TopNav
+                dark={dark}
+                onToggleTheme={toggle}
+                notificationCount={notifCount}
+                notificationBellRef={notifBellRef}
+                onNotificationsClick={handleNotifToggle}
+              />
               <div className="p-4 md:p-8">
                 <Suspense fallback={<Loading />}>
                   <Outlet />
@@ -348,7 +317,6 @@ function ContractorLayout() {
               onClose={() => setNotifOpen(false)}
               isMobile={isMobileView}
               panelRef={notifPanelRef}
-              sidebarExpanded={sidebarExpanded}
             />
           )}
           <ToastContainer />
