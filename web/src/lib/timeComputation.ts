@@ -34,13 +34,39 @@ export function computeLineItemHours(
 }
 
 /**
- * Compute cost for a line item. Uses costOverride if set, otherwise hours × rate.
+ * Effective hours used for cost: a manual override if set, otherwise the
+ * tracked hours summed from time entries. The override keeps the cost
+ * correlated to "time spent" — it's just entered by hand.
+ */
+export function computeLineItemEffectiveHours(
+  trackedHours: number,
+  hoursOverride: number | undefined
+): number {
+  if (hoursOverride !== undefined && !Number.isNaN(hoursOverride)) {
+    return hoursOverride;
+  }
+  return trackedHours;
+}
+
+/**
+ * Compute cost for a line item.
+ *
+ * Precedence:
+ *   1. `hoursOverride` * rate — the preferred manual path; keeps cost
+ *      tied to hours.
+ *   2. Legacy `costOverride` (flat dollars) — read only, back-compat
+ *      with older line items that have it populated.
+ *   3. tracked hours * rate.
  */
 export function computeLineItemCost(
   hours: number,
   hourlyRate: number,
-  costOverride: number | undefined
+  costOverride: number | undefined,
+  hoursOverride?: number
 ): number {
+  if (hoursOverride !== undefined && !Number.isNaN(hoursOverride)) {
+    return hoursOverride * hourlyRate;
+  }
   if (costOverride !== undefined) return costOverride;
   return hours * hourlyRate;
 }

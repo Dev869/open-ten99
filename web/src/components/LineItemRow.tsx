@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import type { LineItem, TimeEntry } from '../lib/types';
-import { computeLineItemHours, computeLineItemCost } from '../lib/timeComputation';
+import {
+  computeLineItemHours,
+  computeLineItemCost,
+  computeLineItemEffectiveHours,
+} from '../lib/timeComputation';
 import { formatCurrency } from '../lib/utils';
 import { updateTimeEntry } from '../services/firestore';
 import { useTimeTracker } from './TimeTracker';
@@ -21,7 +25,7 @@ interface LineItemRowProps {
   hourlyRate: number;
   roundToQuarter: boolean;
   onDescriptionChange: (description: string) => void;
-  onCostOverrideChange: (costOverride: number | undefined) => void;
+  onHoursOverrideChange: (hoursOverride: number | undefined) => void;
   onRemove: () => void;
   onLinkEntries: () => void;
 }
@@ -35,19 +39,28 @@ export function LineItemRow({
   hourlyRate,
   roundToQuarter,
   onDescriptionChange,
-  onCostOverrideChange,
+  onHoursOverrideChange,
   onRemove,
   onLinkEntries,
 }: LineItemRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const [editingCost, setEditingCost] = useState(false);
-  const [costInput, setCostInput] = useState('');
+  const [editingHours, setEditingHours] = useState(false);
+  const [hoursInput, setHoursInput] = useState('');
   const timer = useTimeTracker();
 
   const linkedEntries = timeEntries.filter((te) => te.lineItemId === lineItem.id);
-  const hours = computeLineItemHours(timeEntries, lineItem.id, roundToQuarter);
-  const cost = computeLineItemCost(hours, hourlyRate, lineItem.costOverride);
+  const trackedHours = computeLineItemHours(timeEntries, lineItem.id, roundToQuarter);
+  const effectiveHours = computeLineItemEffectiveHours(trackedHours, lineItem.hoursOverride);
+  const cost = computeLineItemCost(
+    trackedHours,
+    hourlyRate,
+    lineItem.costOverride,
+    lineItem.hoursOverride
+  );
   const sessionCount = linkedEntries.length;
+  const hasHoursOverride = lineItem.hoursOverride !== undefined;
+  const hasLegacyCostOverride =
+    lineItem.costOverride !== undefined && !hasHoursOverride;
 
   const isTimerRunningForThis = timer.isRunning && timer.lineItemId === lineItem.id;
   const isTimerRunningForOther = timer.isRunning && timer.lineItemId !== lineItem.id;
@@ -77,15 +90,19 @@ export function LineItemRow({
     });
   }
 
-  function handleCostClick() {
-    setCostInput(lineItem.costOverride !== undefined ? String(lineItem.costOverride) : '');
-    setEditingCost(true);
+  function handleHoursClick() {
+    setHoursInput(
+      hasHoursOverride ? String(lineItem.hoursOverride) : ''
+    );
+    setEditingHours(true);
   }
 
-  function handleCostSubmit() {
-    const val = parseFloat(costInput);
-    onCostOverrideChange(isNaN(val) || costInput === '' ? undefined : val);
-    setEditingCost(false);
+  function handleHoursSubmit() {
+    const val = parseFloat(hoursInput);
+    onHoursOverrideChange(
+      isNaN(val) || hoursInput.trim() === '' || val < 0 ? undefined : val
+    );
+    setEditingHours(false);
   }
 
   function formatDuration(seconds: number): string {
@@ -148,37 +165,45 @@ export function LineItemRow({
           </div>
         </div>
 
-        {/* Hours + cost */}
+        {/* Hours (editable) + derived cost */}
         <div className="text-right flex-shrink-0">
-          <div className={cn(
-            'text-sm font-bold tabular-nums',
-            hours > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
-          )}>
-            {formatDuration(hours * 3600)}
-          </div>
-          {editingCost ? (
+          {editingHours ? (
             <input
               type="number"
-              value={costInput}
-              onChange={(e) => setCostInput(e.target.value)}
-              onBlur={handleCostSubmit}
-              onKeyDown={(e) => e.key === 'Enter' && handleCostSubmit()}
+              step="0.25"
+              min="0"
+              value={hoursInput}
+              onChange={(e) => setHoursInput(e.target.value)}
+              onBlur={handleHoursSubmit}
+              onKeyDown={(e) => e.key === 'Enter' && handleHoursSubmit()}
               placeholder="Auto"
               autoFocus
-              className="w-20 text-right text-[11px] bg-[var(--bg-input)] border border-[var(--border)] rounded px-1 py-0.5 outline-none focus:border-[var(--accent)]"
+              className="w-20 text-right text-sm font-bold bg-[var(--bg-input)] border border-[var(--border)] rounded px-1 py-0.5 outline-none focus:border-[var(--accent)] tabular-nums"
             />
           ) : (
             <button
-              onClick={handleCostClick}
-              className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
-              title="Click to override cost"
+              onClick={handleHoursClick}
+              className={cn(
+                'text-sm font-bold tabular-nums cursor-pointer transition-colors',
+                effectiveHours > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]',
+                'hover:underline decoration-dotted'
+              )}
+              title="Click to enter hours manually"
             >
-              {formatCurrency(cost)}
-              {lineItem.costOverride !== undefined && (
+              {formatDuration(effectiveHours * 3600)}
+              {hasHoursOverride && (
                 <span className="ml-1 text-[9px] text-[var(--accent)]">(manual)</span>
               )}
             </button>
           )}
+          <div className="text-[11px] text-[var(--text-secondary)]">
+            {formatCurrency(cost)}
+            {hasLegacyCostOverride && (
+              <span className="ml-1 text-[9px] text-[var(--accent)]" title="Legacy fixed-dollar override from an older work order">
+                (pinned)
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Expand/remove controls */}

@@ -50,6 +50,7 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
       description: li.description ?? '',
       hours: li.hours ?? 0,
       cost: li.cost ?? 0,
+      hoursOverride: li.hoursOverride ?? undefined,
       costOverride: li.costOverride ?? undefined,
     })),
     totalHours: data.totalHours ?? 0,
@@ -271,6 +272,7 @@ function lineItemToData(li: LineItem) {
     description: li.description,
     hours: li.hours,
     cost: li.cost,
+    ...(li.hoursOverride !== undefined && { hoursOverride: li.hoursOverride }),
     ...(li.costOverride !== undefined && { costOverride: li.costOverride }),
   };
 }
@@ -1749,6 +1751,7 @@ function docToQuote(id: string, data: DocumentData): Quote {
       description: li.description ?? '',
       hours: li.hours ?? 0,
       cost: li.cost ?? 0,
+      hoursOverride: li.hoursOverride ?? undefined,
       costOverride: li.costOverride ?? undefined,
     })),
     totalHours: data.totalHours ?? 0,
