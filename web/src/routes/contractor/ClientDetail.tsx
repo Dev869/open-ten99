@@ -4,9 +4,12 @@ import type { WorkItem, Client, App } from '../../lib/types';
 import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../../lib/types';
 import { WorkItemCard } from '../../components/WorkItemCard';
 import { AppFormModal } from '../../components/AppFormModal';
+import { GitHubImportModal } from '../../components/GitHubImportModal';
 import { updateClient, deleteClient } from '../../services/firestore';
 import { formatCurrency, formatDate, getRetainerPeriodStart } from '../../lib/utils';
 import { calculateMaintenanceUsage } from '../../lib/maintenanceUsage';
+import { useAuth } from '../../hooks/useAuth';
+import { useIntegration } from '../../hooks/useFirestore';
 import { useToast } from '../../hooks/useToast';
 import { IconChevronLeft, IconEdit, IconClose, IconCheckSmall, IconTrash } from '../../components/icons';
 
@@ -27,12 +30,15 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const { integration } = useIntegration(user?.uid);
   const source = clients.find((c) => c.id === id);
   const [client, setClient] = useState<Client | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNewApp, setShowNewApp] = useState(false);
+  const [showGitHubImport, setShowGitHubImport] = useState(false);
 
   useEffect(() => {
     if (source) setClient({ ...source });
@@ -648,15 +654,29 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
               {clientApps.length}
             </span>
           </h2>
-          <button
-            onClick={() => setShowNewApp(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 active:scale-[0.97] transition-all min-h-[36px]"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            Add App
-          </button>
+          <div className="flex items-center gap-2">
+            {integration.github?.connected && (
+              <button
+                onClick={() => setShowGitHubImport(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all min-h-[36px]"
+                title="Import repositories from GitHub as apps for this client"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+                </svg>
+                Import from GitHub
+              </button>
+            )}
+            <button
+              onClick={() => setShowNewApp(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 active:scale-[0.97] transition-all min-h-[36px]"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Add App
+            </button>
+          </div>
         </div>
 
         {clientApps.length > 0 ? (
@@ -697,6 +717,16 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
           clients={clients}
           clientId={client.id}
           onClose={() => setShowNewApp(false)}
+        />
+      )}
+
+      {/* GitHub Import Modal (pre-selects this client as default) */}
+      {showGitHubImport && (
+        <GitHubImportModal
+          clients={clients}
+          apps={apps}
+          defaultClientId={client.id}
+          onClose={() => setShowGitHubImport(false)}
         />
       )}
     </div>

@@ -20,6 +20,8 @@ interface GitHubImportModalProps {
   clients: Client[];
   apps: App[];
   onClose: () => void;
+  /** Pre-selected bulk client (e.g. when opened from a client's detail page). */
+  defaultClientId?: string;
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
@@ -52,7 +54,7 @@ function formatPushedAt(pushedAt: string): string {
   return `${Math.floor(diffDays / 365)}y ago`;
 }
 
-export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalProps) {
+export function GitHubImportModal({ clients, apps, onClose, defaultClientId = '' }: GitHubImportModalProps) {
   const { addToast } = useToast();
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
@@ -63,7 +65,9 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
   const [activeOrg, setActiveOrg] = useState<string>('all');
 
   const [selectedFullNames, setSelectedFullNames] = useState<Set<string>>(new Set());
-  const [selectedClientId, setSelectedClientId] = useState('');
+  const [bulkClientId, setBulkClientId] = useState(defaultClientId);
+  // Per-repo client overrides. Missing entries fall back to bulkClientId.
+  const [repoClientOverrides, setRepoClientOverrides] = useState<Record<string, string>>({});
 
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
@@ -129,8 +133,26 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
     });
   }
 
+  function setRepoClient(fullName: string, clientId: string) {
+    setRepoClientOverrides((prev) => ({ ...prev, [fullName]: clientId }));
+  }
+
+  function clientIdForRepo(fullName: string): string {
+    const override = repoClientOverrides[fullName];
+    return override !== undefined && override !== '' ? override : bulkClientId;
+  }
+
+  const allSelectedHaveClient = useMemo(() => {
+    if (selectedFullNames.size === 0) return false;
+    for (const fullName of selectedFullNames) {
+      if (!clientIdForRepo(fullName)) return false;
+    }
+    return true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFullNames, repoClientOverrides, bulkClientId]);
+
   async function handleImport() {
-    if (!selectedClientId || selectedFullNames.size === 0) return;
+    if (!allSelectedHaveClient || selectedFullNames.size === 0) return;
     setImporting(true);
 
     const toImport = repos.filter((r) => selectedFullNames.has(r.fullName));
@@ -141,8 +163,9 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
     for (let i = 0; i < toImport.length; i++) {
       setImportProgress({ current: i + 1, total: toImport.length });
       const repo = toImport[i];
+      const clientId = clientIdForRepo(repo.fullName);
       try {
-        await linkFn({ clientId: selectedClientId, repoFullName: repo.fullName });
+        await linkFn({ clientId, repoFullName: repo.fullName });
         succeeded++;
       } catch (err) {
         console.error(`Failed to link ${repo.fullName}:`, err);
@@ -168,7 +191,7 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
     onClose();
   }
 
-  const canImport = selectedClientId && selectedFullNames.size > 0 && !importing;
+  const canImport = allSelectedHaveClient && selectedFullNames.size > 0 && !importing;
 
   const inputClass =
     'w-full px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]';
@@ -264,6 +287,8 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
                 {filteredRepos.map((repo) => {
                   const isLinked = linkedFullNames.has(repo.fullName);
                   const isSelected = selectedFullNames.has(repo.fullName);
+                  const effectiveClientId = clientIdForRepo(repo.fullName);
+                  const needsClient = isSelected && !effectiveClientId;
 
                   return (
                     <label
@@ -271,6 +296,8 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
                       className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
                         isLinked
                           ? 'border-[var(--border)] opacity-50 cursor-not-allowed'
+                          : needsClient
+                          ? 'border-red-500/50 bg-red-500/5'
                           : isSelected
                           ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                           : 'border-[var(--border)] hover:bg-[var(--bg-input)]'
@@ -334,6 +361,35 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
                             Pushed {formatPushedAt(repo.pushedAt)}
                           </span>
                         </div>
+                        {isSelected && !isLinked && (
+                          <div
+                            className="mt-2 flex items-center gap-2"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                              Client
+                            </span>
+                            <select
+                              value={repoClientOverrides[repo.fullName] ?? ''}
+                              onChange={(e) => setRepoClient(repo.fullName, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`flex-1 px-2 py-1.5 rounded-lg border text-xs text-[var(--text-primary)] bg-[var(--bg-card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
+                                needsClient ? 'border-red-500/60' : 'border-[var(--border)]'
+                              }`}
+                            >
+                              <option value="">
+                                {bulkClientId
+                                  ? `Use default (${clients.find((c) => c.id === bulkClientId)?.name ?? 'default'})`
+                                  : 'Select a client…'}
+                              </option>
+                              {clients.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </label>
                   );
@@ -347,11 +403,12 @@ export function GitHubImportModal({ clients, apps, onClose }: GitHubImportModalP
         {!loading && !loadError && (
           <div className="flex items-center gap-3 p-5 border-t border-[var(--border)] flex-shrink-0">
             <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
+              value={bulkClientId}
+              onChange={(e) => setBulkClientId(e.target.value)}
               className="flex-1 px-3 py-2.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              title="Default client — applied to any selected repo without its own client override."
             >
-              <option value="">Select a client *</option>
+              <option value="">Default client for all selected…</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
