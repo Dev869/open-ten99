@@ -1,4 +1,3 @@
-import { cn } from '../lib/utils';
 import type { WorkItem, Client } from '../lib/types';
 import {
   IconBell,
@@ -228,7 +227,6 @@ interface NotificationPanelProps {
   onClose: () => void;
   isMobile: boolean;
   panelRef: React.RefObject<HTMLDivElement | null>;
-  sidebarExpanded?: boolean;
 }
 
 export function NotificationPanel({
@@ -238,7 +236,6 @@ export function NotificationPanel({
   onClose,
   isMobile,
   panelRef,
-  sidebarExpanded,
 }: NotificationPanelProps) {
   const count = notifications.length;
 
@@ -347,14 +344,11 @@ export function NotificationPanel({
     );
   }
 
-  // Desktop: positioned panel next to sidebar
+  // Desktop: positioned panel anchored to the top-right near the bell in the top nav
   return (
     <div
       ref={panelRef}
-      className={cn(
-        'fixed bottom-14 z-[60] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl w-[360px] max-h-[70vh] overflow-y-auto animate-scale-in',
-        sidebarExpanded ? 'left-[228px]' : 'left-[80px]'
-      )}
+      className="fixed top-14 right-4 z-[60] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-xl w-[360px] max-h-[70vh] overflow-y-auto animate-scale-in"
     >
       {panelContent}
     </div>
