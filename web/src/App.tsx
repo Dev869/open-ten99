@@ -7,6 +7,7 @@ import type { WorkItem } from './lib/types';
 import { useWorkItems, useClients, useSettings, useApps, useTimeEntries } from './hooks/useFirestore';
 import { updateSettings, callGenerateInsights } from './services/firestore';
 import { Sidebar } from './components/Sidebar';
+import { TopNav } from './components/TopNav';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { TimeTrackerProvider, TimeTrackerNavButton, TimeTrackerBar } from './components/TimeTracker';
 import { ToastContainer } from './components/ToastContainer';
@@ -326,10 +327,13 @@ function ContractorLayout() {
             <TimeTrackerBar />
 
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
-              <Suspense fallback={<Loading />}>
-                <Outlet />
-              </Suspense>
+            <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
+              <TopNav />
+              <div className="p-4 md:p-8">
+                <Suspense fallback={<Loading />}>
+                  <Outlet />
+                </Suspense>
+              </div>
             </main>
           </div>
 
