@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import type { App, Client } from '../lib/types';
+import type { App, Client, GitHubAccount } from '../lib/types';
 import { functions } from '../lib/firebase';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../hooks/useAuth';
+import { useGitHubAccounts } from '../hooks/useFirestore';
 
 interface RepoSummary {
   fullName: string;
@@ -56,6 +58,8 @@ function formatPushedAt(pushedAt: string): string {
 
 export function GitHubImportModal({ clients, apps, onClose, defaultClientId = '' }: GitHubImportModalProps) {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const { accounts: githubAccounts } = useGitHubAccounts(user?.uid);
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,9 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
 
   const [search, setSearch] = useState('');
   const [activeOrg, setActiveOrg] = useState<string>('all');
+  // accountId = '' means "use whatever the server has (legacy)"; otherwise
+  // scoped to a specific linked GitHub account.
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
   const [selectedFullNames, setSelectedFullNames] = useState<Set<string>>(new Set());
   const [bulkClientId, setBulkClientId] = useState(defaultClientId);
@@ -72,10 +79,23 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
 
-  // Load repos on mount
+  // Default the selected account to the first linked account once loaded.
   useEffect(() => {
-    const importFn = httpsCallable<unknown, { repos: RepoSummary[] }>(functions, 'importGitHubRepos');
-    importFn()
+    if (!selectedAccountId && githubAccounts.length > 0) {
+      setSelectedAccountId(githubAccounts[0].accountId);
+    }
+  }, [githubAccounts, selectedAccountId]);
+
+  // (Re)load repos whenever the selected account changes.
+  useEffect(() => {
+    setLoading(true);
+    setLoadError(null);
+    setSelectedFullNames(new Set());
+    const importFn = httpsCallable<
+      { accountId?: string },
+      { repos: RepoSummary[] }
+    >(functions, 'importGitHubRepos');
+    importFn(selectedAccountId ? { accountId: selectedAccountId } : {})
       .then((result) => {
         setRepos(result.data.repos ?? []);
         setLoading(false);
@@ -85,7 +105,7 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
         setLoadError('Failed to load repositories. Please try again.');
         setLoading(false);
       });
-  }, []);
+  }, [selectedAccountId]);
 
   // Derive org tabs from repo list
   const orgs = useMemo(() => {
@@ -165,7 +185,11 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
       const repo = toImport[i];
       const clientId = clientIdForRepo(repo.fullName);
       try {
-        await linkFn({ clientId, repoFullName: repo.fullName });
+        await linkFn({
+          clientId,
+          repoFullName: repo.fullName,
+          githubAccountId: selectedAccountId || undefined,
+        });
         succeeded++;
       } catch (err) {
         console.error(`Failed to link ${repo.fullName}:`, err);
@@ -239,6 +263,26 @@ export function GitHubImportModal({ clients, apps, onClose, defaultClientId = ''
 
           {!loading && !loadError && (
             <>
+              {/* GitHub account picker (shown when 2+ accounts linked) */}
+              {githubAccounts.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)] flex-shrink-0">
+                    Account
+                  </span>
+                  <select
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] bg-[var(--bg-card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  >
+                    {githubAccounts.map((acc: GitHubAccount) => (
+                      <option key={acc.accountId} value={acc.accountId}>
+                        {acc.login}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Search */}
               <input
                 type="text"

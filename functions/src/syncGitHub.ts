@@ -4,26 +4,57 @@ import * as logger from "firebase-functions/logger";
 import {
   getGitHubToken,
   GitHubTokenRevoked,
+  listGitHubAccountIds,
   markDisconnected,
 } from "./utils/githubClient";
 import { syncAppActivity } from "./utils/syncActivity";
 
 /**
- * Syncs all GitHub-linked apps for a single user. Fetches the user's token,
- * finds every app with a linked repo, and calls syncAppActivity for each one.
- * If the token is revoked mid-sync the integration is marked disconnected and
- * the loop exits early. All other per-app errors are logged and skipped so that
- * one bad repo cannot block the rest.
+ * Fetch a token for a user, trying each linked account in order. Accounts
+ * whose tokens are revoked have their per-account docs removed. Falls back
+ * to the legacy single-account token path when no multi-account docs exist.
+ */
+async function resolveTokenForApp(
+  userId: string,
+  preferredAccountId: string | null
+): Promise<{ token: string; accountId: string | null } | null> {
+  if (preferredAccountId) {
+    try {
+      const token = await getGitHubToken(userId, preferredAccountId);
+      return { token, accountId: preferredAccountId };
+    } catch (err) {
+      logger.warn("Preferred GitHub account unavailable, falling back", {
+        userId,
+        accountId: preferredAccountId,
+        err,
+      });
+    }
+  }
+  const accountIds = await listGitHubAccountIds(userId);
+  for (const accountId of accountIds) {
+    try {
+      const token = await getGitHubToken(userId, accountId);
+      return { token, accountId };
+    } catch {
+      // ignore — try the next account
+    }
+  }
+  try {
+    const token = await getGitHubToken(userId);
+    return { token, accountId: null };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Syncs all GitHub-linked apps for a single user. Each app is synced with
+ * the token of the GitHub account it was linked under (when recorded);
+ * otherwise the first available account's token is used. Revoked tokens
+ * disconnect just the account they came from rather than the whole user.
  */
 export async function syncUserApps(userId: string): Promise<void> {
   const db = admin.firestore();
-  let token: string;
-  try {
-    token = await getGitHubToken(userId);
-  } catch {
-    logger.warn("No GitHub token for user", { userId });
-    return;
-  }
 
   const appsSnap = await db
     .collection("apps")
@@ -36,14 +67,49 @@ export async function syncUserApps(userId: string): Promise<void> {
   logger.info("Syncing GitHub apps", { userId, appCount: linkedApps.length });
 
   for (const appDoc of linkedApps) {
-    const fullName = appDoc.data().githubRepo.fullName as string;
+    const appData = appDoc.data();
+    const fullName = appData.githubRepo.fullName as string;
+    const preferredAccountId: string | null = appData.githubAccountId ?? null;
+
+    const resolved = await resolveTokenForApp(userId, preferredAccountId);
+    if (!resolved) {
+      logger.warn("No GitHub token available for app; skipping", {
+        userId,
+        appId: appDoc.id,
+        fullName,
+      });
+      continue;
+    }
+
     try {
-      await syncAppActivity(token, appDoc.id, fullName);
+      await syncAppActivity(resolved.token, appDoc.id, fullName);
     } catch (error) {
       if (error instanceof GitHubTokenRevoked) {
-        await markDisconnected(userId);
-        logger.warn("Token revoked during sync", { userId });
-        return;
+        logger.warn("Token revoked during sync", {
+          userId,
+          accountId: resolved.accountId,
+        });
+        if (resolved.accountId) {
+          await Promise.all([
+            db
+              .collection("_secrets")
+              .doc(userId)
+              .collection("githubAccounts")
+              .doc(resolved.accountId)
+              .delete(),
+            db
+              .collection("integrations")
+              .doc(userId)
+              .collection("githubAccounts")
+              .doc(resolved.accountId)
+              .delete(),
+          ]);
+        } else {
+          // Legacy path — the only available token is gone.
+          await markDisconnected(userId);
+          return;
+        }
+        continue;
       }
       logger.error("Failed to sync app", {
         userId,

@@ -6,7 +6,7 @@ import { BrandIcon } from '../../components/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { useIntegration } from '../../hooks/useFirestore';
+import { useIntegration, useGitHubAccounts } from '../../hooks/useFirestore';
 import { useToast } from '../../hooks/useToast';
 import {
   getPushPermissionState,
@@ -74,10 +74,11 @@ export default function Settings({ settings, userId }: SettingsProps) {
 
   const { user } = useAuth();
   const { integration } = useIntegration(user?.uid);
+  const { accounts: githubAccounts } = useGitHubAccounts(user?.uid);
+  const [disconnectingAccountId, setDisconnectingAccountId] = useState<string | null>(null);
   const { addToast } = useToast();
   const [syncing, setSyncing] = useState(false);
   const [webhookCopied, setWebhookCopied] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
 
   // Postmark state
   const [postmarkLoading, setPostmarkLoading] = useState(false);
@@ -657,144 +658,180 @@ export default function Settings({ settings, userId }: SettingsProps) {
             <h3 className="text-sm font-bold text-[var(--text-primary)]">GitHub</h3>
           </div>
 
-          {integration.github?.connected ? (
-            <div className="space-y-4 mt-3">
-              {/* User info */}
-              <div className="flex items-center gap-3">
-                {integration.github?.avatarUrl ? (
-                  <img
-                    src={integration.github?.avatarUrl}
-                    alt={integration.github?.login}
-                    className="w-9 h-9 rounded-full border border-[var(--border)]"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-[var(--bg-input)] flex items-center justify-center text-[var(--text-secondary)] text-sm font-bold">
-                    {integration.github?.login.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{integration.github?.login}</p>
-                  {integration.github?.lastSyncAt && (
-                    <p className="text-[10px] text-[var(--text-secondary)]">
-                      Last synced {formatRelativeTime(integration.github?.lastSyncAt)}
-                    </p>
-                  )}
-                </div>
-              </div>
+          {(() => {
+            const startConnect = async () => {
+              try {
+                const getGitHubAuthUrl = httpsCallable<object, { authUrl: string }>(functions, 'getGitHubAuthUrl');
+                const result = await getGitHubAuthUrl({});
+                const url = result.data.authUrl;
+                try {
+                  const parsed = new URL(url);
+                  if (parsed.origin !== 'https://github.com') {
+                    throw new Error('Unexpected redirect target');
+                  }
+                } catch {
+                  throw new Error('Invalid GitHub auth URL');
+                }
+                window.location.href = url;
+              } catch (err) {
+                console.error('GitHub auth URL error:', err);
+                addToast('Could not start GitHub connection. Please try again.', 'error');
+              }
+            };
 
-              {/* Orgs */}
-              {integration.github && integration.github.orgs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {integration.github.orgs.map((org) => (
-                    <span
-                      key={org.login}
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] border border-[var(--border)]"
-                    >
-                      {org.login}
-                    </span>
-                  ))}
-                </div>
-              )}
+            const legacyOnly =
+              githubAccounts.length === 0 && !!integration.github?.connected;
 
-              {/* Webhook URL */}
-              <div>
-                <p className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
-                  Webhook URL
-                </p>
-                <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2 min-w-0">
-                  <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate min-w-0">
-                    {WEBHOOK_URL}
-                  </code>
+            if (githubAccounts.length === 0 && !legacyOnly) {
+              return (
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Connect one or more GitHub accounts to sync repositories and track activity across your work orders.
+                  </p>
                   <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(WEBHOOK_URL);
-                      setWebhookCopied(true);
-                      setTimeout(() => setWebhookCopied(false), 2000);
-                    }}
-                    className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0 min-h-[44px] flex items-center"
+                    onClick={startConnect}
+                    className="w-full py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] transition-colors flex items-center justify-center gap-2"
                   >
-                    {webhookCopied ? 'Copied!' : 'Copy'}
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                    </svg>
+                    Connect GitHub
                   </button>
                 </div>
-              </div>
+              );
+            }
 
-              {/* Actions */}
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={async () => {
-                    setSyncing(true);
-                    try {
-                      const triggerGitHubSync = httpsCallable(functions, 'triggerGitHubSync');
-                      await triggerGitHubSync({});
-                      addToast('GitHub sync started.', 'success');
-                    } catch (err) {
-                      console.error('Sync error:', err);
-                      addToast('Sync failed. Please try again.', 'error');
-                    } finally {
-                      setSyncing(false);
-                    }
-                  }}
-                  disabled={syncing}
-                  className="flex-1 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
-                >
-                  {syncing ? 'Syncing…' : 'Sync Now'}
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!window.confirm('Disconnect GitHub? This will stop syncing and remove your integration.')) return;
-                    setDisconnecting(true);
+            return (
+              <div className="space-y-3 mt-3">
+                {legacyOnly && (
+                  <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-input)] px-3 py-2 text-[11px] text-[var(--text-secondary)]">
+                    Your previous GitHub connection was upgraded to multi-account support. Please reconnect to enable per-account management.
+                  </div>
+                )}
+
+                {githubAccounts.map((acc) => {
+                  const disconnectThis = async () => {
+                    if (!window.confirm(`Disconnect ${acc.login}? Repos linked under this account will stop syncing.`)) return;
+                    setDisconnectingAccountId(acc.accountId);
                     try {
                       const disconnectGitHub = httpsCallable(functions, 'disconnectGitHub');
-                      await disconnectGitHub({});
-                      addToast('GitHub disconnected.', 'info');
+                      await disconnectGitHub({ accountId: acc.accountId });
+                      addToast(`Disconnected ${acc.login}.`, 'info');
                     } catch (err) {
                       console.error('Disconnect error:', err);
                       addToast('Failed to disconnect. Please try again.', 'error');
                     } finally {
-                      setDisconnecting(false);
+                      setDisconnectingAccountId(null);
                     }
-                  }}
-                  disabled={disconnecting}
-                  className="px-4 py-2.5 min-h-[44px] rounded-lg bg-[var(--bg-input)] text-[var(--text-secondary)] text-sm font-semibold hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
-                >
-                  {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-                </button>
+                  };
+
+                  return (
+                    <div
+                      key={acc.accountId}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--bg-input)]/40 p-3 space-y-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        {acc.avatarUrl ? (
+                          <img
+                            src={acc.avatarUrl}
+                            alt={acc.login}
+                            className="w-9 h-9 rounded-full border border-[var(--border)]"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-[var(--bg-input)] flex items-center justify-center text-[var(--text-secondary)] text-sm font-bold">
+                            {(acc.login.charAt(0) || '?').toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{acc.login}</p>
+                          {acc.lastSyncAt && (
+                            <p className="text-[10px] text-[var(--text-secondary)]">
+                              Last synced {formatRelativeTime(acc.lastSyncAt)}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={disconnectThis}
+                          disabled={disconnectingAccountId === acc.accountId}
+                          className="px-3 py-1.5 min-h-[36px] rounded-lg bg-[var(--bg-input)] text-[var(--text-secondary)] text-xs font-semibold hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+                        >
+                          {disconnectingAccountId === acc.accountId ? 'Disconnecting…' : 'Disconnect'}
+                        </button>
+                      </div>
+                      {acc.orgs.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {acc.orgs.map((org) => (
+                            <span
+                              key={org.login}
+                              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-secondary)] border border-[var(--border)]"
+                            >
+                              {org.login}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Webhook URL (shared across accounts) */}
+                <div>
+                  <p className="text-[10px] text-[var(--text-secondary)] uppercase font-semibold tracking-wide mb-1">
+                    Webhook URL
+                  </p>
+                  <div className="flex items-center gap-2 bg-[var(--bg-input)] rounded-lg px-3 py-2 min-w-0">
+                    <code className="flex-1 text-[11px] text-[var(--text-secondary)] font-mono truncate min-w-0">
+                      {WEBHOOK_URL}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(WEBHOOK_URL);
+                        setWebhookCopied(true);
+                        setTimeout(() => setWebhookCopied(false), 2000);
+                      }}
+                      className="text-[11px] text-[var(--accent)] font-semibold hover:underline flex-shrink-0 min-h-[44px] flex items-center"
+                    >
+                      {webhookCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  {githubAccounts.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        setSyncing(true);
+                        try {
+                          const triggerGitHubSync = httpsCallable(functions, 'triggerGitHubSync');
+                          await triggerGitHubSync({});
+                          addToast('GitHub sync started.', 'success');
+                        } catch (err) {
+                          console.error('Sync error:', err);
+                          addToast('Sync failed. Please try again.', 'error');
+                        } finally {
+                          setSyncing(false);
+                        }
+                      }}
+                      disabled={syncing}
+                      className="flex-1 py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+                    >
+                      {syncing ? 'Syncing…' : 'Sync Now'}
+                    </button>
+                  )}
+                  <button
+                    onClick={startConnect}
+                    className="flex-1 py-2.5 min-h-[44px] rounded-lg border border-[var(--border)] text-[var(--text-primary)] text-sm font-semibold hover:bg-[var(--bg-input)] transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+                      <path d="M8 1v14M1 8h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    {legacyOnly ? 'Reconnect GitHub' : 'Add another GitHub account'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="mt-3 space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                Connect your GitHub account to sync repositories and track activity across your work orders.
-              </p>
-              <button
-                onClick={async () => {
-                  try {
-                    const getGitHubAuthUrl = httpsCallable<object, { authUrl: string }>(functions, 'getGitHubAuthUrl');
-                    const result = await getGitHubAuthUrl({});
-                    const url = result.data.authUrl;
-                    try {
-                      const parsed = new URL(url);
-                      if (parsed.origin !== 'https://github.com') {
-                        throw new Error('Unexpected redirect target');
-                      }
-                    } catch {
-                      throw new Error('Invalid GitHub auth URL');
-                    }
-                    window.location.href = url;
-                  } catch (err) {
-                    console.error('GitHub auth URL error:', err);
-                    addToast('Could not start GitHub connection. Please try again.', 'error');
-                  }
-                }}
-                className="w-full py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] transition-colors flex items-center justify-center gap-2"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                Connect GitHub
-              </button>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Postmark Email */}

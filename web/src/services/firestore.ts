@@ -21,7 +21,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData, Quote, QuoteStatus } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubAccount, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData, Quote, QuoteStatus } from '../lib/types';
 
 // --- Converters ---
 
@@ -135,6 +135,7 @@ function docToApp(id: string, data: DocumentData): App {
           pushedAt: toDate(data.githubRepo.pushedAt),
         }
       : undefined,
+    githubAccountId: data.githubAccountId ?? null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -832,6 +833,51 @@ export function subscribeIntegration(
     const postmarkToken = data.postmarkWebhook?.token as string | undefined;
     callback({ github, postmarkConfigured, postmarkToken });
   });
+}
+
+export function subscribeGitHubAccounts(
+  userId: string,
+  callback: (accounts: GitHubAccount[]) => void
+) {
+  const ref = collection(db, 'integrations', userId, 'githubAccounts');
+  const q = query(ref, orderBy('connectedAt', 'asc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const accounts: GitHubAccount[] = snapshot.docs.map((d) => {
+        const data = d.data();
+        const rawOrgs: unknown = data.orgs ?? [];
+        const orgs = Array.isArray(rawOrgs)
+          ? rawOrgs
+              .map((o) =>
+                typeof o === 'string'
+                  ? { login: o }
+                  : {
+                      login: (o as { login?: string }).login ?? '',
+                      avatarUrl: (o as { avatarUrl?: string }).avatarUrl,
+                    }
+              )
+              .filter((o) => o.login)
+          : [];
+        return {
+          accountId: d.id,
+          login: data.login ?? '',
+          name: data.name ?? null,
+          avatarUrl: data.avatarUrl ?? undefined,
+          profileUrl: data.profileUrl ?? undefined,
+          orgs,
+          scope: data.scope ?? undefined,
+          connectedAt: toDate(data.connectedAt),
+          lastSyncAt: data.lastSyncAt ? toDate(data.lastSyncAt) : undefined,
+        };
+      });
+      callback(accounts);
+    },
+    (error) => {
+      console.error('subscribeGitHubAccounts error', error);
+      callback([]);
+    }
+  );
 }
 
 export function subscribeGitHubActivity(

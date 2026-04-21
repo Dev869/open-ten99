@@ -16,6 +16,7 @@ const OAUTH_SCOPE = "repo,read:org";
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface GitHubUser {
+  id: number;
   login: string;
   name: string | null;
   avatar_url: string;
@@ -206,12 +207,20 @@ export const handleGitHubCallback = onCall(
       const accessToken = tokenData.access_token;
       const encryptedAccessToken = encryptToken(accessToken, encryptionKey.value());
 
-      // --- Store token securely ---
+      // --- Fetch GitHub user info and orgs in parallel ---
+      const [user, orgs] = await Promise.all([
+        githubJson<GitHubUser>(accessToken, "/user"),
+        githubJson<GitHubOrg[]>(accessToken, "/user/orgs"),
+      ]);
+
+      const accountId = String(user.id);
+
+      // --- Store token securely at the per-account path ---
       await db
         .collection("_secrets")
         .doc(uid)
-        .collection("github")
-        .doc("token")
+        .collection("githubAccounts")
+        .doc(accountId)
         .set({
           accessToken: encryptedAccessToken,
           tokenType: tokenData.token_type ?? "bearer",
@@ -219,38 +228,52 @@ export const handleGitHubCallback = onCall(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-      // --- Fetch GitHub user info and orgs in parallel ---
-      const [user, orgs] = await Promise.all([
-        githubJson<GitHubUser>(accessToken, "/user"),
-        githubJson<GitHubOrg[]>(accessToken, "/user/orgs"),
-      ]);
+      // --- Write per-account metadata into the githubAccounts sub-collection ---
+      await db
+        .collection("integrations")
+        .doc(uid)
+        .collection("githubAccounts")
+        .doc(accountId)
+        .set(
+          {
+            accountId,
+            login: user.login,
+            name: user.name,
+            avatarUrl: user.avatar_url,
+            profileUrl: user.html_url,
+            orgs: orgs.map((org) => ({
+              login: org.login,
+              avatarUrl: org.avatar_url,
+            })),
+            scope: tokenData.scope ?? OAUTH_SCOPE,
+            connectedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
 
-      // --- Write integration metadata ---
+      // --- Update the parent integration doc with a lightweight aggregate. ---
+      // Legacy single-account fields (githubLogin etc.) are left on the doc
+      // if present; the frontend now reads the sub-collection as the source
+      // of truth. The "connected" flag remains for any existing queries.
       await db.collection("integrations").doc(uid).set(
         {
           connected: true,
           provider: "github",
-          githubLogin: user.login,
-          githubName: user.name,
-          githubAvatarUrl: user.avatar_url,
-          githubProfileUrl: user.html_url,
-          orgs: orgs.map((org) => ({
-            login: org.login,
-            avatarUrl: org.avatar_url,
-          })),
-          connectedAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
 
-      logger.info("GitHub connected successfully", {
+      logger.info("GitHub account connected", {
         uid,
+        accountId,
         githubLogin: user.login,
       });
 
       return {
         success: true,
+        accountId,
         githubLogin: user.login,
         githubName: user.name,
         githubAvatarUrl: user.avatar_url,
@@ -338,24 +361,31 @@ export const importGitHubRepos = onCall(
     }
 
     const uid = request.auth.uid;
+    const { accountId } = (request.data ?? {}) as { accountId?: string };
     const db = admin.firestore();
 
     try {
-      const token = await getGitHubToken(uid);
+      const token = await getGitHubToken(uid, accountId);
 
-      // Fetch user repos and integration doc in parallel
-      const [userRepos, integrationSnap] = await Promise.all([
+      // Determine orgs: sub-doc when accountId supplied, otherwise legacy
+      // fields on the parent integration doc.
+      const orgsDocRef = accountId
+        ? db
+            .collection("integrations")
+            .doc(uid)
+            .collection("githubAccounts")
+            .doc(accountId)
+        : db.collection("integrations").doc(uid);
+
+      const [userRepos, orgsSnap] = await Promise.all([
         githubJson<GitHubRepo[]>(
           token,
           "/user/repos?per_page=100&sort=updated&type=all"
         ),
-        db.collection("integrations").doc(uid).get(),
+        orgsDocRef.get(),
       ]);
 
-      // Determine connected orgs
-      const integrationData = integrationSnap.data();
-      const orgs: Array<{ login: string }> =
-        integrationData?.orgs ?? [];
+      const orgs: Array<{ login: string }> = orgsSnap.data()?.orgs ?? [];
 
       // Fetch org repos in parallel
       const orgRepoArrays = await Promise.all(
@@ -398,10 +428,11 @@ export const importGitHubRepos = onCall(
 
       logger.info("importGitHubRepos complete", {
         uid,
+        accountId,
         repoCount: summaries.length,
       });
 
-      return { repos: summaries };
+      return { repos: summaries, accountId: accountId ?? null };
     } catch (error) {
       if (error instanceof HttpsError) {
         throw error;
@@ -435,11 +466,13 @@ export const linkRepoToApp = onCall(
     }
 
     const uid = request.auth.uid;
-    const { repoFullName, appId, clientId } = request.data as {
-      repoFullName?: string;
-      appId?: string;
-      clientId?: string;
-    };
+    const { repoFullName, appId, clientId, githubAccountId } =
+      request.data as {
+        repoFullName?: string;
+        appId?: string;
+        clientId?: string;
+        githubAccountId?: string;
+      };
 
     if (!repoFullName || typeof repoFullName !== "string") {
       throw new HttpsError(
@@ -457,7 +490,7 @@ export const linkRepoToApp = onCall(
     const db = admin.firestore();
 
     try {
-      const token = await getGitHubToken(uid);
+      const token = await getGitHubToken(uid, githubAccountId);
 
       // Check for duplicate: same owner already linked this repo
       const duplicateSnap = await db
@@ -509,10 +542,14 @@ export const linkRepoToApp = onCall(
           );
         }
 
-        await db.collection("apps").doc(appId).update({
+        const appUpdate: Record<string, unknown> = {
           githubRepo: githubRepoData,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        };
+        if (githubAccountId) {
+          appUpdate.githubAccountId = githubAccountId;
+        }
+        await db.collection("apps").doc(appId).update(appUpdate);
 
         resolvedAppId = appId;
         logger.info("linkRepoToApp: updated existing app", {
@@ -542,6 +579,7 @@ export const linkRepoToApp = onCall(
           repoUrls: [repo.html_url],
           techStack,
           githubRepo: githubRepoData,
+          githubAccountId: githubAccountId ?? null,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -647,19 +685,70 @@ export const disconnectGitHub = onCall(
     }
 
     const uid = request.auth.uid;
+    const { accountId } = (request.data ?? {}) as { accountId?: string };
     const db = admin.firestore();
 
     try {
-      await db
+      if (accountId) {
+        // Multi-account path: remove just this account's token and metadata.
+        await Promise.all([
+          db
+            .collection("_secrets")
+            .doc(uid)
+            .collection("githubAccounts")
+            .doc(accountId)
+            .delete(),
+          db
+            .collection("integrations")
+            .doc(uid)
+            .collection("githubAccounts")
+            .doc(accountId)
+            .delete(),
+        ]);
+
+        // If no accounts remain, clear the parent aggregate too.
+        const remaining = await db
+          .collection("integrations")
+          .doc(uid)
+          .collection("githubAccounts")
+          .limit(1)
+          .get();
+        if (remaining.empty) {
+          await markDisconnected(uid);
+        }
+
+        logger.info("GitHub account disconnected", { uid, accountId });
+        return { success: true, accountId };
+      }
+
+      // Legacy path: wipe everything GitHub for this user.
+      const accountsSnap = await db
+        .collection("integrations")
+        .doc(uid)
+        .collection("githubAccounts")
+        .get();
+
+      const secretsAccountsSnap = await db
         .collection("_secrets")
         .doc(uid)
-        .collection("github")
-        .doc("token")
-        .delete();
+        .collection("githubAccounts")
+        .get();
+
+      const deletions: Promise<unknown>[] = [
+        db
+          .collection("_secrets")
+          .doc(uid)
+          .collection("github")
+          .doc("token")
+          .delete(),
+      ];
+      accountsSnap.forEach((d) => deletions.push(d.ref.delete()));
+      secretsAccountsSnap.forEach((d) => deletions.push(d.ref.delete()));
+      await Promise.all(deletions);
 
       await markDisconnected(uid);
 
-      logger.info("GitHub disconnected", { uid });
+      logger.info("GitHub disconnected (all accounts)", { uid });
 
       return { success: true };
     } catch (error) {

@@ -5,7 +5,7 @@ import { AppCard } from '../../components/AppCard';
 import { AppFormModal } from '../../components/AppFormModal';
 import { GitHubImportModal } from '../../components/GitHubImportModal';
 import { IconPlus, IconSearch } from '../../components/icons';
-import { useIntegration } from '../../hooks/useFirestore';
+import { useGitHubAccounts } from '../../hooks/useFirestore';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AppsListProps {
@@ -23,7 +23,7 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
   const [showImport, setShowImport] = useState(false);
 
   const { user } = useAuth();
-  const { integration } = useIntegration(user?.uid);
+  const { accounts: githubAccounts } = useGitHubAccounts(user?.uid);
 
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -72,7 +72,7 @@ export default function AppsList({ apps, workItems, clients }: AppsListProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {integration.github?.connected && (
+          {githubAccounts.length > 0 && (
             <button
               onClick={() => setShowImport(true)}
               className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--bg-input)] transition-colors min-h-[44px] whitespace-nowrap"
