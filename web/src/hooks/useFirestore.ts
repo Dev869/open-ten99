@@ -222,10 +222,13 @@ export function useIntegration(userId: string | undefined) {
 
 export function useGitHubAccounts(userId: string | undefined) {
   const [accounts, setAccounts] = useState<GitHubAccount[]>([]);
+  // Stay in the "loading" state until auth yields a userId AND the
+  // snapshot has delivered its first payload. This prevents callers
+  // from racing the import callable on mount before auth settles.
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) { setAccounts([]); setLoading(false); return; }
+    if (!userId) { setAccounts([]); return; }
     setLoading(true);
     const unsubscribe = subscribeGitHubAccounts(userId, (list) => {
       setAccounts(list);
