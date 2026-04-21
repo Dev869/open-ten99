@@ -18,6 +18,10 @@ import {
   IconMoon,
   IconSettings,
   IconUser,
+  IconMenu,
+  IconSearch,
+  IconAlert,
+  IconLightbulb,
 } from './icons';
 
 interface TopNavItem {
@@ -55,7 +59,12 @@ interface TopNavProps {
   notificationCount?: number;
   onNotificationsClick?: () => void;
   notificationBellRef?: React.RefObject<HTMLButtonElement | null>;
+  onOpenSearch?: () => void;
 }
+
+const SHORTCUT_HINT = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.platform)
+  ? '⌘K'
+  : 'Ctrl+K';
 
 /**
  * Sole desktop navigation surface: primary section tabs on the left,
@@ -68,12 +77,42 @@ export function TopNav({
   notificationCount = 0,
   onNotificationsClick,
   notificationBellRef,
+  onOpenSearch,
 }: TopNavProps) {
   const location = useLocation();
   const listRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Overflow menu (three-line hamburger) state
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || menuButtonRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+    const t = setTimeout(() => document.addEventListener('mousedown', handleClick), 0);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [menuOpen]);
+
+  // Close the menu on navigation
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -105,6 +144,75 @@ export function TopNav({
   return (
     <div className="hidden md:block border-b border-[var(--border)] bg-[var(--bg-page)] sticky top-0 z-20">
       <div className="flex items-center gap-2 px-4 lg:px-6">
+        {/* Overflow menu — three-line hamburger on the far left */}
+        <div className="relative flex-shrink-0">
+          <button
+            ref={menuButtonRef}
+            onClick={() => setMenuOpen((v) => !v)}
+            className={cn(
+              utilityBtn,
+              menuOpen && 'bg-[var(--bg-input)] text-[var(--text-primary)]'
+            )}
+            aria-label="Open menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            title="Menu"
+          >
+            <IconMenu size={18} />
+          </button>
+          {menuOpen && (
+            <div
+              ref={menuRef}
+              role="menu"
+              className="absolute left-0 top-full mt-1 w-60 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl py-1.5 z-[60] animate-fade-in"
+            >
+              {onOpenSearch && (
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpenSearch();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+                >
+                  <IconSearch size={16} />
+                  <span className="flex-1 text-left">Search</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-[var(--text-secondary)]">
+                    {SHORTCUT_HINT}
+                  </span>
+                </button>
+              )}
+
+              <div className="my-1 border-t border-[var(--border)]" />
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                Help
+              </div>
+              <a
+                role="menuitem"
+                href="https://github.com/open-ten99/open-ten99/issues/new?labels=bug"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+              >
+                <IconAlert size={16} />
+                <span>Report a bug</span>
+              </a>
+              <a
+                role="menuitem"
+                href="https://github.com/open-ten99/open-ten99/issues/new?labels=enhancement"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+              >
+                <IconLightbulb size={16} />
+                <span>Request a feature</span>
+              </a>
+            </div>
+          )}
+        </div>
+
         {/* Section tabs — scrollable */}
         <div className="relative flex-1 min-w-0">
           {canScrollLeft && (
