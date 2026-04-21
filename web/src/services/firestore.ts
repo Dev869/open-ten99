@@ -21,7 +21,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData, Quote, QuoteStatus } from '../lib/types';
 
 // --- Converters ---
 
@@ -1664,4 +1664,217 @@ export function subscribeInsights(
 export async function callGenerateInsights(force = false): Promise<void> {
   const fn = httpsCallable(functions, 'onGenerateInsights');
   await fn({ force });
+}
+
+// === Quotes ================================================================
+
+function docToQuote(id: string, data: DocumentData): Quote {
+  return {
+    id,
+    clientId: data.clientId ?? '',
+    projectId: data.projectId ?? undefined,
+    appId: data.appId ?? undefined,
+    quoteNumber: data.quoteNumber ?? undefined,
+    title: data.title ?? '',
+    description: data.description ?? undefined,
+    status: (data.status as QuoteStatus) ?? 'draft',
+    validUntil: data.validUntil ? toDate(data.validUntil) : undefined,
+    sentAt: data.sentAt ? toDate(data.sentAt) : undefined,
+    respondedAt: data.respondedAt ? toDate(data.respondedAt) : undefined,
+    clientNotes: data.clientNotes ?? undefined,
+    convertedWorkItemId: data.convertedWorkItemId ?? undefined,
+    lineItems: (data.lineItems ?? []).map((li: DocumentData) => ({
+      id: li.id ?? crypto.randomUUID(),
+      description: li.description ?? '',
+      hours: li.hours ?? 0,
+      cost: li.cost ?? 0,
+      costOverride: li.costOverride ?? undefined,
+    })),
+    totalHours: data.totalHours ?? 0,
+    totalCost: data.totalCost ?? 0,
+    taxRate: data.taxRate ?? undefined,
+    discount: data.discount ?? undefined,
+    terms: data.terms ?? undefined,
+    pdfUrl: data.pdfUrl ?? undefined,
+    pdfStoragePath: data.pdfStoragePath ?? undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+export function subscribeQuotes(
+  callback: (quotes: Quote[]) => void,
+  clientId?: string,
+  onError?: () => void,
+) {
+  const user = auth.currentUser;
+  if (!user) { callback([]); return () => {}; }
+
+  const ref = collection(db, 'quotes');
+  const constraints: QueryConstraint[] = [
+    where('ownerId', '==', user.uid),
+    orderBy('updatedAt', 'desc'),
+  ];
+  if (clientId) {
+    constraints.splice(1, 0, where('clientId', '==', clientId));
+  }
+  const q = query(ref, ...constraints);
+
+  return snapshotWithRetry(q, (snapshot: { docs: DocumentSnapshot[] }) => {
+    const quotes = snapshot.docs.map((d) => docToQuote(d.id, d.data()!));
+    callback(quotes);
+  }, { onExhausted: onError });
+}
+
+function quoteToData(quote: Partial<Quote>) {
+  // Strip undefineds and convert Dates → Timestamps. Firestore rejects undefined.
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(quote)) {
+    if (v === undefined) continue;
+    if (k === 'lineItems' && Array.isArray(v)) {
+      out.lineItems = (v as LineItem[]).map(lineItemToData);
+      continue;
+    }
+    if (v instanceof Date) {
+      out[k] = Timestamp.fromDate(v);
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
+export async function createQuote(quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const now = Timestamp.now();
+  const ref = collection(db, 'quotes');
+  const docRef = await addDoc(ref, {
+    ...quoteToData(quote),
+    ownerId: user.uid,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
+export async function updateQuote(quote: Quote) {
+  if (!quote.id) throw new Error('Quote has no ID');
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const ref = doc(db, 'quotes', quote.id);
+  // Use setDoc-like merge by updating an explicit field set; null out optional
+  // fields the caller intentionally cleared.
+  await updateDoc(ref, {
+    clientId: quote.clientId,
+    projectId: quote.projectId ?? null,
+    appId: quote.appId ?? null,
+    quoteNumber: quote.quoteNumber ?? null,
+    title: quote.title,
+    description: quote.description ?? null,
+    status: quote.status,
+    validUntil: quote.validUntil ? Timestamp.fromDate(quote.validUntil) : null,
+    sentAt: quote.sentAt ? Timestamp.fromDate(quote.sentAt) : null,
+    respondedAt: quote.respondedAt ? Timestamp.fromDate(quote.respondedAt) : null,
+    clientNotes: quote.clientNotes ?? null,
+    convertedWorkItemId: quote.convertedWorkItemId ?? null,
+    lineItems: quote.lineItems.map(lineItemToData),
+    totalHours: quote.totalHours,
+    totalCost: quote.totalCost,
+    taxRate: quote.taxRate ?? null,
+    discount: quote.discount ?? null,
+    terms: quote.terms ?? null,
+    pdfUrl: quote.pdfUrl ?? null,
+    pdfStoragePath: quote.pdfStoragePath ?? null,
+    ownerId: user.uid,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function deleteQuote(id: string) {
+  await deleteDoc(doc(db, 'quotes', id));
+}
+
+export async function markQuoteSent(id: string) {
+  const ref = doc(db, 'quotes', id);
+  await updateDoc(ref, {
+    status: 'sent',
+    sentAt: Timestamp.now(),
+    ownerId: auth.currentUser?.uid ?? null,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Portal-side response. Updates the client-visible fields only — Firestore
+ * rules enforce that portal users cannot touch other fields.
+ */
+export async function recordQuoteResponse(
+  quoteId: string,
+  response: 'accepted' | 'declined',
+  clientNotes?: string,
+) {
+  const ref = doc(db, 'quotes', quoteId);
+  const data: Record<string, unknown> = {
+    status: response,
+    respondedAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  };
+  if (clientNotes !== undefined) data.clientNotes = clientNotes;
+  await updateDoc(ref, data);
+}
+
+/**
+ * Convert an accepted quote into a draft work item. Returns the new work item ID.
+ * The original quote is marked converted and linked to the new work item.
+ */
+export async function convertQuoteToWorkItem(quote: Quote): Promise<string> {
+  if (!quote.id) throw new Error('Quote has no ID');
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const newWorkItemId = await createWorkItem({
+    type: 'featureRequest',
+    status: 'approved',
+    clientId: quote.clientId,
+    projectId: quote.projectId,
+    appId: quote.appId,
+    sourceEmail: '',
+    subject: quote.title,
+    lineItems: quote.lineItems,
+    totalHours: quote.totalHours,
+    totalCost: quote.totalCost,
+    isBillable: true,
+  });
+
+  await updateDoc(doc(db, 'quotes', quote.id), {
+    status: 'converted',
+    convertedWorkItemId: newWorkItemId,
+    ownerId: user.uid,
+    updatedAt: Timestamp.now(),
+  });
+
+  return newWorkItemId;
+}
+
+export async function generateQuotePDF(quoteId: string) {
+  const fn = httpsCallable<{ quoteId: string }, { pdfUrl: string }>(functions, 'generateQuotePDF');
+  const result = await fn({ quoteId });
+  return result.data.pdfUrl;
+}
+
+/**
+ * One-shot fetch by ID. Used by the portal quote view, where the user
+ * arrives via a magic link with a known quote ID. Firestore rules govern
+ * whether the caller can actually see the document.
+ */
+export async function fetchQuote(quoteId: string): Promise<Quote | null> {
+  try {
+    const snap = await getDoc(doc(db, 'quotes', quoteId));
+    if (!snap.exists()) return null;
+    return docToQuote(snap.id, snap.data());
+  } catch (err) {
+    console.error('Failed to fetch quote:', err);
+    return null;
+  }
 }

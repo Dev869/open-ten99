@@ -22,6 +22,7 @@ interface NavItem {
 const defaultNavItems: NavItem[] = [
   { to: '/dashboard', key: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
   { to: '/dashboard/work-items', key: 'work-items', label: 'Work Orders', Icon: IconWrench },
+  { to: '/dashboard/quotes', key: 'quotes', label: 'Quotes', Icon: IconDocument },
   { to: '/dashboard/calendar', key: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { to: '/dashboard/clients', key: 'clients', label: 'Clients', Icon: IconClients },
   { to: '/dashboard/apps', key: 'apps', label: 'Apps', Icon: IconApps },

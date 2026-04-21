@@ -45,6 +45,7 @@ const OWNER_COLLECTIONS = [
   'clients',
   'apps',
   'workItems',
+  'quotes',
   'transactions',
   'receipts',
   'timeEntries',
@@ -241,6 +242,86 @@ describe('Firestore rules — cross-user isolation', () => {
         updateDoc(doc(portalCtx, 'workItems', 'wi-3'), { subject: 'tampered' })
       );
     });
+
+    test('portal client cannot read a quote for a different clientId', async () => {
+      await seedAs('contractorA', 'quotes', 'q-1', {
+        clientId: 'client-1',
+        title: 'secret',
+        status: 'sent',
+        lineItems: [],
+      });
+      const portalCtx = testEnv
+        .authenticatedContext('portal-user', { clientId: 'client-2' })
+        .firestore();
+      await assertFails(getDoc(doc(portalCtx, 'quotes', 'q-1')));
+    });
+
+    test('portal client can read their own quote', async () => {
+      await seedAs('contractorA', 'quotes', 'q-2', {
+        clientId: 'client-1',
+        title: 'visible',
+        status: 'sent',
+        lineItems: [],
+      });
+      const portalCtx = testEnv
+        .authenticatedContext('portal-user', { clientId: 'client-1' })
+        .firestore();
+      await assertSucceeds(getDoc(doc(portalCtx, 'quotes', 'q-2')));
+    });
+
+    test('portal client can accept their own quote', async () => {
+      await seedAs('contractorA', 'quotes', 'q-3', {
+        clientId: 'client-1',
+        title: 'accept-me',
+        status: 'sent',
+        lineItems: [],
+      });
+      const portalCtx = testEnv
+        .authenticatedContext('portal-user', { clientId: 'client-1' })
+        .firestore();
+      await assertSucceeds(
+        updateDoc(doc(portalCtx, 'quotes', 'q-3'), {
+          status: 'accepted',
+          respondedAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('portal client cannot mutate quote pricing', async () => {
+      await seedAs('contractorA', 'quotes', 'q-4', {
+        clientId: 'client-1',
+        title: 'locked',
+        status: 'sent',
+        totalCost: 100,
+        lineItems: [],
+      });
+      const portalCtx = testEnv
+        .authenticatedContext('portal-user', { clientId: 'client-1' })
+        .firestore();
+      await assertFails(
+        updateDoc(doc(portalCtx, 'quotes', 'q-4'), { totalCost: 1 })
+      );
+    });
+
+    test('portal client cannot bypass quote status to "converted"', async () => {
+      await seedAs('contractorA', 'quotes', 'q-5', {
+        clientId: 'client-1',
+        title: 'no-bypass',
+        status: 'sent',
+        lineItems: [],
+      });
+      const portalCtx = testEnv
+        .authenticatedContext('portal-user', { clientId: 'client-1' })
+        .firestore();
+      await assertFails(
+        updateDoc(doc(portalCtx, 'quotes', 'q-5'), {
+          status: 'converted',
+          respondedAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+    });
   });
 });
 
@@ -250,6 +331,8 @@ function clientSpecificExtras(col) {
   switch (col) {
     case 'workItems':
       return { clientId: 'c1', subject: 'x', status: 'draft' };
+    case 'quotes':
+      return { clientId: 'c1', title: 'x', status: 'draft', lineItems: [] };
     case 'apps':
       return { clientId: 'c1', name: 'x', repoUrls: [] };
     default:
