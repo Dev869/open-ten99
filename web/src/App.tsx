@@ -297,6 +297,7 @@ function ContractorLayout() {
                 notificationCount={notifCount}
                 notificationBellRef={notifBellRef}
                 onNotificationsClick={handleNotifToggle}
+                onOpenSearch={() => setSearchOpen(true)}
               />
               <div className="p-4 md:p-8">
                 <Suspense fallback={<Loading />}>
