@@ -9,7 +9,7 @@ import { updateClient, deleteClient } from '../../services/firestore';
 import { formatCurrency, formatDate, getRetainerPeriodStart } from '../../lib/utils';
 import { calculateMaintenanceUsage } from '../../lib/maintenanceUsage';
 import { useAuth } from '../../hooks/useAuth';
-import { useIntegration } from '../../hooks/useFirestore';
+import { useGitHubAccounts } from '../../hooks/useFirestore';
 import { useToast } from '../../hooks/useToast';
 import { IconChevronLeft, IconEdit, IconClose, IconCheckSmall, IconTrash } from '../../components/icons';
 
@@ -31,7 +31,7 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { user } = useAuth();
-  const { integration } = useIntegration(user?.uid);
+  const { accounts: githubAccounts } = useGitHubAccounts(user?.uid);
   const source = clients.find((c) => c.id === id);
   const [client, setClient] = useState<Client | null>(null);
   const [editing, setEditing] = useState(false);
@@ -655,7 +655,7 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
             </span>
           </h2>
           <div className="flex items-center gap-2">
-            {integration.github?.connected && (
+            {githubAccounts.length > 0 && (
               <button
                 onClick={() => setShowGitHubImport(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-input)] active:scale-[0.97] transition-all min-h-[36px]"

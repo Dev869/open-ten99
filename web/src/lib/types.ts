@@ -205,6 +205,7 @@ export interface App {
   deploymentNotes?: string;
   vaultCredentialIds?: string[];
   githubRepo?: GitHubRepoInfo;
+  githubAccountId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -246,6 +247,20 @@ export interface GitHubOrgSummary {
   avatarUrl?: string;
 }
 
+export interface GitHubAccount {
+  accountId: string;
+  login: string;
+  name?: string | null;
+  avatarUrl?: string;
+  profileUrl?: string;
+  orgs: GitHubOrgSummary[];
+  scope?: string;
+  connectedAt: Date;
+  lastSyncAt?: Date;
+}
+
+// Legacy single-account aggregate kept for compatibility. New UI should
+// consume the accounts sub-collection via useGitHubAccounts().
 export interface GitHubIntegration {
   connected: boolean;
   login: string;

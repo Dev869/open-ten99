@@ -11,6 +11,7 @@ import {
   subscribeTeamMembers,
   subscribeTeamInvites,
   subscribeIntegration,
+  subscribeGitHubAccounts,
   subscribeGitHubActivity,
   subscribeConnectedAccounts,
   subscribeReceipts,
@@ -19,7 +20,7 @@ import {
   subscribeInsights,
   callGenerateInsights,
 } from '../services/firestore';
-import type { WorkItem, Quote, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
+import type { WorkItem, Quote, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubAccount, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -217,6 +218,23 @@ export function useIntegration(userId: string | undefined) {
   }, [userId]);
 
   return { integration, loading };
+}
+
+export function useGitHubAccounts(userId: string | undefined) {
+  const [accounts, setAccounts] = useState<GitHubAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) { setAccounts([]); setLoading(false); return; }
+    setLoading(true);
+    const unsubscribe = subscribeGitHubAccounts(userId, (list) => {
+      setAccounts(list);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [userId]);
+
+  return { accounts, loading };
 }
 
 export function useGitHubActivity(appId: string | undefined) {
