@@ -539,6 +539,10 @@ export default function App() {
     <ErrorBoundary>
     <Suspense fallback={<Loading />}>
       <Routes>
+        {/* GitHub OAuth callback — must be top-level so GitHub's
+            redirect_uri resolves regardless of the user's current route. */}
+        <Route path="/auth/github/callback" element={<GitHubCallback />} />
+
         {/* Portal auth (public) */}
         <Route path="/portal/auth" element={<PortalAuth />} />
 
