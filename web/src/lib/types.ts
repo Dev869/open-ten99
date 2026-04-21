@@ -3,6 +3,13 @@ export interface LineItem {
   description: string;
   hours: number;
   cost: number;
+  // Manual hours entry for this line item. When set, cost is computed
+  // as hoursOverride * hourlyRate regardless of tracked time, so the
+  // total still correlates to time spent — it's just entered by hand
+  // instead of coming from the timer. Editable at any work-order status.
+  hoursOverride?: number;
+  // Legacy flat-dollar override. Kept read-only for back-compat on old
+  // line items; new UI persists hoursOverride instead.
   costOverride?: number;
 }
 

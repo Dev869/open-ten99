@@ -7,7 +7,11 @@ import { TypeTag } from '../../components/TypeTag';
 import { LineItemRow } from '../../components/LineItemRow';
 import { TimeEntryLinkPicker } from '../../components/TimeEntryLinkPicker';
 import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays, cn } from '../../lib/utils';
-import { computeLineItemHours, computeLineItemCost } from '../../lib/timeComputation';
+import {
+  computeLineItemHours,
+  computeLineItemCost,
+  computeLineItemEffectiveHours,
+} from '../../lib/timeComputation';
 import {
   updateWorkItem,
   discardWorkItem,
@@ -99,25 +103,22 @@ export default function WorkItemDetail({
     }
 
     const updated = item!.lineItems.filter((_, i) => i !== index);
-    const totalHours = updated.reduce(
-      (s, ul) => s + computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false),
-      0
-    );
-    const totalCost = updated.reduce(
-      (s, ul) => s + computeLineItemCost(
-        computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false),
-        hourlyRate,
-        ul.costOverride
-      ),
-      0
-    );
+    const totalHours = updated.reduce((s, ul) => {
+      const tracked = computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
+      return s + computeLineItemEffectiveHours(tracked, ul.hoursOverride);
+    }, 0);
+    const totalCost = updated.reduce((s, ul) => {
+      const tracked = computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
+      return s + computeLineItemCost(tracked, hourlyRate, ul.costOverride, ul.hoursOverride);
+    }, 0);
     setItem({ ...item!, lineItems: updated, totalHours, totalCost });
   }
 
   function buildSnapshotItem(): WorkItem {
     const updatedLineItems = item!.lineItems.map((li) => {
-      const hours = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
-      const cost = computeLineItemCost(hours, hourlyRate, li.costOverride);
+      const tracked = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
+      const hours = computeLineItemEffectiveHours(tracked, li.hoursOverride);
+      const cost = computeLineItemCost(tracked, hourlyRate, li.costOverride, li.hoursOverride);
       return { ...li, hours, cost };
     });
     const totalHours = updatedLineItems.reduce((s, li) => s + li.hours, 0);
@@ -441,9 +442,15 @@ export default function WorkItemDetail({
                 updated[index] = { ...updated[index], description: desc };
                 setItem({ ...item, lineItems: updated });
               }}
-              onCostOverrideChange={(override) => {
+              onHoursOverrideChange={(override) => {
                 const updated = [...item.lineItems];
-                updated[index] = { ...updated[index], costOverride: override };
+                if (override === undefined) {
+                  const next = { ...updated[index] };
+                  delete next.hoursOverride;
+                  updated[index] = next;
+                } else {
+                  updated[index] = { ...updated[index], hoursOverride: override };
+                }
                 setItem({ ...item, lineItems: updated });
               }}
               onRemove={() => removeLineItem(index)}
