@@ -300,7 +300,7 @@ function ContractorLayout() {
                 onOpenSearch={() => setSearchOpen(true)}
               />
               <div className="flex-1 min-h-0 overflow-y-auto pb-24 md:pb-0">
-                <div className="p-4 md:px-8 md:py-8 lg:px-10 lg:py-10 flex flex-col h-full min-h-full">
+                <div className="p-4 md:p-8 flex flex-col h-full min-h-full">
                   <Suspense fallback={<Loading />}>
                     <Outlet />
                   </Suspense>

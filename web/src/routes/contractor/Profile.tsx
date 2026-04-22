@@ -105,7 +105,7 @@ export default function Profile({ user, onLogout }: ProfileProps) {
   const resolvedPhotoURL = photoPreview || profile?.photoURL || user.photoURL;
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in-up">
+    <div className="w-full animate-fade-in-up">
       <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-6">
         Profile
       </h1>

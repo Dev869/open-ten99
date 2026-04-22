@@ -237,7 +237,7 @@ export default function Team({ user, settings }: TeamProps) {
 
   // --- Team Dashboard ---
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in-up">
+    <div className="w-full animate-fade-in-up">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3 min-w-0">
