@@ -1540,17 +1540,36 @@ export async function createTimeEntry(
 
 export async function updateTimeEntry(
   id: string,
-  updates: Partial<Pick<TimeEntry, 'workItemId' | 'lineItemId' | 'description' | 'durationSeconds' | 'isBillable' | 'appId'>> & {
+  updates: {
+    workItemId?: string | null;
+    lineItemId?: string | null;
+    appId?: string | null;
+    description?: string;
+    durationSeconds?: number;
+    isBillable?: boolean;
     endedAt?: Date;
   }
 ): Promise<void> {
   const ref = doc(db, 'timeEntries', id);
-  const { endedAt, ...rest } = updates;
-  await updateDoc(ref, {
-    ...rest,
-    ...(endedAt ? { endedAt: Timestamp.fromDate(endedAt) } : {}),
-    updatedAt: serverTimestamp(),
-  });
+  // Firestore is initialised without ignoreUndefinedProperties, so a
+  // caller passing `{ workItemId: undefined }` to unlink an entry used
+  // to throw. Translate nullish clears on link/appId fields to
+  // deleteField() and omit any other undefined properties.
+  const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
+
+  const clearableKeys = ['workItemId', 'lineItemId', 'appId'] as const;
+  for (const key of clearableKeys) {
+    if (key in updates) {
+      const v = updates[key];
+      payload[key] = v == null ? deleteField() : v;
+    }
+  }
+  if (updates.description !== undefined) payload.description = updates.description;
+  if (updates.durationSeconds !== undefined) payload.durationSeconds = updates.durationSeconds;
+  if (updates.isBillable !== undefined) payload.isBillable = updates.isBillable;
+  if (updates.endedAt !== undefined) payload.endedAt = Timestamp.fromDate(updates.endedAt);
+
+  await updateDoc(ref, payload);
 }
 
 export async function unlinkTimeEntriesForLineItem(
