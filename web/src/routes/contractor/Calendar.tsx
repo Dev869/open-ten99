@@ -475,7 +475,7 @@ export default function Calendar({ workItems, clients, apps }: CalendarProps) {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 pb-14 md:pb-0">
+    <div className="flex flex-col h-full min-h-0 pb-14 md:pb-0">
 
       {/* ══ Header Bar ══════════════════════════════════ */}
       <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 pb-3">

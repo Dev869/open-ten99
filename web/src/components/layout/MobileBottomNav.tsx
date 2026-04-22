@@ -231,7 +231,7 @@ export function MobileBottomNav({ dark, onToggleTheme }: MobileBottomNavProps) {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-card)] border-t border-[var(--border)] flex items-center justify-around md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-[#010409] border-t border-[#21262d] flex items-center justify-around md:hidden"
         style={{
           minHeight: '56px',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -244,10 +244,10 @@ export function MobileBottomNav({ dark, onToggleTheme }: MobileBottomNavProps) {
             end={tab.to === '/dashboard'}
             className={({ isActive }) =>
               cn(
-                'flex items-center justify-center flex-1 py-3 rounded-lg transition-colors active:bg-[var(--bg-input)]',
+                'flex items-center justify-center flex-1 py-3 rounded-md transition-colors active:bg-[#21262d]',
                 isActive
-                  ? 'text-[var(--accent)]'
-                  : 'text-[var(--text-secondary)]'
+                  ? 'text-[#f0f6fc]'
+                  : 'text-[#9198a1]'
               )
             }
           >
@@ -259,10 +259,10 @@ export function MobileBottomNav({ dark, onToggleTheme }: MobileBottomNavProps) {
         <button
           onClick={() => setMoreOpen(true)}
           className={cn(
-            'flex items-center justify-center flex-1 py-3 rounded-lg transition-colors active:bg-[var(--bg-input)]',
+            'flex items-center justify-center flex-1 py-3 rounded-md transition-colors active:bg-[#21262d]',
             moreOpen
-              ? 'text-[var(--accent)]'
-              : 'text-[var(--text-secondary)]'
+              ? 'text-[#f0f6fc]'
+              : 'text-[#9198a1]'
           )}
         >
           <IconMore size={24} />

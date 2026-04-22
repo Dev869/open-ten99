@@ -117,7 +117,7 @@ export default function Accounts() {
   }, [addToast]);
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       {/* Page header */}
       <div className="hidden md:block mb-6">
         <h1 className="text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">

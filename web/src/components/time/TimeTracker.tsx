@@ -336,6 +336,190 @@ export function TimeTrackerNavButton() {
   );
 }
 
+/* ── Desktop navbar pill — prominent timer in TopNav ── */
+
+export function TimeTrackerNavPill() {
+  const {
+    isRunning, elapsedSeconds, selectedClient,
+    clients, apps, clientId, appId, description, isBillable, isOpen,
+    handlePlayPause, handleStop, setClientId, setAppId, setDescription, setIsBillable, toggleOpen,
+  } = useTimeTracker();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isActive = isRunning || elapsedSeconds > 0;
+  const filteredApps = clientId ? apps.filter((a) => a.clientId === clientId) : apps;
+  const selectedApp = apps.find((a) => a.id === appId);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    function onClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) toggleOpen();
+    }
+    const t = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, [isOpen, toggleOpen]);
+
+  return (
+    <div ref={containerRef} className="relative flex-shrink-0">
+      <button
+        onClick={toggleOpen}
+        className={cn(
+          'group inline-flex items-center gap-2 h-8 px-2.5 rounded-md text-[13px] font-mono font-semibold transition-all cursor-pointer border',
+          isActive
+            ? 'bg-[#033a16] text-[#3fb950] border-[#2ea043] shadow-[0_0_0_1px_rgba(46,160,67,0.3),0_0_12px_rgba(63,185,80,0.25)]'
+            : 'bg-[#238636] text-white border-[#2ea043] hover:bg-[#2ea043]'
+        )}
+        title={isActive ? 'Time tracking' : 'Start time tracker'}
+        aria-label={isActive ? `Timer ${formatTime(elapsedSeconds)}` : 'Start time tracker'}
+      >
+        {isRunning ? (
+          <span className="relative flex h-2 w-2 flex-shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3fb950] opacity-70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#3fb950]" />
+          </span>
+        ) : isActive ? (
+          <span className="h-2 w-2 rounded-full bg-[#d29922] flex-shrink-0" />
+        ) : (
+          <IconClock size={14} />
+        )}
+        <span className="tabular-nums tracking-wide">
+          {isActive ? formatTime(elapsedSeconds) : 'Track time'}
+        </span>
+        {isActive && selectedClient && (
+          <span className="hidden xl:inline max-w-[160px] truncate text-[11px] font-normal opacity-70 font-sans">
+            {selectedClient.name}{selectedApp ? ' · ' + selectedApp.name : ''}
+          </span>
+        )}
+        <IconChevronDown
+          size={12}
+          className={cn('transition-transform opacity-70', isOpen && 'rotate-180')}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute right-0 top-full mt-1 w-80 z-[60] rounded-md border border-[#3d444d] bg-[#151b23] text-[#f0f6fc] shadow-xl animate-fade-in"
+          role="dialog"
+        >
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#3d444d]">
+            <div className="flex items-center gap-2">
+              {isRunning && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#3fb950] opacity-70" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#3fb950]" />
+                </span>
+              )}
+              <span className="font-mono font-semibold text-[15px] tabular-nums">
+                {formatTime(elapsedSeconds)}
+              </span>
+              {isBillable && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-[#3d444d] text-[#d29922]">$</span>
+              )}
+            </div>
+            <button
+              onClick={toggleOpen}
+              className="w-6 h-6 flex items-center justify-center rounded text-[#9198a1] hover:bg-[#21262d] hover:text-[#f0f6fc] transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <IconClose size={12} />
+            </button>
+          </div>
+
+          <div className="px-3 py-3 space-y-2.5">
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#9198a1] mb-1">Client</label>
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full h-8 px-2 rounded-md bg-[#0d1117] border border-[#3d444d] text-sm text-[#f0f6fc] outline-none focus:border-[#4493f8] cursor-pointer"
+              >
+                <option value="">Select client...</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {filteredApps.length > 0 && (
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#9198a1] mb-1">App</label>
+                <select
+                  value={appId}
+                  onChange={(e) => setAppId(e.target.value)}
+                  className="w-full h-8 px-2 rounded-md bg-[#0d1117] border border-[#3d444d] text-sm text-[#f0f6fc] outline-none focus:border-[#4493f8] cursor-pointer"
+                >
+                  <option value="">None</option>
+                  {filteredApps.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#9198a1] mb-1">Task</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What are you working on?"
+                className="w-full h-8 px-2 rounded-md bg-[#0d1117] border border-[#3d444d] text-sm text-[#f0f6fc] placeholder:text-[#656c76] outline-none focus:border-[#4493f8]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-[#9198a1]">Billable</label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isBillable}
+                onClick={() => setIsBillable(!isBillable)}
+                className={cn(
+                  'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors',
+                  isBillable ? 'bg-[#238636]' : 'bg-[#21262d]'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-4 w-4 mt-0.5 rounded-full bg-white shadow-sm transition',
+                    isBillable ? 'translate-x-[18px]' : 'translate-x-0.5'
+                  )}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-2 px-3 py-2.5 border-t border-[#3d444d] bg-[#0d1117]">
+            <button
+              onClick={handlePlayPause}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-sm font-semibold cursor-pointer transition-colors border',
+                isRunning
+                  ? 'bg-[#21262d] text-[#f0f6fc] border-[#3d444d] hover:bg-[#30363d]'
+                  : 'bg-[#238636] text-white border-[#2ea043] hover:bg-[#2ea043]'
+              )}
+            >
+              {isRunning ? <><IconPause size={12} /> Pause</> : <><IconPlay size={12} /> Start</>}
+            </button>
+            {isActive && (
+              <button
+                onClick={handleStop}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md text-sm font-semibold cursor-pointer transition-colors border bg-[#21262d] text-[#f85149] border-[#3d444d] hover:bg-[#30363d]"
+              >
+                <IconStop size={10} /> Stop
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Status bar / floating card ─────────────────────── */
 
 export function TimeTrackerBar() {
@@ -353,28 +537,15 @@ export function TimeTrackerBar() {
 
   const selectedApp = apps.find((a) => a.id === appId);
 
-  // Desktop-only: floating trigger when nothing is happening
+  // Desktop: nothing — the nav pill handles idle+closed. Fall through to null.
   if (!isActive && !isOpen) {
-    return (
-      <button
-        onClick={toggleOpen}
-        className={cn(
-          'hidden md:flex fixed bottom-6 right-6 z-30',
-          'items-center gap-2 h-12 px-5 rounded-full shadow-lg',
-          'bg-[var(--accent)] text-white font-semibold text-sm',
-          'hover-lift cursor-pointer transition-all duration-200'
-        )}
-      >
-        <IconClock size={16} />
-        <span>Track Time</span>
-      </button>
-    );
+    return null;
   }
 
-  // Active: accent-colored status bar that glides up under the navbar
+  // Active: mobile-only status bar (desktop uses the nav pill)
   if (isActive) {
     return (
-      <div className="animate-glide-up bg-[var(--accent)] text-white flex-shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+      <div className="md:hidden animate-glide-up bg-[var(--accent)] text-white flex-shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
         {/* Main bar row — tappable to expand */}
         <div
           className="flex items-center gap-3 px-4 py-2.5 cursor-pointer"
@@ -508,20 +679,19 @@ export function TimeTrackerBar() {
     );
   }
 
-  // Not active, open: setup card (fixed overlay)
+  // Not active, open: setup card (mobile-only; desktop uses the nav pill dropdown)
   return (
-    <>
+    <div className="md:hidden">
       {/* Backdrop on mobile */}
       <div
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] md:hidden"
+        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]"
         onClick={toggleOpen}
       />
 
       <div
         className={cn(
           'fixed bottom-0 left-0 right-0 z-50',
-          'md:left-auto md:right-6 md:bottom-6 md:w-80 md:rounded-2xl',
-          'bg-[var(--bg-card)] border-t md:border border-[var(--border)] shadow-2xl',
+          'bg-[var(--bg-card)] border-t border-[var(--border)] shadow-2xl',
           'animate-fade-in-up'
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -626,7 +796,7 @@ export function TimeTrackerBar() {
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
