@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 import {
   type IconProps,
   IconSun, IconMoon,
   IconDashboard, IconWrench, IconDocument, IconCalendar, IconClients, IconTeam, IconAnalytics, IconFinanceOverview, IconApps, IconCamera,
   IconSettings, IconUser, IconLock, IconBell, IconGear, IconDollar, IconRepeat, IconBook, IconClock,
   IconChevronUp, IconChevronDown, IconChevronRight, IconClose, IconPaintBrush,
-} from './icons';
+} from '../icons';
 
 /* ── Nav Config ────────────────────────────────────── */
 

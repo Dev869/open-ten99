@@ -1,5 +1,5 @@
-import { WORK_ITEM_STATUS_LABELS, type WorkItemStatus } from '../lib/types';
-import { statusColor } from '../lib/theme';
+import { WORK_ITEM_STATUS_LABELS, type WorkItemStatus } from '../../lib/types';
+import { statusColor } from '../../lib/theme';
 
 interface StatusBadgeProps {
   status: WorkItemStatus;

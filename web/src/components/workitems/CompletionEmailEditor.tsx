@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
-import type { WorkItem, Client, EmailTemplate } from '../lib/types';
-import { WORK_ITEM_TYPE_LABELS } from '../lib/types';
-import { formatCurrency } from '../lib/utils';
+import { functions } from '../../lib/firebase';
+import type { WorkItem, Client, EmailTemplate } from '../../lib/types';
+import { WORK_ITEM_TYPE_LABELS } from '../../lib/types';
+import { formatCurrency } from '../../lib/utils';
 import {
   subscribeEmailTemplates,
   saveEmailTemplate,
   deleteEmailTemplate,
-} from '../services/firestore';
+} from '../../services/firestore';
 
 export type EmailEditorType = 'completion' | 'invoice';
 

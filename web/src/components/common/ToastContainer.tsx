@@ -1,6 +1,6 @@
-import { useToast } from '../hooks/useToast';
-import { cn } from '../lib/utils';
-import { IconCheckSmall, IconAlertCircle, IconInfo, IconClose } from './icons';
+import { useToast } from '../../hooks/useToast';
+import { cn } from '../../lib/utils';
+import { IconCheckSmall, IconAlertCircle, IconInfo, IconClose } from '../icons';
 
 export function ToastContainer() {
   const { toasts, removeToast } = useToast();

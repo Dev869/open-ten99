@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { WorkItem, Client } from '../lib/types';
-import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../lib/types';
-import { IconSearch, IconDocument, IconUser } from './icons';
+import type { WorkItem, Client } from '../../lib/types';
+import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
+import { IconSearch, IconDocument, IconUser } from '../icons';
 
 interface GlobalSearchProps {
   workItems: WorkItem[];

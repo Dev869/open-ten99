@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrandWordmark } from '../components/Brand';
+import { BrandWordmark } from '../components/layout/Brand';
 
 interface LoginProps {
   onSignIn: () => Promise<void> | void;

@@ -1,4 +1,4 @@
-import type { WorkItem, Client } from '../lib/types';
+import type { WorkItem, Client } from '../../lib/types';
 import {
   IconBell,
   IconRefresh,
@@ -7,7 +7,7 @@ import {
   IconUser,
   IconClose,
   IconThumbsUp,
-} from './icons';
+} from '../icons';
 
 /* ── Types ──────────────────────────────────────────── */
 
