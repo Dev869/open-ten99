@@ -249,23 +249,23 @@ function ContractorLayout() {
         <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0">
             {/* Mobile header — fixed at top so it stays anchored while main scrolls */}
-            <header className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[var(--bg-page)]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+            <header className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#010409] text-[#f0f6fc] border-b border-[#21262d]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
               <div className="flex items-center justify-between h-12 px-4">
                 <div className="flex items-center gap-0.5 min-w-[88px]">
                   <Link
                     to="/dashboard/settings"
-                    className="p-2 -ml-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                    className="p-2 -ml-2 rounded-md text-[#9198a1] hover:bg-[#21262d] hover:text-[#f0f6fc] transition-colors"
                   >
                     <IconSettings size={24} />
                   </Link>
                   <button
                     onClick={() => setSearchOpen(true)}
-                    className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                    className="p-2 rounded-md text-[#9198a1] hover:bg-[#21262d] hover:text-[#f0f6fc] transition-colors"
                   >
                     <IconSearch size={24} />
                   </button>
                 </div>
-                <h1 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+                <h1 className="text-sm font-bold text-[#f0f6fc] uppercase tracking-wider">
                   {getPageName(location.pathname)}
                 </h1>
                 <div className="flex items-center gap-0.5 min-w-[88px] justify-end">
@@ -277,7 +277,7 @@ function ContractorLayout() {
                   />
                   <Link
                     to="/dashboard/profile"
-                    className="p-2 -mr-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                    className="p-2 -mr-2 rounded-md text-[#9198a1] hover:bg-[#21262d] hover:text-[#f0f6fc] transition-colors"
                   >
                     <IconUser size={24} />
                   </Link>
@@ -290,7 +290,7 @@ function ContractorLayout() {
             <TimeTrackerBar />
 
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
+            <main className="flex-1 flex flex-col min-h-0">
               <TopNav
                 dark={dark}
                 onToggleTheme={toggle}
@@ -299,10 +299,12 @@ function ContractorLayout() {
                 onNotificationsClick={handleNotifToggle}
                 onOpenSearch={() => setSearchOpen(true)}
               />
-              <div className="p-4 md:p-8">
-                <Suspense fallback={<Loading />}>
-                  <Outlet />
-                </Suspense>
+              <div className="flex-1 min-h-0 overflow-y-auto pb-24 md:pb-0">
+                <div className="p-4 md:p-8 lg:p-10 flex flex-col h-full min-h-full">
+                  <Suspense fallback={<Loading />}>
+                    <Outlet />
+                  </Suspense>
+                </div>
               </div>
             </main>
           </div>
