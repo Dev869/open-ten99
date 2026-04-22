@@ -479,7 +479,7 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
   /* ── Sending state ─────────────────────────────────── */
   if (sendState === 'sending') {
     return (
-      <div className="flex items-center justify-center py-32">
+      <div className="max-w-3xl mx-auto flex items-center justify-center py-32">
         <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-sm p-8 text-center max-w-md w-full">
           <div className="h-8 w-8 mx-auto mb-4 rounded-full border-[3px] border-[var(--accent)] border-t-transparent animate-spin" />
           <p className="text-sm text-[var(--text-secondary)]">Sending to {toEmail}...</p>
@@ -491,7 +491,7 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
   /* ── Sent state ────────────────────────────────────── */
   if (sendState === 'sent') {
     return (
-      <div className="flex items-center justify-center py-32">
+      <div className="max-w-3xl mx-auto flex items-center justify-center py-32">
         <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-sm p-8 text-center max-w-md w-full">
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--color-green)]/15 flex items-center justify-center">
             <svg className="w-6 h-6 text-[var(--color-green)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -516,7 +516,7 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
   /* ── Error state ───────────────────────────────────── */
   if (sendState === 'error') {
     return (
-      <div className="flex items-center justify-center py-32">
+      <div className="max-w-3xl mx-auto flex items-center justify-center py-32">
         <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] shadow-sm p-8 text-center max-w-md w-full">
           <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--color-red)]/15 flex items-center justify-center">
             <svg className="w-6 h-6 text-[var(--color-red)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
