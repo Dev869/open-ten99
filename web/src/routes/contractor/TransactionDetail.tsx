@@ -95,7 +95,7 @@ export default function TransactionDetail() {
 
   if (loading) {
     return (
-      <div className="w-full">
+      <div className="max-w-2xl mx-auto">
         <div className="animate-pulse space-y-4">
           <div className="h-6 w-32 bg-[var(--border)] rounded" />
           <div className="h-40 bg-[var(--border)] rounded-lg" />
@@ -129,7 +129,7 @@ export default function TransactionDetail() {
   };
 
   return (
-    <div className="w-full">
+    <div className="max-w-2xl mx-auto">
       {/* Back + header */}
       <div className="flex items-center gap-3 mb-6">
         <button

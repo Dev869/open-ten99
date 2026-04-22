@@ -124,7 +124,7 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
     : [...TYPE_TABS];
 
   return (
-    <div className="w-full animate-fade-in-up">
+    <div className="max-w-5xl mx-auto animate-fade-in-up">
       {/* Back Link */}
       <Link
         to="/dashboard/apps"

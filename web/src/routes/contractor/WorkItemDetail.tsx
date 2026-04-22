@@ -262,7 +262,7 @@ export default function WorkItemDetail({
   const inputClass = 'w-full h-10 px-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 transition-all';
 
   return (
-    <div className="w-full">
+    <div className="max-w-4xl mx-auto">
       <button
         onClick={() => navigate('/dashboard/work-items')}
         className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-4"

@@ -118,7 +118,7 @@ export default function ClientDetail({ workItems, clients, apps, hourlyRate }: C
   }
 
   return (
-    <div className="w-full animate-fade-in-up">
+    <div className="max-w-4xl mx-auto animate-fade-in-up">
       {/* Back Button */}
       <button
         onClick={() => navigate('/dashboard/clients')}

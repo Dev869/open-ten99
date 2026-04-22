@@ -263,7 +263,7 @@ export default function Vault({ user, clients }: VaultProps) {
   }
 
   return (
-    <div className="w-full animate-fade-in-up">
+    <div className="max-w-3xl mx-auto animate-fade-in-up">
       {/* Encryption status banner */}
       <div className="py-2 px-4 rounded-xl bg-[var(--bg-input)] flex items-center gap-3 text-xs text-[var(--text-secondary)] mb-4 flex-wrap">
         <span className="inline-flex items-center gap-1.5 font-medium">

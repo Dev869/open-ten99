@@ -201,7 +201,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
   const isLocked = draft.status === 'converted';
 
   return (
-    <div className="animate-fade-in-up w-full pb-20">
+    <div className="animate-fade-in-up max-w-3xl mx-auto pb-20">
       {/* Breadcrumb / status */}
       <div className="flex items-center justify-between mb-4">
         <Link

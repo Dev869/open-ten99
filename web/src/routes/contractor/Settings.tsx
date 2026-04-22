@@ -174,7 +174,7 @@ export default function Settings({ settings, userId }: SettingsProps) {
   }
 
   return (
-    <div className="w-full">
+    <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <h1 className="hidden md:block text-xl font-extrabold text-[var(--text-primary)] uppercase tracking-wider">
           Settings
