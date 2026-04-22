@@ -1,8 +1,8 @@
 import { useMemo, useState, useCallback, Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { WorkItemCard } from '../../components/WorkItemCard';
-import { Onboarding } from '../../components/Onboarding';
+import { WorkItemCard } from '../../components/workitems/WorkItemCard';
+import { Onboarding } from '../../components/onboarding/Onboarding';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings, useTimeEntries, useInsights } from '../../hooks/useFirestore';
 import { UtilizationGauge } from '../../components/insights/UtilizationGauge';

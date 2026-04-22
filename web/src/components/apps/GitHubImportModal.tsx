@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import type { App, Client, GitHubAccount } from '../lib/types';
-import { functions } from '../lib/firebase';
-import { useToast } from '../hooks/useToast';
-import { useAuth } from '../hooks/useAuth';
-import { useGitHubAccounts } from '../hooks/useFirestore';
+import type { App, Client, GitHubAccount } from '../../lib/types';
+import { functions } from '../../lib/firebase';
+import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../hooks/useAuth';
+import { useGitHubAccounts } from '../../hooks/useFirestore';
 
 interface RepoSummary {
   fullName: string;

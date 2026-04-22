@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import type { LineItem, TimeEntry } from '../lib/types';
+import type { LineItem, TimeEntry } from '../../lib/types';
 import {
   computeLineItemHours,
   computeLineItemCost,
   computeLineItemEffectiveHours,
-} from '../lib/timeComputation';
-import { formatCurrency } from '../lib/utils';
-import { updateTimeEntry } from '../services/firestore';
-import { useTimeTracker } from './TimeTracker';
-import { cn } from '../lib/utils';
+} from '../../lib/timeComputation';
+import { formatCurrency } from '../../lib/utils';
+import { updateTimeEntry } from '../../services/firestore';
+import { useTimeTracker } from '../time/TimeTracker';
+import { cn } from '../../lib/utils';
 import {
   IconPlay,
   IconPause,
   IconChevronDown,
   IconClose,
-} from './icons';
+} from '../icons';
 
 interface LineItemRowProps {
   lineItem: LineItem;

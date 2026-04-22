@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { WorkItemCard } from '../../components/WorkItemCard';
-import { FilterTabs } from '../../components/FilterTabs';
-import { NewWorkOrderModal } from '../../components/NewWorkOrderModal';
+import { WorkItemCard } from '../../components/workitems/WorkItemCard';
+import { FilterTabs } from '../../components/workitems/FilterTabs';
+import { NewWorkOrderModal } from '../../components/workitems/NewWorkOrderModal';
 import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
 import { formatDate, exportToCsv } from '../../lib/utils';

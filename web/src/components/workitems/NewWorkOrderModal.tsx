@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../lib/types';
-import { RECURRENCE_LABELS } from '../lib/types';
-import { formatCurrency, addBusinessDays, formatDate, cn } from '../lib/utils';
-import { createWorkItem } from '../services/firestore';
-import { IconPlus, IconTrash } from './icons';
-import { Modal } from './Modal';
+import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../../lib/types';
+import { RECURRENCE_LABELS } from '../../lib/types';
+import { formatCurrency, addBusinessDays, formatDate, cn } from '../../lib/utils';
+import { createWorkItem } from '../../services/firestore';
+import { IconPlus, IconTrash } from '../icons';
+import { Modal } from '../common/Modal';
 
 interface NewWorkOrderModalProps {
   clients: Client[];

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 import {
   type IconProps,
   IconDashboard,
@@ -22,7 +22,7 @@ import {
   IconSearch,
   IconAlert,
   IconLightbulb,
-} from './icons';
+} from '../icons';
 
 interface TopNavItem {
   to: string;

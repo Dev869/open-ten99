@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { TimeEntry } from '../lib/types';
-import { updateTimeEntry } from '../services/firestore';
-import { cn } from '../lib/utils';
-import { IconClose } from './icons';
+import type { TimeEntry } from '../../lib/types';
+import { updateTimeEntry } from '../../services/firestore';
+import { cn } from '../../lib/utils';
+import { IconClose } from '../icons';
 
 interface TimeEntryLinkPickerProps {
   timeEntries: TimeEntry[];

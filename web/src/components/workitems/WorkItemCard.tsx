@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import type { WorkItem } from '../lib/types';
+import type { WorkItem } from '../../lib/types';
 import { TypeTag } from './TypeTag';
-import { formatCurrency, formatHours } from '../lib/utils';
-import { typeColor } from '../lib/theme';
+import { formatCurrency, formatHours } from '../../lib/utils';
+import { typeColor } from '../../lib/theme';
 
 interface WorkItemCardProps {
   item: WorkItem;

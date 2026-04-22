@@ -6,17 +6,17 @@ import type {
   AppPlatform,
   AppStatus,
   AppEnvironment,
-} from '../lib/types';
+} from '../../lib/types';
 import {
   APP_PLATFORM_LABELS,
   APP_STATUS_LABELS,
   APP_ENVIRONMENT_LABELS,
-} from '../lib/types';
-import { createApp, updateApp } from '../services/firestore';
-import { useToast } from '../hooks/useToast';
-import { cn } from '../lib/utils';
-import { IconClose } from './icons';
-import { Modal } from './Modal';
+} from '../../lib/types';
+import { createApp, updateApp } from '../../services/firestore';
+import { useToast } from '../../hooks/useToast';
+import { cn } from '../../lib/utils';
+import { IconClose } from '../icons';
+import { Modal } from '../common/Modal';
 
 interface AppFormModalProps {
   app?: App;

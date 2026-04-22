@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { WorkItem, Client } from '../../lib/types';
 import { createClient } from '../../services/firestore';
 import { IconPlus, IconSearch, IconChevronRight } from '../../components/icons';
-import { Modal } from '../../components/Modal';
+import { Modal } from '../../components/common/Modal';
 import { useInsights } from '../../hooks/useFirestore';
 import { ConcentrationDonut } from '../../components/insights/ConcentrationDonut';
 import { InsightBadge } from '../../components/insights/InsightBadge';

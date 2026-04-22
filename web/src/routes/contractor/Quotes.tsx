@@ -5,7 +5,7 @@ import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS } from '../../lib/types';
 import { createQuote } from '../../services/firestore';
 import { formatCurrency } from '../../lib/utils';
 import { useQuotes } from '../../hooks/useFirestore';
-import { Modal } from '../../components/Modal';
+import { Modal } from '../../components/common/Modal';
 import { IconPlus, IconSearch, IconChevronRight, IconDocument } from '../../components/icons';
 
 interface QuotesProps {

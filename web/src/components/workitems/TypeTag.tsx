@@ -1,5 +1,5 @@
-import { WORK_ITEM_TYPE_LABELS, type WorkItemType } from '../lib/types';
-import { typeColor } from '../lib/theme';
+import { WORK_ITEM_TYPE_LABELS, type WorkItemType } from '../../lib/types';
+import { typeColor } from '../../lib/theme';
 
 interface TypeTagProps {
   type: WorkItemType;
