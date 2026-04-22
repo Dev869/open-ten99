@@ -10,6 +10,7 @@ import { TopNav } from './components/layout/TopNav';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { TimeTrackerProvider, TimeTrackerNavButton, TimeTrackerBar } from './components/time/TimeTracker';
 import { ToastContainer } from './components/common/ToastContainer';
+import { AnimationDebugger } from './components/common/AnimationDebugger';
 import { ToastContext, useToastState } from './hooks/useToast';
 import { useTheme } from './hooks/useTheme';
 import { GlobalSearch } from './components/common/GlobalSearch';
@@ -323,6 +324,7 @@ function ContractorLayout() {
             />
           )}
           <ToastContainer />
+          <AnimationDebugger />
           {searchOpen && (
             <GlobalSearch
               workItems={workItems}
