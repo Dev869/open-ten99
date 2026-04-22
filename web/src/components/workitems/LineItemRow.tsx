@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import type { LineItem, TimeEntry } from '../../lib/types';
-import {
-  computeLineItemHours,
-  computeLineItemCost,
-  computeLineItemEffectiveHours,
-} from '../../lib/timeComputation';
+import { computeLineItemHours, computeLineItemCost } from '../../lib/timeComputation';
 import { formatCurrency } from '../../lib/utils';
 import { updateTimeEntry } from '../../services/firestore';
 import { useTimeTracker } from '../time/TimeTracker';
@@ -25,9 +21,9 @@ interface LineItemRowProps {
   hourlyRate: number;
   roundToQuarter: boolean;
   onDescriptionChange: (description: string) => void;
-  onHoursOverrideChange: (hoursOverride: number | undefined) => void;
   onRemove: () => void;
   onLinkEntries: () => void;
+  onAddManualEntry: () => void;
 }
 
 export function LineItemRow({
@@ -39,28 +35,17 @@ export function LineItemRow({
   hourlyRate,
   roundToQuarter,
   onDescriptionChange,
-  onHoursOverrideChange,
   onRemove,
   onLinkEntries,
+  onAddManualEntry,
 }: LineItemRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const [editingHours, setEditingHours] = useState(false);
-  const [hoursInput, setHoursInput] = useState('');
   const timer = useTimeTracker();
 
   const linkedEntries = timeEntries.filter((te) => te.lineItemId === lineItem.id);
-  const trackedHours = computeLineItemHours(timeEntries, lineItem.id, roundToQuarter);
-  const effectiveHours = computeLineItemEffectiveHours(trackedHours, lineItem.hoursOverride);
-  const cost = computeLineItemCost(
-    trackedHours,
-    hourlyRate,
-    lineItem.costOverride,
-    lineItem.hoursOverride
-  );
+  const hours = computeLineItemHours(timeEntries, lineItem.id, roundToQuarter);
+  const cost = computeLineItemCost(hours, hourlyRate);
   const sessionCount = linkedEntries.length;
-  const hasHoursOverride = lineItem.hoursOverride !== undefined;
-  const hasLegacyCostOverride =
-    lineItem.costOverride !== undefined && !hasHoursOverride;
 
   const isTimerRunningForThis = timer.isRunning && timer.lineItemId === lineItem.id;
   const isTimerRunningForOther = timer.isRunning && timer.lineItemId !== lineItem.id;
@@ -90,21 +75,6 @@ export function LineItemRow({
     });
   }
 
-  function handleHoursClick() {
-    setHoursInput(
-      hasHoursOverride ? String(lineItem.hoursOverride) : ''
-    );
-    setEditingHours(true);
-  }
-
-  function handleHoursSubmit() {
-    const val = parseFloat(hoursInput);
-    onHoursOverrideChange(
-      isNaN(val) || hoursInput.trim() === '' || val < 0 ? undefined : val
-    );
-    setEditingHours(false);
-  }
-
   function formatDuration(seconds: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -116,7 +86,7 @@ export function LineItemRow({
     const start = entry.startedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const end = entry.endedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const date = entry.startedAt.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    return `${date} \u00b7 ${start} \u2013 ${end}`;
+    return `${date} · ${start} – ${end}`;
   }
 
   return (
@@ -165,44 +135,17 @@ export function LineItemRow({
           </div>
         </div>
 
-        {/* Hours (editable) + derived cost */}
+        {/* Hours + derived cost (both read-only; the only way to change
+            these is to add / edit / link TimeEntry records). */}
         <div className="text-right flex-shrink-0">
-          {editingHours ? (
-            <input
-              type="number"
-              step="0.25"
-              min="0"
-              value={hoursInput}
-              onChange={(e) => setHoursInput(e.target.value)}
-              onBlur={handleHoursSubmit}
-              onKeyDown={(e) => e.key === 'Enter' && handleHoursSubmit()}
-              placeholder="Auto"
-              autoFocus
-              className="w-20 text-right text-sm font-bold bg-[var(--bg-input)] border border-[var(--border)] rounded px-1 py-0.5 outline-none focus:border-[var(--accent)] tabular-nums"
-            />
-          ) : (
-            <button
-              onClick={handleHoursClick}
-              className={cn(
-                'text-sm font-bold tabular-nums cursor-pointer transition-colors',
-                effectiveHours > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]',
-                'hover:underline decoration-dotted'
-              )}
-              title="Click to enter hours manually"
-            >
-              {formatDuration(effectiveHours * 3600)}
-              {hasHoursOverride && (
-                <span className="ml-1 text-[9px] text-[var(--accent)]">(manual)</span>
-              )}
-            </button>
-          )}
+          <div className={cn(
+            'text-sm font-bold tabular-nums',
+            hours > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
+          )}>
+            {formatDuration(hours * 3600)}
+          </div>
           <div className="text-[11px] text-[var(--text-secondary)]">
             {formatCurrency(cost)}
-            {hasLegacyCostOverride && (
-              <span className="ml-1 text-[9px] text-[var(--accent)]" title="Legacy fixed-dollar override from an older work order">
-                (pinned)
-              </span>
-            )}
           </div>
         </div>
 
@@ -248,20 +191,27 @@ export function LineItemRow({
           {isTimerRunningForThis && (
             <div className="flex items-center gap-2 py-1.5 text-xs">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0" />
-              <span className="flex-1 text-[var(--accent)]">Now {'\u00b7'} recording</span>
+              <span className="flex-1 text-[var(--accent)]">Now {'·'} recording</span>
               <span className="font-semibold text-[var(--accent)] tabular-nums">
                 {formatDuration(timer.elapsedSeconds)}
               </span>
             </div>
           )}
 
-          {/* Link existing entry button */}
-          <button
-            onClick={onLinkEntries}
-            className="w-full mt-2 py-1.5 text-[11px] text-[var(--text-secondary)] border border-dashed border-[var(--border)] rounded-lg hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
-          >
-            + Link existing time entry
-          </button>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={onAddManualEntry}
+              className="py-1.5 text-[11px] text-[var(--text-secondary)] border border-dashed border-[var(--border)] rounded-lg hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            >
+              + Add time manually
+            </button>
+            <button
+              onClick={onLinkEntries}
+              className="py-1.5 text-[11px] text-[var(--text-secondary)] border border-dashed border-[var(--border)] rounded-lg hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            >
+              + Link existing entry
+            </button>
+          </div>
         </div>
       )}
     </div>
