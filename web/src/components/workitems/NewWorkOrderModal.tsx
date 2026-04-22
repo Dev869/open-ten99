@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Client, WorkItemType, LineItem, RecurrenceFrequency, App } from '../../lib/types';
 import { RECURRENCE_LABELS } from '../../lib/types';
-import { formatCurrency, addBusinessDays, formatDate, cn } from '../../lib/utils';
+import { addBusinessDays, formatDate, cn } from '../../lib/utils';
 import { createWorkItem } from '../../services/firestore';
 import { IconPlus, IconTrash } from '../icons';
 import { Modal } from '../common/Modal';
@@ -15,7 +15,7 @@ interface NewWorkOrderModalProps {
   initialAppId?: string;
 }
 
-export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialClientId, initialAppId }: NewWorkOrderModalProps) {
+export function NewWorkOrderModal({ clients, apps, onClose, initialClientId, initialAppId }: NewWorkOrderModalProps) {
   const [type, setType] = useState<WorkItemType>('changeRequest');
   const [clientId, setClientId] = useState(initialClientId ?? '');
   const [selectedAppId, setSelectedAppId] = useState(initialAppId ?? '');
@@ -44,18 +44,13 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
   function addLineItem() {
     setLineItems([
       ...lineItems,
-      { id: crypto.randomUUID(), description: '', hours: 1, cost: hourlyRate },
+      { id: crypto.randomUUID(), description: '', hours: 0, cost: 0 },
     ]);
   }
 
-  function updateLineItem(index: number, field: keyof LineItem, value: string | number) {
+  function updateDescription(index: number, value: string) {
     const updated = [...lineItems];
-    if (field === 'hours') {
-      const hours = Number(value) || 0;
-      updated[index] = { ...updated[index], hours, cost: hours * hourlyRate };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
+    updated[index] = { ...updated[index], description: value };
     setLineItems(updated);
   }
 
@@ -367,7 +362,7 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                       <input
                         type="text"
                         value={li.description}
-                        onChange={(e) => updateLineItem(i, 'description', e.target.value)}
+                        onChange={(e) => updateDescription(i, e.target.value)}
                         placeholder="Description"
                         className="flex-1 text-sm text-[var(--text-primary)] bg-transparent outline-none placeholder:text-[var(--text-secondary)]/60"
                       />
@@ -378,21 +373,8 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
                         <IconTrash size={12} />
                       </button>
                     </div>
-                    <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border)]">
-                      <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] font-medium">
-                        Hours
-                        <input
-                          type="number"
-                          value={li.hours}
-                          onChange={(e) => updateLineItem(i, 'hours', e.target.value)}
-                          step="0.5"
-                          min="0"
-                          className="w-16 h-8 px-2 bg-[var(--bg-input)] rounded-lg text-xs font-bold text-[var(--text-primary)] outline-none text-center focus:ring-2 focus:ring-[var(--accent)]/15 transition-all"
-                        />
-                      </label>
-                      <span className="text-sm font-bold text-[var(--text-primary)] ml-auto tabular-nums">
-                        {formatCurrency(li.cost)}
-                      </span>
+                    <div className="text-[10px] text-[var(--text-secondary)] mt-1.5">
+                      Hours are logged later via the timer or Add time manually.
                     </div>
                   </div>
                 ))}
@@ -406,25 +388,6 @@ export function NewWorkOrderModal({ clients, apps, hourlyRate, onClose, initialC
               </div>
             </div>
 
-            {/* Totals */}
-            {lineItems.length > 0 && (
-              <div className="flex justify-between items-center bg-[var(--accent)]/8 rounded-xl p-4">
-                <div>
-                  <div className="text-[10px] text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Total Hours</div>
-                  <div className="text-lg font-extrabold text-[var(--text-primary)] mt-0.5 tabular-nums">
-                    {totalHours.toFixed(1)}h
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-[var(--text-secondary)] font-medium">
-                    @ {formatCurrency(hourlyRate)}/hr
-                  </div>
-                  <div className="text-xl font-extrabold text-[var(--accent)] tabular-nums">
-                    {formatCurrency(totalCost)}
-                  </div>
-                </div>
-              </div>
-            )}
       </div>
     </Modal>
   );
