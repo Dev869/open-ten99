@@ -1,16 +1,22 @@
 export interface LineItem {
   id: string;
   description: string;
+  // Cached hours at save time. Live work-order UI always recomputes
+  // from TimeEntry records via computeLineItemHours(); this field is
+  // persisted so previously-sent PDFs/snapshots stay stable.
   hours: number;
+  // Cached cost at save time (hours * rate at that moment). Always
+  // derived — no UI-level override on work orders.
   cost: number;
-  // Manual hours entry for this line item. When set, cost is computed
-  // as hoursOverride * hourlyRate regardless of tracked time, so the
-  // total still correlates to time spent — it's just entered by hand
-  // instead of coming from the timer. Editable at any work-order status.
-  hoursOverride?: number;
-  // Legacy flat-dollar override. Kept read-only for back-compat on old
-  // line items; new UI persists hoursOverride instead.
+  // Deprecated on work orders. Still written by the Quote editor,
+  // which uses a flat-dollar line price unrelated to tracked time.
+  // Work-order code ignores this field on read and strips it on save.
   costOverride?: number;
+  // Previously a manual hours override for work-order line items.
+  // Removed — line-item hours now come exclusively from TimeEntry
+  // records. Kept on the type so reads of legacy docs don't fail;
+  // work-order saves strip it.
+  hoursOverride?: number;
 }
 
 export type WorkItemType = 'changeRequest' | 'featureRequest' | 'maintenance';

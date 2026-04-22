@@ -3,7 +3,6 @@ import {
   roundToQuarterHour,
   computeLineItemHours,
   computeLineItemCost,
-  computeLineItemEffectiveHours,
 } from '../timeComputation';
 import type { TimeEntry } from '../types';
 
@@ -97,37 +96,11 @@ describe('computeLineItemHours', () => {
 });
 
 describe('computeLineItemCost', () => {
-  it('returns hours × hourlyRate when no override', () => {
-    expect(computeLineItemCost(2.5, 75, undefined)).toBe(187.5);
+  it('returns hours * hourlyRate', () => {
+    expect(computeLineItemCost(2.5, 75)).toBe(187.5);
   });
 
-  it('prefers hoursOverride × rate over tracked hours', () => {
-    expect(computeLineItemCost(2.5, 75, undefined, 4)).toBe(300);
-  });
-
-  it('prefers hoursOverride × rate over a legacy costOverride', () => {
-    expect(computeLineItemCost(2.5, 75, 500, 4)).toBe(300);
-  });
-
-  it('falls back to legacy costOverride when hoursOverride absent', () => {
-    expect(computeLineItemCost(2.5, 75, 200, undefined)).toBe(200);
-  });
-
-  it('returns 0 when hours are 0 and no override', () => {
-    expect(computeLineItemCost(0, 75, undefined)).toBe(0);
-  });
-});
-
-describe('computeLineItemEffectiveHours', () => {
-  it('returns tracked hours when override is undefined', () => {
-    expect(computeLineItemEffectiveHours(3, undefined)).toBe(3);
-  });
-
-  it('returns override when set, ignoring tracked hours', () => {
-    expect(computeLineItemEffectiveHours(3, 5)).toBe(5);
-  });
-
-  it('treats NaN override as absent', () => {
-    expect(computeLineItemEffectiveHours(3, Number.NaN)).toBe(3);
+  it('returns 0 when hours are 0', () => {
+    expect(computeLineItemCost(0, 75)).toBe(0);
   });
 });

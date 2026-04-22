@@ -6,11 +6,11 @@ import { StatusBadge } from '../../components/workitems/StatusBadge';
 import { TypeTag } from '../../components/workitems/TypeTag';
 import { LineItemRow } from '../../components/workitems/LineItemRow';
 import { TimeEntryLinkPicker } from '../../components/time/TimeEntryLinkPicker';
+import { ManualTimeEntryModal } from '../../components/time/ManualTimeEntryModal';
 import { formatCurrency, formatDate, addBusinessDays, paymentTermsToDays, cn } from '../../lib/utils';
 import {
   computeLineItemHours,
   computeLineItemCost,
-  computeLineItemEffectiveHours,
 } from '../../lib/timeComputation';
 import {
   updateWorkItem,
@@ -62,6 +62,7 @@ export default function WorkItemDetail({
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [linkPickerLineItemId, setLinkPickerLineItemId] = useState<string | null>(null);
+  const [manualEntryLineItemId, setManualEntryLineItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (source) setItem({ ...source });
@@ -104,22 +105,24 @@ export default function WorkItemDetail({
 
     const updated = item!.lineItems.filter((_, i) => i !== index);
     const totalHours = updated.reduce((s, ul) => {
-      const tracked = computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
-      return s + computeLineItemEffectiveHours(tracked, ul.hoursOverride);
+      return s + computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
     }, 0);
     const totalCost = updated.reduce((s, ul) => {
-      const tracked = computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
-      return s + computeLineItemCost(tracked, hourlyRate, ul.costOverride, ul.hoursOverride);
+      const hours = computeLineItemHours(timeEntries, ul.id, roundTimeToQuarterHour ?? false);
+      return s + computeLineItemCost(hours, hourlyRate);
     }, 0);
     setItem({ ...item!, lineItems: updated, totalHours, totalCost });
   }
 
   function buildSnapshotItem(): WorkItem {
     const updatedLineItems = item!.lineItems.map((li) => {
-      const tracked = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
-      const hours = computeLineItemEffectiveHours(tracked, li.hoursOverride);
-      const cost = computeLineItemCost(tracked, hourlyRate, li.costOverride, li.hoursOverride);
-      return { ...li, hours, cost };
+      const hours = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
+      const cost = computeLineItemCost(hours, hourlyRate);
+      // Strip any legacy overrides so persisted data reflects
+      // the time-only model.
+      const { hoursOverride: _ho, costOverride: _co, ...rest } = li;
+      void _ho; void _co;
+      return { ...rest, hours, cost };
     });
     const totalHours = updatedLineItems.reduce((s, li) => s + li.hours, 0);
     const totalCost = updatedLineItems.reduce((s, li) => s + li.cost, 0);
@@ -442,19 +445,9 @@ export default function WorkItemDetail({
                 updated[index] = { ...updated[index], description: desc };
                 setItem({ ...item, lineItems: updated });
               }}
-              onHoursOverrideChange={(override) => {
-                const updated = [...item.lineItems];
-                if (override === undefined) {
-                  const next = { ...updated[index] };
-                  delete next.hoursOverride;
-                  updated[index] = next;
-                } else {
-                  updated[index] = { ...updated[index], hoursOverride: override };
-                }
-                setItem({ ...item, lineItems: updated });
-              }}
               onRemove={() => removeLineItem(index)}
               onLinkEntries={() => setLinkPickerLineItemId(li.id)}
+              onAddManualEntry={() => setManualEntryLineItemId(li.id)}
             />
           ))}
         </div>
@@ -467,6 +460,19 @@ export default function WorkItemDetail({
           workItemId={item.id!}
           lineItemId={linkPickerLineItemId}
           onClose={() => setLinkPickerLineItemId(null)}
+        />
+      )}
+
+      {manualEntryLineItemId && (
+        <ManualTimeEntryModal
+          clientId={item.clientId}
+          workItemId={item.id!}
+          lineItemId={manualEntryLineItemId}
+          appId={item.appId}
+          defaultDescription={
+            item.lineItems.find((li) => li.id === manualEntryLineItemId)?.description
+          }
+          onClose={() => setManualEntryLineItemId(null)}
         />
       )}
 
