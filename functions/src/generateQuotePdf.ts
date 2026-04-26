@@ -7,7 +7,7 @@ interface LineItem {
   description: string;
   hours: number;
   cost: number;
-  costOverride?: number;
+  costOverride?: number | null;
 }
 
 interface QuoteData {
@@ -21,9 +21,9 @@ interface QuoteData {
   lineItems: LineItem[];
   totalHours: number;
   totalCost: number;
-  taxRate?: number;
-  discount?: number;
-  terms?: string;
+  taxRate?: number | null;
+  discount?: number | null;
+  terms?: string | null;
   createdAt?: admin.firestore.Timestamp;
 }
 
@@ -279,10 +279,11 @@ async function buildQuotePdf(
         color: lightGrayBg,
       });
     }
-    const desc = truncateText(item.description, helvetica, 10, colHours - colDescription - 16);
-    const cost = item.costOverride !== undefined ? item.costOverride : item.cost;
+    const desc = truncateText(item.description ?? '', helvetica, 10, colHours - colDescription - 16);
+    const cost = item.costOverride != null ? item.costOverride : (item.cost ?? 0);
+    const hours = item.hours ?? 0;
     page.drawText(desc, { x: colDescription + 6, y, size: 10, font: helvetica, color: darkColor });
-    page.drawText(item.hours.toFixed(2), { x: colHours, y, size: 10, font: helvetica, color: darkColor });
+    page.drawText(hours.toFixed(2), { x: colHours, y, size: 10, font: helvetica, color: darkColor });
     page.drawText(formatCurrency(cost), { x: colCost, y, size: 10, font: helvetica, color: darkColor });
     y -= 20;
   }
@@ -296,7 +297,7 @@ async function buildQuotePdf(
   });
   y -= 18;
 
-  const subtotal = quote.totalCost;
+  const subtotal = quote.totalCost ?? 0;
   const discount = quote.discount ?? 0;
   const taxedBase = Math.max(0, subtotal - discount);
   const taxRate = quote.taxRate ?? settings.invoiceTaxRate ?? 0;
