@@ -83,6 +83,15 @@ export default function WorkItemDetail({
   const availableApps = apps.filter((a) => a.clientId === item.clientId);
   const linkedApp = apps.find((a) => a.id === item.appId);
 
+  const liveTotalHours = item.lineItems.reduce(
+    (s, li) => s + computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false),
+    0
+  );
+  const liveTotalCost = item.lineItems.reduce((s, li) => {
+    const hours = computeLineItemHours(timeEntries, li.id, roundTimeToQuarterHour ?? false);
+    return s + computeLineItemCost(hours, hourlyRate);
+  }, 0);
+
   function addLineItem() {
     const updated = [
       ...item!.lineItems,
@@ -622,14 +631,9 @@ export default function WorkItemDetail({
       {/* Totals */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4">
         <div className="space-y-0">
-          {/* Assignee */}
           <div className="flex justify-between items-center py-2.5">
-            <span className="text-sm text-[var(--text-secondary)]">Assignee</span>
-            <span className="text-sm text-[var(--text-primary)]">{item.assigneeId || 'Unassigned'}</span>
-          </div>
-          <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
             <span className="text-sm text-[var(--text-secondary)]">Total Hours</span>
-            <span className="text-sm font-semibold tabular-nums">{item.totalHours.toFixed(1)} hrs</span>
+            <span className="text-sm font-semibold tabular-nums">{liveTotalHours.toFixed(1)} hrs</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
             <span className="text-sm text-[var(--text-secondary)]">Hourly Rate</span>
@@ -638,7 +642,7 @@ export default function WorkItemDetail({
           {taxRate != null && taxRate > 0 && (
             <div className="flex justify-between items-center py-2.5 border-t border-[var(--border)]">
               <span className="text-sm text-[var(--text-secondary)]">Tax ({taxRate}%)</span>
-              <span className="text-sm font-semibold tabular-nums">{formatCurrency(item.totalCost * (taxRate / 100))}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatCurrency(liveTotalCost * (taxRate / 100))}</span>
             </div>
           )}
           <div className="flex justify-between items-center py-3 border-t border-[var(--border)]">
@@ -646,8 +650,8 @@ export default function WorkItemDetail({
             <span className="text-xl font-extrabold text-[var(--accent)] tabular-nums">
               {formatCurrency(
                 taxRate != null && taxRate > 0
-                  ? item.totalCost + item.totalCost * (taxRate / 100)
-                  : item.totalCost
+                  ? liveTotalCost + liveTotalCost * (taxRate / 100)
+                  : liveTotalCost
               )}
             </span>
           </div>
@@ -655,7 +659,7 @@ export default function WorkItemDetail({
             {item.deductFromRetainer ? (
               <>
                 <span className="text-sm text-[var(--color-orange)] font-medium">Retainer Deduction</span>
-                <span className="text-sm font-semibold text-[var(--color-orange)] tabular-nums">-{item.totalHours.toFixed(1)} hrs</span>
+                <span className="text-sm font-semibold text-[var(--color-orange)] tabular-nums">-{liveTotalHours.toFixed(1)} hrs</span>
               </>
             ) : (
               <>
