@@ -57,6 +57,8 @@ import {
   Car,
   ThumbsUp,
   Sparkle,
+  ArrowSquareOut,
+  Notebook,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react';
 
@@ -157,3 +159,7 @@ export const IconCar         = wrap(Car);
 
 /* ── AI ────────────────────────────────────────────────── */
 export const IconSparkle = wrap(Sparkle, 14);
+
+/* ── Integrations ──────────────────────────────────────── */
+export const IconExternalLink = wrap(ArrowSquareOut, 16);
+export const IconNotebook     = wrap(Notebook, 18);

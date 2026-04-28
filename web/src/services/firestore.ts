@@ -21,7 +21,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, auth, storage } from '../lib/firebase';
-import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubAccount, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData, Quote, QuoteStatus } from '../lib/types';
+import type { WorkItem, Client, AppSettings, LineItem, UserProfile, VaultMeta, VaultCredential, Team, TeamMember, TeamInvite, TeamRole, App, GitHubIntegration, GitHubAccount, GitHubActivity, ConnectedAccount, AccountProvider, AccountStatus, Transaction, TransactionProvider, TransactionType, MatchStatus, EmailTemplate, Receipt, TimeEntry, MileageTrip, MileagePurpose, Insights, IntegrationData, NotionIntegration, NotionPageRef, Quote, QuoteStatus } from '../lib/types';
 
 // --- Converters ---
 
@@ -802,7 +802,7 @@ export function subscribeIntegration(
   const ref = doc(db, 'integrations', userId);
   return onSnapshot(ref, (snapshot) => {
     if (!snapshot.exists()) {
-      callback({ github: null, postmarkConfigured: false });
+      callback({ github: null, notion: null, postmarkConfigured: false });
       return;
     }
     const data = snapshot.data();
@@ -833,7 +833,102 @@ export function subscribeIntegration(
       : null;
     const postmarkConfigured = !!data.postmarkWebhook?.token;
     const postmarkToken = data.postmarkWebhook?.token as string | undefined;
-    callback({ github, postmarkConfigured, postmarkToken });
+    callback({ github, notion: null, postmarkConfigured, postmarkToken });
+  });
+}
+
+export function subscribeNotionIntegration(
+  userId: string,
+  callback: (notion: NotionIntegration | null) => void
+) {
+  const ref = doc(db, 'integrations', userId, 'notion', 'connection');
+  return onSnapshot(
+    ref,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
+      const data = snapshot.data();
+      if (!data?.connected) {
+        callback(null);
+        return;
+      }
+      callback({
+        connected: true,
+        workspaceId: data.workspaceId ?? '',
+        workspaceName: data.workspaceName ?? null,
+        workspaceIcon: data.workspaceIcon ?? null,
+        botId: data.botId ?? undefined,
+        connectedAt: data.connectedAt ? toDate(data.connectedAt) : undefined,
+      });
+    },
+    (error) => {
+      console.warn('subscribeNotionIntegration error', error);
+      callback(null);
+    }
+  );
+}
+
+export async function callGetNotionAuthUrl(): Promise<string> {
+  const fn = httpsCallable<object, { authUrl: string }>(functions, 'getNotionAuthUrl');
+  const result = await fn({});
+  return result.data.authUrl;
+}
+
+export async function callHandleNotionCallback(
+  code: string,
+  state: string
+): Promise<{ workspaceId: string; workspaceName: string | null; workspaceIcon: string | null }> {
+  const fn = httpsCallable<
+    { code: string; state: string },
+    { success: boolean; workspaceId: string; workspaceName: string | null; workspaceIcon: string | null }
+  >(functions, 'handleNotionCallback');
+  const result = await fn({ code, state });
+  return {
+    workspaceId: result.data.workspaceId,
+    workspaceName: result.data.workspaceName,
+    workspaceIcon: result.data.workspaceIcon,
+  };
+}
+
+export async function callSearchNotionPages(
+  query: string
+): Promise<NotionPageRef[]> {
+  const fn = httpsCallable<
+    { query: string; pageSize?: number },
+    { pages: NotionPageRef[] }
+  >(functions, 'searchNotionPages');
+  const result = await fn({ query, pageSize: 25 });
+  return result.data.pages ?? [];
+}
+
+export async function callDisconnectNotion(): Promise<void> {
+  const fn = httpsCallable(functions, 'disconnectNotion');
+  await fn({});
+}
+
+export async function setAppNotionPage(
+  appId: string,
+  page: NotionPageRef | null
+): Promise<void> {
+  const ref = doc(db, 'apps', appId);
+  if (!page) {
+    await updateDoc(ref, {
+      notionPageId: null,
+      notionPageUrl: null,
+      notionPageTitle: null,
+      notionPageIcon: null,
+      updatedAt: serverTimestamp(),
+    });
+    return;
+  }
+  await updateDoc(ref, {
+    notionPageId: page.id,
+    notionPageUrl: page.url,
+    notionPageTitle: page.title,
+    notionPageIcon: page.icon ?? null,
+    updatedAt: serverTimestamp(),
   });
 }
 

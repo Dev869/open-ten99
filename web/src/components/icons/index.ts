@@ -64,4 +64,7 @@ export {
   IconCar,
   // AI
   IconSparkle,
+  // Integrations
+  IconExternalLink,
+  IconNotebook,
 } from './Icons';

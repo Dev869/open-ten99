@@ -166,6 +166,12 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false;
       }
+
+      // Notion connection metadata. Owner can read; server-only writes.
+      match /notion/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // ---------------------------------------------------------------------------
