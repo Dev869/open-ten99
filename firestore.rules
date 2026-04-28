@@ -19,11 +19,12 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
-    // Returns true if a document is owned by the current user.
-    // Migration-friendly: if ownerId is absent (legacy data), the rule passes so
-    // existing records remain accessible while we backfill the field.
-    function isOwnerOrLegacy(data) {
-      return !('ownerId' in data) || data.ownerId == request.auth.uid;
+    // Returns true if a document is explicitly owned by the current user.
+    // Docs without an ownerId field are NOT readable — every write path stamps
+    // ownerId, so any missing-ownerId doc is treated as unowned rather than
+    // falling back to a legacy allow-all.
+    function isOwner(data) {
+      return data.ownerId == request.auth.uid;
     }
 
     // For writes: the incoming document must claim the current user as owner.
@@ -35,48 +36,41 @@ service cloud.firestore {
     // Clients collection
     // ---------------------------------------------------------------------------
     // Only contractors can manage clients. Scoped to the owning contractor.
-    // Legacy documents without ownerId remain readable/updatable until backfilled.
     match /clients/{clientId} {
-      // Read: contractor + (their doc or legacy doc without ownerId)
-      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
-
-      // Create: contractor must set themselves as owner
+      allow read: if isContractor() && isOwner(resource.data);
       allow create: if isContractor() && claimsOwnership();
-
-      // Update: contractor owns the doc (or legacy) AND must claim ownership
-      // in the incoming data — this backfills ownerId on legacy docs.
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
+        && isOwner(resource.data)
         && claimsOwnership();
 
-      // Delete: contractor owns the doc (or legacy doc without ownerId)
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Delete: contractor owns the doc
+      allow delete: if isContractor() && isOwner(resource.data);
     }
 
     // ---------------------------------------------------------------------------
     // Projects collection
     // ---------------------------------------------------------------------------
     match /projects/{projectId} {
-      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+      allow read: if isContractor() && isOwner(resource.data);
       allow create: if isContractor() && claimsOwnership();
-      // Update: contractor owns the doc (or legacy) AND must claim ownership
+      // Update: contractor owns the doc AND must claim ownership
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
+        && isOwner(resource.data)
         && claimsOwnership();
-      // Delete: contractor owns the doc (or legacy doc without ownerId)
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Delete: contractor owns the doc
+      allow delete: if isContractor() && isOwner(resource.data);
     }
 
     // ---------------------------------------------------------------------------
     // Work items collection
     // ---------------------------------------------------------------------------
-    // Contractors: full CRUD on their own items (or legacy items).
+    // Contractors: full CRUD on their own items.
     // Portal clients: read-only access scoped to work items belonging to their
     //   clientId. The clientId claim is set in the custom token by the Cloud
     //   Function that issues magic-link tokens. Portal users cannot write.
     match /workItems/{workItemId} {
-      // Contractor read: owns the item or it's a legacy item
-      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Contractor read: owns the item
+      allow read: if isContractor() && isOwner(resource.data);
 
       // Portal client read: authenticated non-contractor whose clientId claim
       // matches the item's clientId field.
@@ -97,13 +91,13 @@ service cloud.firestore {
       // Contractor create: must set themselves as owner
       allow create: if isContractor() && claimsOwnership();
 
-      // Contractor update: owns the doc (or legacy) AND must claim ownership
+      // Contractor update: owns the doc AND must claim ownership
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
+        && isOwner(resource.data)
         && claimsOwnership();
 
-      // Contractor delete: owns the doc (or legacy doc without ownerId)
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Contractor delete: owns the doc
+      allow delete: if isContractor() && isOwner(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -144,14 +138,14 @@ service cloud.firestore {
     // ---------------------------------------------------------------------------
     // Only contractors can manage apps. Scoped to the owning contractor.
     match /apps/{appId} {
-      allow read: if isContractor() && isOwnerOrLegacy(resource.data);
+      allow read: if isContractor() && isOwner(resource.data);
       allow create: if isContractor() && claimsOwnership();
-      // Update: contractor owns the doc (or legacy) AND must claim ownership
+      // Update: contractor owns the doc AND must claim ownership
       allow update: if isContractor()
-        && isOwnerOrLegacy(resource.data)
+        && isOwner(resource.data)
         && claimsOwnership();
-      // Delete: contractor owns the doc (or legacy doc without ownerId)
-      allow delete: if isContractor() && isOwnerOrLegacy(resource.data);
+      // Delete: contractor owns the doc
+      allow delete: if isContractor() && isOwner(resource.data);
     }
 
     // ---------------------------------------------------------------------------
@@ -172,7 +166,7 @@ service cloud.firestore {
     // GitHub activity subcollection: owner can read, server writes only
     // ---------------------------------------------------------------------------
     match /apps/{appId}/github/{activityId} {
-      allow read: if isContractor() && isOwnerOrLegacy(
+      allow read: if isContractor() && isOwner(
         get(/databases/$(database)/documents/apps/$(appId)).data
       );
       allow write: if false;
