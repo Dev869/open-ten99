@@ -3,16 +3,33 @@ import { BrandWordmark } from '../components/layout/Brand';
 
 interface LoginProps {
   onSignIn: () => Promise<void> | void;
+  onDevSignIn?: (email: string, password: string) => Promise<void> | void;
   error?: string | null;
 }
 
-export default function Login({ onSignIn, error }: LoginProps) {
+export default function Login({ onSignIn, onDevSignIn, error }: LoginProps) {
   const [loading, setLoading] = useState(false);
+  const [showDev, setShowDev] = useState(false);
+  const [email, setEmail] = useState('demo@ten99.local');
+  const [password, setPassword] = useState('');
 
   async function handleSignIn() {
     setLoading(true);
     try {
       await onSignIn();
+    } catch {
+      // Error display handled via the error prop
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDevSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!onDevSignIn) return;
+    setLoading(true);
+    try {
+      await onDevSignIn(email, password);
     } catch {
       // Error display handled via the error prop
     } finally {
@@ -68,6 +85,59 @@ export default function Login({ onSignIn, error }: LoginProps) {
               </svg>
               {loading ? 'Signing in...' : 'Sign in with Google'}
             </button>
+
+            {onDevSignIn && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowDev((v) => !v)}
+                  className="mt-4 w-full text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                >
+                  {showDev ? 'Hide dev sign-in' : 'Use dev sign-in (demo accounts)'}
+                </button>
+
+                {showDev && (
+                  <form onSubmit={handleDevSignIn} className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                        autoComplete="email"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full px-3 py-2.5 rounded-lg bg-[var(--bg-input)] border border-[var(--border)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                        autoComplete="current-password"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-2.5 px-4 rounded-lg bg-[var(--accent)] text-[var(--text-on-accent)] text-sm font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+                    >
+                      {loading ? 'Signing in...' : 'Sign in'}
+                    </button>
+                    <p className="text-[10px] text-[var(--text-muted)] text-center">
+                      Only @ten99.local demo emails are allowed for dev sign-in.
+                    </p>
+                  </form>
+                )}
+              </>
+            )}
           </div>
         </div>
 
