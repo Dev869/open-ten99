@@ -86,6 +86,7 @@ const AppsList = lazy(() => import('./routes/contractor/AppsList'));
 const AppDetail = lazy(() => import('./routes/contractor/AppDetail'));
 const EmailComposer = lazy(() => import('./routes/contractor/EmailComposer'));
 const GitHubCallback = lazy(() => import('./routes/contractor/GitHubCallback'));
+const NotionCallback = lazy(() => import('./routes/contractor/NotionCallback'));
 
 // Lazy-loaded portal routes
 const PortalAuth = lazy(() => import('./routes/portal/PortalAuth'));
@@ -451,6 +452,7 @@ function ContractorRoutes() {
         element={user ? <Vault user={user} clients={clients} /> : null}
       />
       <Route path="github/callback" element={<GitHubCallback />} />
+      <Route path="notion/callback" element={<NotionCallback />} />
     </Routes>
   );
 }
@@ -546,6 +548,7 @@ export default function App() {
         {/* GitHub OAuth callback — must be top-level so GitHub's
             redirect_uri resolves regardless of the user's current route. */}
         <Route path="/auth/github/callback" element={<GitHubCallback />} />
+        <Route path="/auth/notion/callback" element={<NotionCallback />} />
 
         {/* Portal auth (public) */}
         <Route path="/portal/auth" element={<PortalAuth />} />

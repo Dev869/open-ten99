@@ -14,6 +14,7 @@ import { WorkItemCard } from '../../components/workitems/WorkItemCard';
 import { AppFormModal } from '../../components/apps/AppFormModal';
 import { NewWorkOrderModal } from '../../components/workitems/NewWorkOrderModal';
 import { FilterTabs } from '../../components/workitems/FilterTabs';
+import { NotionLinkCard } from '../../components/notion/NotionLinkCard';
 import { deleteApp } from '../../services/firestore';
 import { useGitHubActivity } from '../../hooks/useFirestore';
 import {
@@ -534,6 +535,9 @@ export default function AppDetail({ apps, workItems, clients, hourlyRate }: AppD
                 </div>
               </div>
             )}
+
+            {/* Notion link */}
+            <NotionLinkCard app={app} />
 
             {/* Divider */}
             <div className="border-t border-[var(--border)]" />

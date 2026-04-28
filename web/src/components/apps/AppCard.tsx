@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { App } from '../../lib/types';
 import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../../lib/types';
+import { openNotionPage } from '../../lib/notion';
+import { useAppNotionLink } from '../../hooks/useAppNotionLink';
+import { IconNotebook } from '../icons';
 
 interface AppCardProps {
   app: App;
@@ -9,16 +12,34 @@ interface AppCardProps {
 }
 
 export function AppCard({ app, clientName, workOrderCount }: AppCardProps) {
+  const { effective, effectiveSource } = useAppNotionLink(app);
   return (
     <Link
       to={`/dashboard/apps/${app.id}`}
       className="block rounded-xl p-4 bg-[var(--bg-card)] border border-[var(--border)] hover:shadow-md transition-shadow"
     >
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2 gap-2">
         <h3 className="font-semibold text-[var(--text-primary)] truncate">{app.name}</h3>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${APP_STATUS_COLORS[app.status]}`}>
-          {APP_STATUS_LABELS[app.status]}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {effective && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openNotionPage(effective);
+              }}
+              aria-label={`Open ${effective.title} in Notion`}
+              title={`${effective.title}${effectiveSource === 'personal' ? ' (your link)' : ''}`}
+              className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${effectiveSource === 'personal' ? 'text-[var(--accent)] hover:bg-[var(--accent)]/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--accent)]'}`}
+            >
+              <IconNotebook size={14} />
+            </button>
+          )}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${APP_STATUS_COLORS[app.status]}`}>
+            {APP_STATUS_LABELS[app.status]}
+          </span>
+        </div>
       </div>
       <p className="text-sm text-[var(--text-secondary)] mb-3">{clientName}</p>
       <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">

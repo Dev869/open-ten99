@@ -166,6 +166,12 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false;
       }
+
+      // Notion connection metadata. Owner can read; server-only writes.
+      match /notion/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // ---------------------------------------------------------------------------
@@ -176,6 +182,15 @@ service cloud.firestore {
         get(/databases/$(database)/documents/apps/$(appId)).data
       );
       allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Notion per-user link override on an App
+    // ---------------------------------------------------------------------------
+    // Each contractor manages their own personal Notion-page override for an
+    // app. The team default lives on the app document itself (notionPageId).
+    match /apps/{appId}/notionLinks/{userId} {
+      allow read, write: if isContractor() && request.auth.uid == userId;
     }
 
     // ---------------------------------------------------------------------------

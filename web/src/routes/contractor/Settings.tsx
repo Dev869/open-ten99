@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppSettings } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
-import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell } from '../../components/icons';
+import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell, IconNotebook } from '../../components/icons';
+import { useNotion } from '../../hooks/useNotion';
+import { callGetNotionAuthUrl, callDisconnectNotion } from '../../services/firestore';
 import { BrandIcon } from '../../components/layout/Brand';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
@@ -834,6 +836,9 @@ export default function Settings({ settings, userId }: SettingsProps) {
           })()}
         </div>
 
+        {/* Notion */}
+        <NotionIntegrationCard />
+
         {/* Postmark Email */}
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mt-3">
           <div className="flex items-center justify-between mb-1">
@@ -1008,6 +1013,111 @@ export default function Settings({ settings, userId }: SettingsProps) {
       <p className="text-[10px] text-[var(--text-secondary)] text-center mt-6">
         &copy; 2026 Open TEN99 Contributors. MIT License.
       </p>
+    </div>
+  );
+}
+
+function NotionIntegrationCard() {
+  const { notion, loading } = useNotion();
+  const { addToast } = useToast();
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  async function handleConnect() {
+    setConnecting(true);
+    try {
+      const url = await callGetNotionAuthUrl();
+      try {
+        const parsed = new URL(url);
+        if (parsed.origin !== 'https://api.notion.com') {
+          throw new Error('Unexpected redirect target');
+        }
+      } catch {
+        throw new Error('Invalid Notion auth URL');
+      }
+      window.location.href = url;
+    } catch (err) {
+      console.error('Notion auth URL error:', err);
+      addToast('Could not start Notion connection. Please try again.', 'error');
+      setConnecting(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!window.confirm('Disconnect Notion? Existing page links will stop opening.')) return;
+    setDisconnecting(true);
+    try {
+      await callDisconnectNotion();
+      addToast('Notion disconnected.', 'info');
+    } catch (err) {
+      console.error('Notion disconnect error:', err);
+      addToast('Failed to disconnect Notion.', 'error');
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  return (
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mt-3">
+      <div className="flex items-center gap-2 mb-1">
+        <IconNotebook size={18} />
+        <h3 className="text-sm font-bold text-[var(--text-primary)]">Notion</h3>
+      </div>
+
+      {loading ? (
+        <div className="mt-3 h-9 rounded-lg bg-[var(--bg-input)] animate-pulse" />
+      ) : !notion ? (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-[var(--text-secondary)]">
+            Connect a Notion workspace to deep-link any app to its docs, runbooks, or roadmap pages.
+          </p>
+          <button
+            onClick={handleConnect}
+            disabled={connecting}
+            className="w-full py-2.5 min-h-[44px] rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <IconNotebook size={16} />
+            {connecting ? 'Opening Notion…' : 'Connect Notion'}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)]/40 p-3">
+            {notion.workspaceIcon ? (
+              notion.workspaceIcon.startsWith('http') ? (
+                <img
+                  src={notion.workspaceIcon}
+                  alt=""
+                  className="w-9 h-9 rounded-md border border-[var(--border)] object-cover"
+                />
+              ) : (
+                <span className="w-9 h-9 rounded-md bg-[var(--bg-card)] flex items-center justify-center text-lg">
+                  {notion.workspaceIcon}
+                </span>
+              )
+            ) : (
+              <span className="w-9 h-9 rounded-md bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-secondary)]">
+                <IconNotebook size={16} />
+              </span>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                {notion.workspaceName ?? 'Connected workspace'}
+              </p>
+              <p className="text-[10px] text-[var(--text-secondary)]">
+                Pages can now be linked from any app's detail page.
+              </p>
+            </div>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="px-3 py-1.5 min-h-[36px] rounded-lg bg-[var(--bg-input)] text-[var(--text-secondary)] text-xs font-semibold hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+            >
+              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

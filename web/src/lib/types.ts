@@ -219,6 +219,11 @@ export interface App {
   vaultCredentialIds?: string[];
   githubRepo?: GitHubRepoInfo;
   githubAccountId?: string | null;
+  notionPageId?: string | null;
+  notionPageUrl?: string | null;
+  notionPageTitle?: string | null;
+  notionPageIcon?: string | null;
+  ownerId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -288,8 +293,25 @@ export interface PostmarkWebhook {
   updatedAt: Date;
 }
 
+export interface NotionIntegration {
+  connected: boolean;
+  workspaceId: string;
+  workspaceName: string | null;
+  workspaceIcon: string | null;
+  botId?: string;
+  connectedAt?: Date;
+}
+
+export interface NotionPageRef {
+  id: string;
+  url: string;
+  title: string;
+  icon?: string | null;
+}
+
 export interface IntegrationData {
   github: GitHubIntegration | null;
+  notion: NotionIntegration | null;
   postmarkConfigured: boolean;
   postmarkToken?: string;
 }

@@ -203,6 +203,7 @@ export function useTeamInvites(teamId: string | undefined) {
 export function useIntegration(userId: string | undefined) {
   const [integration, setIntegration] = useState<IntegrationData>({
     github: null,
+    notion: null,
     postmarkConfigured: false,
   });
   const [loading, setLoading] = useState(true);
