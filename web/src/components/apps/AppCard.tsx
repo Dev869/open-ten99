@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { App } from '../../lib/types';
 import { APP_PLATFORM_LABELS, APP_STATUS_LABELS, APP_STATUS_COLORS } from '../../lib/types';
 import { openNotionPage } from '../../lib/notion';
+import { useAppNotionLink } from '../../hooks/useAppNotionLink';
 import { IconNotebook } from '../icons';
 
 interface AppCardProps {
@@ -11,6 +12,7 @@ interface AppCardProps {
 }
 
 export function AppCard({ app, clientName, workOrderCount }: AppCardProps) {
+  const { effective, effectiveSource } = useAppNotionLink(app);
   return (
     <Link
       to={`/dashboard/apps/${app.id}`}
@@ -19,17 +21,17 @@ export function AppCard({ app, clientName, workOrderCount }: AppCardProps) {
       <div className="flex items-start justify-between mb-2 gap-2">
         <h3 className="font-semibold text-[var(--text-primary)] truncate">{app.name}</h3>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {app.notionPageId && (
+          {effective && (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                openNotionPage({ id: app.notionPageId!, url: app.notionPageUrl ?? '' });
+                openNotionPage(effective);
               }}
-              aria-label={`Open ${app.notionPageTitle ?? app.name} in Notion`}
-              title={app.notionPageTitle ?? 'Open in Notion'}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+              aria-label={`Open ${effective.title} in Notion`}
+              title={`${effective.title}${effectiveSource === 'personal' ? ' (your link)' : ''}`}
+              className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${effectiveSource === 'personal' ? 'text-[var(--accent)] hover:bg-[var(--accent)]/10' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-input)] hover:text-[var(--accent)]'}`}
             >
               <IconNotebook size={14} />
             </button>

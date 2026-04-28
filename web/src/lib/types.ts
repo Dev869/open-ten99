@@ -223,6 +223,7 @@ export interface App {
   notionPageUrl?: string | null;
   notionPageTitle?: string | null;
   notionPageIcon?: string | null;
+  ownerId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

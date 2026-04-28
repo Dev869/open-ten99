@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   deleteField,
@@ -137,6 +138,11 @@ function docToApp(id: string, data: DocumentData): App {
         }
       : undefined,
     githubAccountId: data.githubAccountId ?? null,
+    notionPageId: data.notionPageId ?? null,
+    notionPageUrl: data.notionPageUrl ?? null,
+    notionPageTitle: data.notionPageTitle ?? null,
+    notionPageIcon: data.notionPageIcon ?? null,
+    ownerId: data.ownerId ?? undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };
@@ -930,6 +936,58 @@ export async function setAppNotionPage(
     notionPageIcon: page.icon ?? null,
     updatedAt: serverTimestamp(),
   });
+}
+
+/** Per-user personal Notion link override on an app. */
+export async function setUserAppNotionPage(
+  appId: string,
+  userId: string,
+  page: NotionPageRef | null
+): Promise<void> {
+  const ref = doc(db, 'apps', appId, 'notionLinks', userId);
+  if (!page) {
+    await deleteDoc(ref);
+    return;
+  }
+  await setDoc(ref, {
+    pageId: page.id,
+    pageUrl: page.url,
+    pageTitle: page.title,
+    pageIcon: page.icon ?? null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function subscribeUserAppNotionLink(
+  appId: string,
+  userId: string,
+  callback: (page: NotionPageRef | null) => void
+) {
+  const ref = doc(db, 'apps', appId, 'notionLinks', userId);
+  return onSnapshot(
+    ref,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
+      const data = snapshot.data();
+      if (!data?.pageId) {
+        callback(null);
+        return;
+      }
+      callback({
+        id: data.pageId,
+        url: data.pageUrl ?? '',
+        title: data.pageTitle ?? 'Notion page',
+        icon: data.pageIcon ?? null,
+      });
+    },
+    (error) => {
+      console.warn('subscribeUserAppNotionLink error', error);
+      callback(null);
+    }
+  );
 }
 
 export function subscribeGitHubAccounts(
