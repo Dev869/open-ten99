@@ -6,6 +6,7 @@ import {
   IconDashboard,
   IconWrench,
   IconClients,
+  IconApps,
   IconBell,
   IconSun,
   IconMoon,
@@ -29,6 +30,7 @@ const pinnedItems: TopNavItem[] = [
   { to: '/dashboard', label: 'Dashboard', Icon: IconDashboard, exact: true },
   { to: '/dashboard/work-items', label: 'Work Orders', Icon: IconWrench },
   { to: '/dashboard/clients', label: 'Clients', Icon: IconClients },
+  { to: '/dashboard/apps', label: 'Apps', Icon: IconApps },
 ];
 
 function isActive(pathname: string, item: TopNavItem): boolean {
