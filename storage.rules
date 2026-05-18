@@ -3,6 +3,13 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Contractors are Google Sign-In users. Portal clients authenticate via
+    // custom token and must never read/write storage objects.
+    function isContractor() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
     // Deny all access by default
     match /{allPaths=**} {
       allow read, write: if false;
@@ -15,15 +22,15 @@ service firebase.storage {
 
     // Receipt uploads (Phase 3)
     match /receipts/{userId}/{fileName} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId
+      allow read: if isContractor() && request.auth.uid == userId;
+      allow write: if isContractor() && request.auth.uid == userId
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*|application/pdf');
     }
 
     // Generated reports (written by Cloud Functions only)
     match /reports/{userId}/{fileName} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isContractor() && request.auth.uid == userId;
       allow write: if false;
     }
   }

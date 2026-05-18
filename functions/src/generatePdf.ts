@@ -76,8 +76,9 @@ export const generatePDF = onCall(
 
       const workItem = workItemSnap.data() as WorkItemData;
 
-      // --- Ownership check ---
-      if (workItem.ownerId && workItem.ownerId !== request.auth?.uid) {
+      // --- Ownership check (fail closed: legacy docs without ownerId are
+      // denied rather than open to any authenticated user) ---
+      if (workItem.ownerId !== request.auth.uid) {
         throw new HttpsError(
           "permission-denied",
           "Not authorized to generate this PDF"

@@ -19,11 +19,13 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
-    // Returns true if a document is owned by the current user.
-    // Migration-friendly: if ownerId is absent (legacy data), the rule passes so
-    // existing records remain accessible while we backfill the field.
+    // Returns true only if a document is owned by the current user.
+    // NOTE: the legacy "ownerId absent => allow" branch was REMOVED — it let
+    // any contractor read/update/delete any pre-backfill document (cross-tenant
+    // exposure). Documents missing ownerId are now inaccessible from the client
+    // and must be backfilled via the Admin SDK (see scripts/backfillOwnerId).
     function isOwnerOrLegacy(data) {
-      return !('ownerId' in data) || data.ownerId == request.auth.uid;
+      return data.ownerId == request.auth.uid;
     }
 
     // For writes: the incoming document must claim the current user as owner.
@@ -197,14 +199,14 @@ service cloud.firestore {
     // Settings collection: user-scoped by document ID
     // ---------------------------------------------------------------------------
     match /settings/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isContractor() && request.auth.uid == userId;
     }
 
     // ---------------------------------------------------------------------------
     // Profiles collection: user-scoped by document ID
     // ---------------------------------------------------------------------------
     match /profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isContractor() && request.auth.uid == userId;
     }
 
     // ---------------------------------------------------------------------------
