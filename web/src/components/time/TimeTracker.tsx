@@ -155,50 +155,60 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
      Creates a live TimeEntry once workItemId is set + timer has run,
      then updates durationSeconds/endedAt every AUTOSAVE_INTERVAL_MS
      and on beforeunload. Finalized on stop. */
-  const autosaveInFlightRef = useRef(false);
-  const autosave = useCallback(async (finalize = false, workItemIdOverride?: string) => {
-    if (autosaveInFlightRef.current) return;
-    const s = persistedRef.current;
-    const workItemId = workItemIdOverride ?? s.workItemId;
-    if (!workItemId || !s.clientId) return;
-    const now = Date.now();
-    const elapsed = computeElapsed(s, now);
-    if (elapsed <= 0) return;
+  // Serialize all autosaves onto a single promise chain. A finalize-on-stop
+  // call previously short-circuited when a periodic save was mid-flight,
+  // letting `handleStop`'s finally clear state before the final entry was
+  // written (data loss + orphaned work order). Chaining guarantees the
+  // finalize runs after any in-flight save and is never dropped.
+  const autosaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const autosave = useCallback(
+    (finalize = false, workItemIdOverride?: string): Promise<void> => {
+      const run = async (): Promise<void> => {
+        const s = persistedRef.current;
+        const workItemId = workItemIdOverride ?? s.workItemId;
+        if (!workItemId || !s.clientId) return;
+        const now = Date.now();
+        const elapsed = computeElapsed(s, now);
+        if (elapsed <= 0) return;
 
-    autosaveInFlightRef.current = true;
-    try {
-      const startedAt = new Date(s.firstStartedAtMs ?? now - elapsed * 1000);
-      const endedAt = new Date(now);
+        try {
+          const startedAt = new Date(s.firstStartedAtMs ?? now - elapsed * 1000);
+          const endedAt = new Date(now);
 
-      if (!s.activeEntryId) {
-        const id = await createTimeEntry({
-          clientId: s.clientId,
-          appId: s.appId || undefined,
-          description: s.description,
-          durationSeconds: elapsed,
-          isBillable: s.isBillable,
-          startedAt,
-          endedAt,
-          workItemId,
-          lineItemId: s.lineItemId || undefined,
-        });
-        setPersisted((prev) => ({ ...prev, activeEntryId: id }));
-      } else {
-        await updateTimeEntry(s.activeEntryId, {
-          description: s.description,
-          durationSeconds: elapsed,
-          isBillable: s.isBillable,
-          appId: s.appId || undefined,
-          endedAt,
-          ...(finalize ? { workItemId, lineItemId: s.lineItemId || undefined } : {}),
-        });
-      }
-    } catch (err) {
-      console.error('time tracker autosave failed:', err);
-    } finally {
-      autosaveInFlightRef.current = false;
-    }
-  }, []);
+          if (!s.activeEntryId) {
+            const id = await createTimeEntry({
+              clientId: s.clientId,
+              appId: s.appId || undefined,
+              description: s.description,
+              durationSeconds: elapsed,
+              isBillable: s.isBillable,
+              startedAt,
+              endedAt,
+              workItemId,
+              lineItemId: s.lineItemId || undefined,
+            });
+            setPersisted((prev) => ({ ...prev, activeEntryId: id }));
+          } else {
+            await updateTimeEntry(s.activeEntryId, {
+              description: s.description,
+              durationSeconds: elapsed,
+              isBillable: s.isBillable,
+              appId: s.appId || undefined,
+              endedAt,
+              ...(finalize ? { workItemId, lineItemId: s.lineItemId || undefined } : {}),
+            });
+          }
+        } catch (err) {
+          console.error('time tracker autosave failed:', err);
+        }
+      };
+
+      const next = autosaveChainRef.current.then(run, run);
+      autosaveChainRef.current = next;
+      return next;
+    },
+    [],
+  );
 
   // Periodic autosave while running and attached to a work order
   useEffect(() => {

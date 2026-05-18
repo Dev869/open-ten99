@@ -69,6 +69,8 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
         }
       : undefined,
     scheduledDate: data.scheduledDate ? toDate(data.scheduledDate) : undefined,
+    assigneeId: data.assigneeId ?? undefined,
+    teamId: data.teamId ?? undefined,
     clientNotes: data.clientNotes ?? undefined,
     clientApproval: data.clientApproval ?? undefined,
     clientApprovalDate: data.clientApprovalDate ? toDate(data.clientApprovalDate) : undefined,
@@ -266,6 +268,12 @@ export function subscribeSettings(
       teamId: data?.teamId ?? undefined,
       sidebarOrder: data?.sidebarOrder ?? undefined,
       sidebarHidden: data?.sidebarHidden ?? undefined,
+      pushNotificationsEnabled: data?.pushNotificationsEnabled ?? undefined,
+      pushNotifyWorkOrderDue: data?.pushNotifyWorkOrderDue ?? undefined,
+      pushNotifyNewInboundOrder: data?.pushNotifyNewInboundOrder ?? undefined,
+      fcmToken: data?.fcmToken ?? undefined,
+      mileageRate: data?.mileageRate ?? undefined,
+      roundTimeToQuarterHour: data?.roundTimeToQuarterHour ?? undefined,
     });
   }, { onExhausted: onError });
 }
