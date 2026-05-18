@@ -54,6 +54,7 @@ const menuSections: MenuSection[] = [
       { to: '/dashboard/work-items', label: 'Work Orders', Icon: IconWrench },
       { to: '/dashboard/clients', label: 'Clients', Icon: IconClients },
       { to: '/dashboard/calendar', label: 'Calendar', Icon: IconCalendar },
+      { to: '/dashboard/time-logs', label: 'Time Logs', Icon: IconClock },
       { to: '/dashboard/team', label: 'Team', Icon: IconTeam },
     ],
   },

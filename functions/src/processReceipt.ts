@@ -141,21 +141,28 @@ Return ONLY the JSON object, no markdown formatting.`;
       date: extracted.date ? new Date(extracted.date) : undefined,
     };
 
+    // Pre-fetch all confirmed receipt ids for this owner once, so the
+    // per-transaction loop can check membership in memory instead of issuing
+    // per-receipt reads (avoids an N+1 read pattern).
+    const confirmedSnap = await db
+      .collection('receipts')
+      .where('ownerId', '==', userId)
+      .where('status', '==', 'confirmed')
+      .get();
+    const confirmedReceiptIds = new Set(confirmedSnap.docs.map((d) => d.id));
+
     let bestScore = 0;
     let bestTxId: string | null = null;
 
     for (const txDoc of txSnap.docs) {
       const txData = txDoc.data();
 
-      // Skip transactions that already have confirmed receipts
+      // Skip transactions that already have a confirmed receipt
       const existingReceiptIds: string[] = txData.receiptIds ?? [];
-      if (existingReceiptIds.length > 0) {
-        const linkedReceipts = await Promise.all(
-          existingReceiptIds.map((rid) => db.collection('receipts').doc(rid).get())
-        );
-        const hasConfirmed = linkedReceipts.some((r) => r.exists && r.data()?.status === 'confirmed');
-        if (hasConfirmed) continue;
-      }
+      const hasConfirmed = existingReceiptIds.some((rid) =>
+        confirmedReceiptIds.has(rid),
+      );
+      if (hasConfirmed) continue;
 
       const tx: TransactionData = {
         amount: txData.amount as number,

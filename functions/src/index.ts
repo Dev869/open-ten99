@@ -6,7 +6,6 @@ admin.initializeApp();
 
 // Re-export all Cloud Functions so the Firebase CLI discovers them.
 export { onEmailReceived } from "./parseEmail";
-export { generatePDF } from "./generatePdf";
 export { generateQuotePDF } from "./generateQuotePdf";
 export { onGenerateReport } from "./generateReport";
 export {

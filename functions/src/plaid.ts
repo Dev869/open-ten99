@@ -341,21 +341,33 @@ export async function syncPlaidAccount(
         await batch.commit();
       }
 
-      // Handle removed transactions
+      // Handle removed transactions. Batch the lookups with an `in` query
+      // (chunked to Firestore's 30-value limit) instead of one query per
+      // removed transaction to avoid an N+1 read pattern.
       if (removed.length > 0) {
+        const removedIds = removed
+          .map((r) => r.transaction_id)
+          .filter((id): id is string => Boolean(id));
+
         const removeBatch = db.batch();
-        for (const removedTx of removed) {
+        let pendingDeletes = 0;
+
+        for (let i = 0; i < removedIds.length; i += 30) {
+          const chunk = removedIds.slice(i, i + 30);
           const snap = await db
             .collection('transactions')
-            .where('externalId', '==', removedTx.transaction_id)
             .where('accountId', '==', accountId)
-            .limit(1)
+            .where('externalId', 'in', chunk)
             .get();
-          if (!snap.empty) {
-            removeBatch.delete(snap.docs[0].ref);
+          for (const doc of snap.docs) {
+            removeBatch.delete(doc.ref);
+            pendingDeletes++;
           }
         }
-        await removeBatch.commit();
+
+        if (pendingDeletes > 0) {
+          await removeBatch.commit();
+        }
       }
 
       cursor = next_cursor;

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Client, App, WorkItem, TimeEntry } from '../../lib/types';
-import { useTimeEntries, useClients, useApps, useWorkItems } from '../../hooks/useFirestore';
 import { deleteTimeEntry, updateTimeEntry } from '../../services/firestore';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../hooks/useToast';
@@ -246,11 +245,15 @@ function EditTimeEntryModal({ entry, clients, apps, workItems, onClose }: EditTi
 
 /* ── Page ─────────────────────────────────────────────── */
 
-export default function TimeLogs() {
-  const { entries, loading } = useTimeEntries();
-  const { clients } = useClients();
-  const { apps } = useApps();
-  const { workItems } = useWorkItems();
+interface TimeLogsProps {
+  clients: Client[];
+  apps: App[];
+  workItems: WorkItem[];
+  timeEntries: TimeEntry[];
+}
+
+export default function TimeLogs({ clients, apps, workItems, timeEntries }: TimeLogsProps) {
+  const entries = timeEntries;
   const { addToast } = useToast();
 
   const [editing, setEditing] = useState<TimeEntry | null>(null);
@@ -339,11 +342,12 @@ export default function TimeLogs() {
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
-        <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-1">
+        <div role="group" aria-label="Filter time entries by assignment" className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-1">
           {(['all', 'unassigned', 'assigned'] as const).map((s) => (
             <button
               key={s}
               type="button"
+              aria-pressed={filterStatus === s}
               onClick={() => setFilterStatus(s)}
               className={cn(
                 'px-3 py-1 rounded-md text-xs font-semibold transition-colors capitalize',
@@ -360,9 +364,7 @@ export default function TimeLogs() {
 
       {/* Table */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]">Loading…</div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-[var(--bg-input)] flex items-center justify-center mb-3">
               <IconClock size={20} />

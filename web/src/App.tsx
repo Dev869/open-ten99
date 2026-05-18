@@ -383,7 +383,10 @@ function ContractorRoutes() {
         path="work-items/:id/email/:type"
         element={<EmailComposer workItems={workItems} clients={clients} />}
       />
-      <Route path="time-logs" element={<TimeLogs />} />
+      <Route
+        path="time-logs"
+        element={<TimeLogs clients={clients} apps={apps} workItems={workItems} timeEntries={timeEntries} />}
+      />
       <Route
         path="quotes"
         element={<Quotes clients={clients} hourlyRate={settings.hourlyRate} />}

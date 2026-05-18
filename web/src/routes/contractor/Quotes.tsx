@@ -5,6 +5,7 @@ import { QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS } from '../../lib/types';
 import { createQuote } from '../../services/firestore';
 import { formatCurrency } from '../../lib/utils';
 import { useQuotes } from '../../hooks/useFirestore';
+import { useToast } from '../../hooks/useToast';
 import { Modal } from '../../components/common/Modal';
 import { IconPlus, IconSearch, IconChevronRight, IconDocument } from '../../components/icons';
 
@@ -262,6 +263,7 @@ function NewQuoteModal({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
+  const { addToast } = useToast();
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState(clients[0]?.id ?? '');
   const [estimatedHours, setEstimatedHours] = useState<string>('');
@@ -302,7 +304,7 @@ function NewQuoteModal({
       onCreated(id);
     } catch (err) {
       console.error('Failed to create quote:', err);
-      alert('Failed to create quote. See console for details.');
+      addToast('Failed to create quote. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

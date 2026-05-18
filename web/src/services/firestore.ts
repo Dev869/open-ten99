@@ -363,27 +363,6 @@ export async function discardWorkItem(id: string, currentStatus?: string) {
   });
 }
 
-export async function restoreWorkItem(id: string) {
-  const { runTransaction } = await import('firebase/firestore');
-  const ref = doc(db, 'workItems', id);
-  await runTransaction(db, async (txn) => {
-    const snap = await txn.get(ref);
-    const restoredStatus = snap.data()?.preDiscardStatus || 'completed';
-    txn.update(ref, {
-      status: restoredStatus,
-      preDiscardStatus: deleteField(),
-      discardedAt: deleteField(),
-      ownerId: auth.currentUser?.uid ?? null,
-      updatedAt: Timestamp.now(),
-    });
-  });
-}
-
-export async function permanentlyDeleteWorkItem(id: string) {
-  const ref = doc(db, 'workItems', id);
-  await deleteDoc(ref);
-}
-
 export async function bulkUpdateStatus(ids: string[], status: string) {
   const uid = auth.currentUser?.uid ?? null;
   const promises = ids.map((id) => {
@@ -466,7 +445,11 @@ export async function updateClient(client: Client) {
 export async function deleteClient(id: string) {
   // Clear clientId on all work orders referencing this client
   const wiRef = collection(db, 'workItems');
-  const q = query(wiRef, where('clientId', '==', id));
+  const q = query(
+    wiRef,
+    where('clientId', '==', id),
+    where('ownerId', '==', auth.currentUser!.uid),
+  );
   const snapshot = await getDocs(q);
 
   const BATCH_LIMIT = 499;
@@ -526,7 +509,11 @@ export async function updateApp(app: App) {
 export async function deleteApp(id: string) {
   // Clear appId on all work orders referencing this app
   const wiRef = collection(db, 'workItems');
-  const q = query(wiRef, where('appId', '==', id));
+  const q = query(
+    wiRef,
+    where('appId', '==', id),
+    where('ownerId', '==', auth.currentUser!.uid),
+  );
   const snapshot = await getDocs(q);
 
   // Chunk into batches of 499 (leave room for the app delete)
@@ -556,17 +543,6 @@ export async function updateSettings(userId: string, settings: Partial<AppSettin
     if (v !== undefined) clean[k] = v;
   }
   await setDoc(ref, clean, { merge: true });
-}
-
-export async function getAndIncrementInvoiceNumber(userId: string): Promise<number> {
-  const { runTransaction } = await import('firebase/firestore');
-  const ref = doc(db, 'settings', userId);
-  return runTransaction(db, async (txn) => {
-    const snap = await txn.get(ref);
-    const current = snap.data()?.invoiceNextNumber ?? 1;
-    txn.update(ref, { invoiceNextNumber: current + 1 });
-    return current;
-  });
 }
 
 // --- Profile ---
@@ -791,15 +767,6 @@ export async function createTeamInvite(
     createdAt: Timestamp.now(),
   });
   return docRef.id;
-}
-
-export async function updateInviteStatus(
-  teamId: string,
-  inviteId: string,
-  status: 'accepted' | 'declined',
-) {
-  const ref = doc(db, 'teams', teamId, 'invites', inviteId);
-  await updateDoc(ref, { status });
 }
 
 export async function deleteTeamInvite(teamId: string, inviteId: string) {
@@ -1071,21 +1038,13 @@ export function subscribeGitHubActivity(
   });
 }
 
-// --- Cloud Functions ---
-
-export async function generatePDF(workItemId: string) {
-  const fn = httpsCallable<{ workItemId: string }, { pdfUrl: string }>(functions, 'generatePDF');
-  const result = await fn({ workItemId });
-  return result.data.pdfUrl;
-}
-
 // --- Bank & Payment Integration ---
 
 function docToConnectedAccount(id: string, data: Record<string, unknown>): ConnectedAccount {
   return {
     id,
-    ownerId: data.ownerId as string,
-    provider: data.provider as AccountProvider,
+    ownerId: data.ownerId as string ?? '',
+    provider: data.provider as AccountProvider ?? 'plaid',
     accountName: data.accountName as string ?? '',
     institutionName: data.institutionName as string ?? '',
     accountMask: data.accountMask as string ?? '',
@@ -1838,51 +1797,6 @@ export async function deleteMileageTrip(tripId: string, transactionId?: string):
   if (transactionId) {
     batch.delete(doc(db, 'transactions', transactionId));
   }
-  await batch.commit();
-}
-
-export async function updateMileageTrip(
-  tripId: string,
-  current: { purpose: MileagePurpose; transactionId?: string },
-  data: {
-    date: Date; description: string; miles: number; purpose: MileagePurpose;
-    clientId?: string; roundTrip: boolean; rate: number;
-  }
-): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const effectiveMiles = data.roundTrip ? data.miles * 2 : data.miles;
-  const deduction = data.purpose === 'business' ? effectiveMiles * data.rate : 0;
-  const now = Timestamp.now();
-  const batch = writeBatch(db);
-
-  const tripUpdate: Record<string, unknown> = {
-    date: Timestamp.fromDate(data.date), description: data.description, miles: data.miles,
-    purpose: data.purpose, clientId: data.clientId ?? null, roundTrip: data.roundTrip,
-    rate: data.rate, deduction, updatedAt: now,
-  };
-
-  if (current.purpose === 'business' && data.purpose === 'personal') {
-    if (current.transactionId) batch.delete(doc(db, 'transactions', current.transactionId));
-    tripUpdate.transactionId = null;
-  } else if (current.purpose === 'personal' && data.purpose === 'business') {
-    const txnRef = doc(collection(db, 'transactions'));
-    batch.set(txnRef, {
-      ownerId: user.uid, provider: 'manual', externalId: null,
-      date: Timestamp.fromDate(data.date), amount: -Math.abs(deduction),
-      description: data.description, category: 'Vehicle & Fuel', type: 'expense',
-      matchStatus: 'unmatched', isManual: true, taxDeductible: true, receiptUrl: null,
-      createdAt: now, updatedAt: now,
-    });
-    tripUpdate.transactionId = txnRef.id;
-  } else if (data.purpose === 'business' && current.transactionId) {
-    batch.update(doc(db, 'transactions', current.transactionId), {
-      date: Timestamp.fromDate(data.date), amount: -Math.abs(deduction),
-      description: data.description, updatedAt: now,
-    });
-  }
-
-  batch.update(doc(db, 'mileageTrips', tripId), tripUpdate);
   await batch.commit();
 }
 
