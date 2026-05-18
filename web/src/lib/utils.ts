@@ -122,3 +122,16 @@ export function addBusinessDays(start: Date, days: number): Date {
   }
   return result;
 }
+
+/**
+ * Base64-encode a byte array. Chunked to stay within the argument limit of
+ * String.fromCharCode for large buffers (used to attach a PDF to an email).
+ */
+export function uint8ToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
