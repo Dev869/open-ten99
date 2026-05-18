@@ -10,6 +10,7 @@ import {
   generateQuotePDF,
 } from '../../services/firestore';
 import { useQuotes } from '../../hooks/useFirestore';
+import { useToast } from '../../hooks/useToast';
 import { formatCurrency } from '../../lib/utils';
 import {
   IconPlus,
@@ -30,6 +31,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { quotes, loading } = useQuotes();
+  const { addToast } = useToast();
   const remote = useMemo(() => quotes.find((q) => q.id === id), [quotes, id]);
 
   const [draft, setDraft] = useState<Quote | null>(null);
@@ -143,7 +145,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
       await markQuoteSent(draft.id);
     } catch (err) {
       console.error(err);
-      alert('Failed to mark quote as sent.');
+      addToast('Failed to mark quote as sent.', 'error');
     } finally {
       setBusyAction(null);
     }
@@ -159,7 +161,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
       navigate(`/dashboard/work-items/${workItemId}`);
     } catch (err) {
       console.error(err);
-      alert('Failed to convert quote.');
+      addToast('Failed to convert quote.', 'error');
     } finally {
       setBusyAction(null);
     }
@@ -174,7 +176,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
       window.open(url, '_blank');
     } catch (err) {
       console.error(err);
-      alert('Failed to generate PDF.');
+      addToast('Failed to generate PDF.', 'error');
     } finally {
       setBusyAction(null);
     }
@@ -189,7 +191,7 @@ export default function QuoteDetail({ clients, apps, settings }: QuoteDetailProp
       navigate('/dashboard/quotes');
     } catch (err) {
       console.error(err);
-      alert('Failed to delete quote.');
+      addToast('Failed to delete quote.', 'error');
       setBusyAction(null);
     }
   }
