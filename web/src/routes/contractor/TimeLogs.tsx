@@ -342,11 +342,12 @@ export default function TimeLogs({ clients, apps, workItems, timeEntries }: Time
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
-        <div className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-1">
+        <div role="group" aria-label="Filter time entries by assignment" className="flex gap-1 bg-[var(--bg-input)] rounded-lg p-1">
           {(['all', 'unassigned', 'assigned'] as const).map((s) => (
             <button
               key={s}
               type="button"
+              aria-pressed={filterStatus === s}
               onClick={() => setFilterStatus(s)}
               className={cn(
                 'px-3 py-1 rounded-md text-xs font-semibold transition-colors capitalize',
