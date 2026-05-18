@@ -6,6 +6,7 @@ import { NewWorkOrderModal } from '../../components/workitems/NewWorkOrderModal'
 import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
 import { formatDate, exportToCsv } from '../../lib/utils';
+import { isWorkOrder } from '../../lib/workItem';
 import { bulkUpdateStatus } from '../../services/firestore';
 import { IconDocument } from '../../components/icons';
 import { useInsights } from '../../hooks/useFirestore';
@@ -20,8 +21,6 @@ interface WorkItemsProps {
 
 const typeTabs = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'];
 const statusTabs = ['All', 'Draft', 'In Review', 'Approved', 'Completed'];
-const invoiceStatusOptions = ['draft', 'sent', 'paid', 'overdue'];
-const invoiceStatusLabels: Record<string, string> = { draft: 'Draft', sent: 'Sent', paid: 'Paid', overdue: 'Overdue' };
 
 export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,10 +42,6 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     const val = searchParams.get('apps');
     return val ? val.split(',') : [];
   });
-  const [selectedInvoiceStatus, setSelectedInvoiceStatus] = useState<string[]>(() => {
-    const val = searchParams.get('invoice');
-    return val ? val.split(',') : [];
-  });
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => ({
     start: searchParams.get('start') || '',
     end: searchParams.get('end') || '',
@@ -59,11 +54,10 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     const params = new URLSearchParams();
     if (selectedClients.length) params.set('clients', selectedClients.join(','));
     if (selectedApps.length) params.set('apps', selectedApps.join(','));
-    if (selectedInvoiceStatus.length) params.set('invoice', selectedInvoiceStatus.join(','));
     if (dateRange.start) params.set('start', dateRange.start);
     if (dateRange.end) params.set('end', dateRange.end);
     setSearchParams(params, { replace: true });
-  }, [selectedClients, selectedApps, selectedInvoiceStatus, dateRange, setSearchParams]);
+  }, [selectedClients, selectedApps, dateRange, setSearchParams]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -95,12 +89,13 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
   const hasActiveFilters =
     selectedClients.length > 0 ||
     selectedApps.length > 0 ||
-    selectedInvoiceStatus.length > 0 ||
     !!dateRange.start ||
     !!dateRange.end;
 
   const filtered = useMemo(() => {
     return workItems
+      // Membership: a sent-out item is an invoice, not a work order — exclude.
+      .filter(isWorkOrder)
       .filter((i) => i.status !== 'archived')
       .filter((i) => {
         if (selectedType === 'Change Requests') return i.type === 'changeRequest';
@@ -128,15 +123,13 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
       .filter((i) => selectedClients.length === 0 || selectedClients.includes(i.clientId))
       // app filter
       .filter((i) => selectedApps.length === 0 || (i.appId ? selectedApps.includes(i.appId) : false))
-      // invoice status filter
-      .filter((i) => selectedInvoiceStatus.length === 0 || (i.invoiceStatus ? selectedInvoiceStatus.includes(i.invoiceStatus) : false))
       // date range filter
       .filter((i) => {
         if (dateRange.start && i.createdAt < new Date(dateRange.start)) return false;
         if (dateRange.end && i.createdAt > new Date(dateRange.end + 'T23:59:59')) return false;
         return true;
       });
-  }, [workItems, selectedType, selectedStatus, search, clientMap, selectedClients, selectedApps, selectedInvoiceStatus, dateRange]);
+  }, [workItems, selectedType, selectedStatus, search, clientMap, selectedClients, selectedApps, dateRange]);
 
   function toggleSelect(id: string) {
     const next = new Set(selectedIds);
@@ -186,12 +179,11 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
   function clearAllFilters() {
     setSelectedClients([]);
     setSelectedApps([]);
-    setSelectedInvoiceStatus([]);
     setDateRange({ start: '', end: '' });
   }
 
   const [showAdvanced, setShowAdvanced] = useState(hasActiveFilters);
-  const activeFilterCount = selectedClients.length + selectedApps.length + selectedInvoiceStatus.length + (dateRange.start ? 1 : 0) + (dateRange.end ? 1 : 0);
+  const activeFilterCount = selectedClients.length + selectedApps.length + (dateRange.start ? 1 : 0) + (dateRange.end ? 1 : 0);
 
   return (
     <div className="animate-fade-in-up">
@@ -310,29 +302,6 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
                 <option value="">+ App</option>
                 {availableApps.filter(a => a.id && !selectedApps.includes(a.id)).map(a => (
                   <option key={a.id} value={a.id!}>{a.name}</option>
-                ))}
-              </select>
-            )}
-
-            {/* Invoice status filter chips + dropdown */}
-            {selectedInvoiceStatus.map(status => (
-              <span key={status} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
-                {invoiceStatusLabels[status] ?? status}
-                <button onClick={() => setSelectedInvoiceStatus(prev => prev.filter(s => s !== status))} className="hover:text-[var(--color-red)] leading-none">&times;</button>
-              </span>
-            ))}
-            {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).length > 0 && (
-              <select
-                value=""
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val && !selectedInvoiceStatus.includes(val)) setSelectedInvoiceStatus(prev => [...prev, val]);
-                }}
-                className="h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-[11px] min-w-0"
-              >
-                <option value="">+ Invoice</option>
-                {invoiceStatusOptions.filter(s => !selectedInvoiceStatus.includes(s)).map(s => (
-                  <option key={s} value={s}>{invoiceStatusLabels[s]}</option>
                 ))}
               </select>
             )}
