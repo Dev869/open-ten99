@@ -1,4 +1,5 @@
 import type { WorkItem, Client, WorkItemType } from './types';
+import { isInvoice } from './workItem';
 
 // ── Exported Types ──────────────────────────────────────────────────────────
 
@@ -288,14 +289,17 @@ export function getRevenueByType(items: readonly WorkItem[], range: DateRange): 
 }
 
 /**
- * Filters billable work items by optional invoiceStatus.
- * If no status is provided, returns all billable items.
+ * Filters items down to invoices (sent-out work items — see `isInvoice`),
+ * billable and non-archived, optionally narrowed by invoiceStatus.
+ * Single-sourced membership: never-sent items are work orders, not invoices.
  */
 export function getInvoicesByStatus(
   items: readonly WorkItem[],
   status?: WorkItem['invoiceStatus'],
 ): WorkItem[] {
-  const active = items.filter(item => item.isBillable && item.status !== 'archived');
+  const active = items.filter(
+    item => isInvoice(item) && item.isBillable && item.status !== 'archived',
+  );
   if (status === undefined) {
     return active;
   }
@@ -303,15 +307,15 @@ export function getInvoicesByStatus(
 }
 
 /**
- * Returns counts of billable work items by invoiceStatus.
- * Items with no invoiceStatus are counted as 'draft'.
- * `all` is the total count of billable items.
+ * Returns counts of invoices (sent-out billable work items) by invoiceStatus.
+ * Single-sourced via `isInvoice` so it matches `getInvoicesByStatus`.
+ * `all` is the total count of invoices.
  */
 export function getInvoiceStatusCounts(items: readonly WorkItem[]): Record<string, number> {
   const counts: Record<string, number> = { all: 0, draft: 0, sent: 0, paid: 0, overdue: 0 };
 
   for (const item of items) {
-    if (!item.isBillable || item.status === 'archived') continue;
+    if (!isInvoice(item) || !item.isBillable || item.status === 'archived') continue;
     counts.all += 1;
     const status = item.invoiceStatus ?? 'draft';
     counts[status] = (counts[status] ?? 0) + 1;

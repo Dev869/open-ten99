@@ -5,6 +5,7 @@ import { WorkItemCard } from '../../components/workitems/WorkItemCard';
 import { Onboarding } from '../../components/onboarding/Onboarding';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings, useTimeEntries, useInsights } from '../../hooks/useFirestore';
+import { isWorkOrder } from '../../lib/workItem';
 import { UtilizationGauge } from '../../components/insights/UtilizationGauge';
 import { InsightShimmer } from '../../components/insights/InsightShimmer';
 import {
@@ -107,7 +108,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
     user != null;
 
   const pending = workItems.filter(
-    (i) => i.status === 'draft' || i.status === 'inReview'
+    (i) => isWorkOrder(i) && (i.status === 'draft' || i.status === 'inReview')
   );
 
   const now = new Date();
@@ -234,7 +235,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
   const pipelineStages = useMemo(() => {
     const counts: Record<string, number> = { draft: 0, inReview: 0, approved: 0, completed: 0 };
     workItems
-      .filter((i) => i.status !== 'archived')
+      .filter((i) => isWorkOrder(i) && i.status !== 'archived')
       .forEach((i) => { counts[i.status] = (counts[i.status] ?? 0) + 1; });
     return [
       { label: 'Draft', count: counts.draft, color: 'var(--text-secondary)' },

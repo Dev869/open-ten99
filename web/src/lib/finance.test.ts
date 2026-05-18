@@ -170,13 +170,18 @@ describe('getRevenueByType', () => {
 });
 
 describe('getInvoiceStatusCounts', () => {
-  it('counts invoices by status', () => {
+  it('counts invoices by status, excluding never-sent work orders', () => {
     const items = [
       makeWorkItem({ isBillable: true, invoiceStatus: 'sent' }),
       makeWorkItem({ isBillable: true, invoiceStatus: 'sent' }),
       makeWorkItem({ isBillable: true, invoiceStatus: 'paid' }),
+      // Never sent (no invoiceSentDate, no sent/paid/overdue status) → a
+      // work order, not an invoice — excluded by the shared isInvoice rule.
       makeWorkItem({ isBillable: true }),
+      makeWorkItem({ isBillable: true, invoiceStatus: 'draft' }),
       makeWorkItem({ isBillable: false }),
+      // Draft status but already sent out → counts as a draft invoice.
+      makeWorkItem({ isBillable: true, invoiceStatus: 'draft', invoiceSentDate: new Date('2026-03-01') }),
     ];
     const counts = getInvoiceStatusCounts(items);
     expect(counts.all).toBe(4);
