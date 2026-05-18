@@ -18,8 +18,6 @@ import {
   updateInvoiceStatus,
   unlinkTimeEntriesForLineItem,
 } from '../../services/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../lib/firebase';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
 import { IconClose } from '../../components/icons';
 
@@ -196,75 +194,6 @@ export default function WorkItemDetail({
     const updated = { ...item!, status: 'completed' as const };
     await updateWorkItem(updated);
     setItem(updated);
-  }
-
-  async function handleSendToClient() {
-    if (!item?.id) return;
-
-    // Use original sender email if available (from forwarded emails), else client email
-    const recipientEmail = item.senderEmail || client?.email;
-    const recipientName = item.senderName || client?.name || '';
-    if (!recipientEmail) return;
-
-    try {
-      // Generate a magic link — use client if assigned, otherwise create for sender
-      const linkEmail = client?.email || recipientEmail;
-      const linkClientId = client?.id || 'unassigned';
-
-      const gen = httpsCallable<
-        { clientId: string; email: string; workItemId: string },
-        { token: string }
-      >(functions, 'generateMagicLink');
-      const { data: { token } } = await gen({
-        clientId: linkClientId,
-        email: linkEmail,
-        workItemId: item.id,
-      });
-
-      const portalLink = `${window.location.origin}/portal/auth?token=${token}`;
-
-      const subject = encodeURIComponent(
-        `Invoice: ${item.subject}`
-      );
-
-      const snapshot = buildSnapshotItem();
-      const lineItemsBlock = snapshot.lineItems
-        .map(
-          (li, i) =>
-            `  ${i + 1}. ${li.description || '(no description)'}\n` +
-            `     Hours: ${li.hours.toFixed(1)}  |  Cost: ${formatCurrency(li.cost)}`
-        )
-        .join('\n\n');
-
-      const billingNote = item.deductFromRetainer
-        ? `\nBilling: ${snapshot.totalHours.toFixed(1)} hours will be deducted from your retainer balance.\n`
-        : '';
-
-      const body = encodeURIComponent(
-        `Hello ${recipientName || 'there'},\n\n` +
-        `A new work order is ready for your review.\n\n` +
-        `————————————————————————————————\n` +
-        `WORK ORDER SUMMARY\n` +
-        `————————————————————————————————\n\n` +
-        `Subject:  ${item.subject}\n` +
-        `Type:     ${item.type.charAt(0).toUpperCase() + item.type.slice(1)}\n\n` +
-        `Line Items:\n\n` +
-        `${lineItemsBlock}\n\n` +
-        `————————————————————————————————\n` +
-        `Total Hours:  ${snapshot.totalHours.toFixed(1)} hrs\n` +
-        `Total Cost:   ${formatCurrency(snapshot.totalCost)}\n` +
-        `————————————————————————————————\n` +
-        `${billingNote}\n` +
-        `Review and approve this work order:\n` +
-        `${portalLink}\n\n` +
-        `This link expires in 7 days. Reply to this email with any questions.\n\n\n` +
-        `Thank you for your business.\n\n` +
-        `Best regards`
-      );
-      window.open(`mailto:${recipientEmail}?subject=${subject}&body=${body}`, '_self');
-    } catch (err) {
-      console.error('Send to client error:', err);
-    }
   }
 
   const labelClass = 'block text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5';
@@ -671,10 +600,10 @@ export default function WorkItemDetail({
         </div>
       </div>
 
-      {/* Invoice Tracking */}
+      {/* Invoice Status */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4">
         <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-          Invoice
+          Invoice Status
         </h2>
 
         {/* Draft / No invoice */}
@@ -791,9 +720,13 @@ export default function WorkItemDetail({
         )}
       </div>
 
-      {/* ── Email Actions ── */}
+      {/* Email */}
       {client?.email && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="mb-6">
+          <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Email
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Send Work Order */}
           <button
             onClick={() => navigate(`/dashboard/work-items/${item.id}/email/completion`)}
@@ -850,39 +783,11 @@ export default function WorkItemDetail({
               →
             </span>
           </button>
+          </div>
         </div>
       )}
 
-      {/* ── Invoice Status Actions ── */}
-      {(item.invoiceStatus === 'sent' || item.invoiceStatus === 'overdue') && (
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={async () => {
-              if (!item.id) return;
-              const now = new Date();
-              await updateInvoiceStatus(item.id, { invoiceStatus: 'paid', invoicePaidDate: now });
-              setItem({ ...item, invoiceStatus: 'paid', invoicePaidDate: now });
-            }}
-            className="px-4 py-2 rounded-lg bg-[var(--color-green)]/10 text-[var(--color-green)] text-xs font-semibold hover:bg-[var(--color-green)]/20 transition-colors"
-          >
-            Mark as Paid
-          </button>
-          {item.invoiceStatus === 'sent' && (
-            <button
-              onClick={async () => {
-                if (!item.id) return;
-                await updateInvoiceStatus(item.id, { invoiceStatus: 'overdue' });
-                setItem({ ...item, invoiceStatus: 'overdue' });
-              }}
-              className="px-4 py-2 rounded-lg bg-[var(--color-red)]/10 text-[var(--color-red)] text-xs font-semibold hover:bg-[var(--color-red)]/20 transition-colors"
-            >
-              Mark Overdue
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Actions */}
+      {/* Primary Actions */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <button
           onClick={handleDiscard}
@@ -897,15 +802,6 @@ export default function WorkItemDetail({
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
-        {item.status !== 'completed' && item.status !== 'archived' && (
-          <button
-            onClick={handleApproveAndGenerate}
-            disabled={generatingPdf}
-            className="py-2.5 px-5 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
-          >
-            {generatingPdf ? 'Generating...' : 'Approve & Generate PDF'}
-          </button>
-        )}
         {item.status !== 'completed' && item.status !== 'archived' && (
           <button
             onClick={handleApproveAndGenerate}
@@ -925,44 +821,50 @@ export default function WorkItemDetail({
         )}
       </div>
 
-      {/* View PDF */}
-      {item.status === 'approved' && !generatingPdf && (
-        <button
-          onClick={async () => {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            const pdfClient = client || {
-              name: item.senderName || 'Unknown',
-              email: item.senderEmail || '',
-              createdAt: new Date(),
-            };
-            const blobUrl = await buildChangeOrderPdf(item, pdfClient, {
-              companyName: 'Your Company',
-              hourlyRate,
-              taxRate,
-              pdfLogoUrl,
-              invoiceFromAddress,
-              invoiceTerms,
-              invoiceNotes,
-            });
-            setPreviewUrl(blobUrl);
-            setShowPdfPreview(true);
-          }}
-          className="w-full h-11 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all mb-3"
-        >
-          View PDF
-        </button>
+      {/* Work Order Actions */}
+      {((item.status === 'approved' && !generatingPdf) || (client?.email || item.senderEmail)) && (
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] p-5 mb-4">
+          <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+            Work Order Actions
+          </h2>
+          <div className="flex flex-col gap-3">
+            {item.status === 'approved' && !generatingPdf && (
+              <button
+                onClick={async () => {
+                  if (previewUrl) URL.revokeObjectURL(previewUrl);
+                  const pdfClient = client || {
+                    name: item.senderName || 'Unknown',
+                    email: item.senderEmail || '',
+                    createdAt: new Date(),
+                  };
+                  const blobUrl = await buildChangeOrderPdf(item, pdfClient, {
+                    companyName: 'Your Company',
+                    hourlyRate,
+                    taxRate,
+                    pdfLogoUrl,
+                    invoiceFromAddress,
+                    invoiceTerms,
+                    invoiceNotes,
+                  });
+                  setPreviewUrl(blobUrl);
+                  setShowPdfPreview(true);
+                }}
+                className="w-full h-11 rounded-xl border border-[var(--accent)] text-sm font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all"
+              >
+                View PDF
+              </button>
+            )}
+            {(client?.email || item.senderEmail) && (
+              <button
+                onClick={() => navigate(`/dashboard/work-items/${item.id}/email/completion`)}
+                className="w-full h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-all"
+              >
+                Send Work Order to Client →
+              </button>
+            )}
+          </div>
+        </div>
       )}
-
-      {/* Send to Client */}
-      {(client?.email || item.senderEmail) && (
-        <button
-          onClick={handleSendToClient}
-          className="w-full h-11 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-all mb-4"
-        >
-          Send to Client →
-        </button>
-      )}
-
 
       {/* PDF Preview Modal */}
       {showPdfPreview && previewUrl && (
