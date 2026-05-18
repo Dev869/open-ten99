@@ -92,8 +92,10 @@ describe('calculateMaintenanceUsage', () => {
 
   it('excludes items outside the current period', () => {
     const items: WorkItem[] = [
-      makeItem({ totalHours: 5, updatedAt: new Date(2026, 2, 10) }), // before Mar 15
-      makeItem({ totalHours: 3, updatedAt: new Date(2026, 2, 18) }),
+      // Period membership is by scheduledDate ?? createdAt (not updatedAt:
+      // last-modified is wrong — see calculateMaintenanceUsage).
+      makeItem({ totalHours: 5, createdAt: new Date(2026, 2, 10) }), // before Mar 15
+      makeItem({ totalHours: 3, createdAt: new Date(2026, 2, 18) }),
     ];
     const result = calculateMaintenanceUsage(
       { maintenanceHoursAllotted: 10, maintenanceRenewalDay: 15 },

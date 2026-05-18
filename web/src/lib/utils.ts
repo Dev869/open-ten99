@@ -34,24 +34,48 @@ export function cn(...classes: (string | false | undefined | null)[]): string {
  * e.g. renewalDay=15: if today is Mar 20, period started Mar 15.
  * If today is Mar 10, period started Feb 15.
  */
+/** Last calendar day of the given month (month is 0-indexed). */
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+/** renewalDay clamped to the actual length of (year, month). */
+function clampDay(renewalDay: number, year: number, month: number): number {
+  return Math.min(renewalDay, lastDayOfMonth(year, month));
+}
+
 export function getRetainerPeriodStart(renewalDay: number, now = new Date()): Date {
   const year = now.getFullYear();
   const month = now.getMonth();
   const today = now.getDate();
 
-  if (today >= renewalDay) {
-    return new Date(year, month, renewalDay);
+  // Clamp so renewalDay=31 doesn't overflow into the next month (e.g. a
+  // Feb period would otherwise start "Mar 3" and double the billing window).
+  if (today >= clampDay(renewalDay, year, month)) {
+    return new Date(year, month, clampDay(renewalDay, year, month));
   }
-  // Before renewal day this month — period started last month
-  return new Date(year, month - 1, renewalDay);
+  // Before renewal day this month — period started last month.
+  const prev = new Date(year, month - 1, 1);
+  return new Date(
+    prev.getFullYear(),
+    prev.getMonth(),
+    clampDay(renewalDay, prev.getFullYear(), prev.getMonth()),
+  );
 }
 
 export function getRetainerPeriodEnd(renewalDay: number, now = new Date()): Date {
   const start = getRetainerPeriodStart(renewalDay, now);
-  const endDate = new Date(start);
-  endDate.setMonth(endDate.getMonth() + 1);
-  endDate.setDate(endDate.getDate() - 1);
-  return endDate;
+  // End = day before the next period's (clamped) start, computed without
+  // JS Date month-overflow.
+  const next = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  const nextStart = new Date(
+    next.getFullYear(),
+    next.getMonth(),
+    clampDay(renewalDay, next.getFullYear(), next.getMonth()),
+  );
+  const end = new Date(nextStart);
+  end.setDate(end.getDate() - 1);
+  return end;
 }
 
 export function exportToCsv(filename: string, headers: string[], rows: string[][]) {
