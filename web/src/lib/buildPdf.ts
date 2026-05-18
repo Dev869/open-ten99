@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { WorkItem, Client } from './types';
 import { WORK_ITEM_STATUS_LABELS } from './types';
+import { BRAND, BRAND_FROM_ADDRESS, BRAND_RGB } from './brand';
 
 interface PdfSettings {
   companyName: string;
@@ -15,15 +16,15 @@ interface PdfSettings {
 /* ──────────────────────────────────────────────────────────
  * Brand palette
  * ────────────────────────────────────────────────────────── */
-const TEAL        = rgb(0.29, 0.66, 0.66);           // #4BA8A8
-const DARK_TEAL   = rgb(0.18, 0.48, 0.48);           // #2D7A7A
-const CHARCOAL    = rgb(0.176, 0.176, 0.176);        // #2D2D2D
-const GRAY        = rgb(0.45, 0.45, 0.45);
-const LIGHT_GRAY  = rgb(0.6, 0.6, 0.6);
-const TABLE_STRIPE = rgb(0.96, 0.96, 0.96);
-const TABLE_BORDER = rgb(0.82, 0.82, 0.82);
+// DW Tailored Systems palette (see web/src/lib/brand.ts)
+const TEAL        = rgb(...BRAND_RGB.teal);           // #1C8A8A
+const DARK_TEAL   = rgb(...BRAND_RGB.darkTeal);       // #14706E
+const CHARCOAL    = rgb(...BRAND_RGB.charcoal);       // #2D2D2D
+const GRAY        = rgb(...BRAND_RGB.muted);          // #5C574F
+const TABLE_STRIPE = rgb(...BRAND_RGB.subtle);        // #F8F6F3
+const TABLE_BORDER = rgb(...BRAND_RGB.border);        // #E4DFDA
 const WHITE       = rgb(1, 1, 1);
-const RETAINER_ORANGE = rgb(0.9, 0.49, 0.13);
+const RETAINER_ORANGE = rgb(0.541, 0.329, 0.075);     // #8A5413 (AA on white)
 
 /* ──────────────────────────────────────────────────────────
  * Page dimensions & layout constants
@@ -42,16 +43,18 @@ const LINE_H = 16;          // standard text line height
 const SECTION_GAP = 24;     // gap between major sections
 
 /**
- * Generates a branded, professional invoice PDF and returns a blob URL.
+ * Generates a branded, professional invoice PDF and returns the raw bytes.
+ * Used directly when the PDF needs to be attached to an email.
  */
-export async function buildChangeOrderPdf(
+export async function buildChangeOrderPdfBytes(
   workItem: WorkItem,
   client: Client,
   settings: PdfSettings,
-): Promise<string> {
+): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const font       = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold   = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontSerif  = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
   // Track which pages already have footers drawn (for page-break pages)
   const footeredPages = new Set<PDFPage>();
@@ -92,7 +95,16 @@ export async function buildChangeOrderPdf(
   const coBoxH = coFontSize + coPadY * 2;
   const coBoxX = rightX - coBoxW;
 
-  // Company logo or name — top left
+  // Brand wordmark (serif) — top left. A custom logo URL still wins if set.
+  const wordmark = brandCompanyName(settings);
+  const maxCompanyW = coBoxX - MARGIN - 10;
+  const drawWordmark = (): number => {
+    page.drawText(truncateText(wordmark, fontSerif, 22, maxCompanyW), {
+      x: MARGIN, y, size: 22, font: fontSerif, color: DARK_TEAL,
+    });
+    return 22;
+  };
+
   let headerH = 22; // default text height
   if (settings.pdfLogoUrl) {
     try {
@@ -116,19 +128,11 @@ export async function buildChangeOrderPdf(
       });
       headerH = logoH;
     } catch {
-      // Logo fetch/embed failed — fall back to text
-      const companyDisplayName = settings.companyName.toUpperCase();
-      page.drawText(companyDisplayName, {
-        x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
-      });
+      // Logo fetch/embed failed — fall back to the brand wordmark
+      headerH = drawWordmark();
     }
   } else {
-    const companyDisplayName = settings.companyName.toUpperCase();
-    const maxCompanyW = coBoxX - MARGIN - 10;
-    const displayText = truncateText(companyDisplayName, fontBold, 22, maxCompanyW);
-    page.drawText(displayText, {
-      x: MARGIN, y, size: 22, font: fontBold, color: DARK_TEAL,
-    });
+    headerH = drawWordmark();
   }
 
   // Draw CHANGE ORDER box aligned with company name baseline
@@ -161,14 +165,14 @@ export async function buildChangeOrderPdf(
   // Max width for left column text: stop before right column starts (with gutter)
   const leftColMaxW = colRightStart - MARGIN - 20;
 
-  const companyLine = settings.companyName || 'Your Company';
+  const companyLine = brandCompanyName(settings);
   page.drawText(truncateText(companyLine, fontBold, 11, leftColMaxW), {
     x: MARGIN, y, size: 11, font: fontBold, color: CHARCOAL,
   });
   y -= LINE_H;
 
-  // Render from-address lines (user-customizable)
-  const fromLines = (settings.invoiceFromAddress || 'Your Name\nYour Business\nyou@example.com')
+  // Render from-address lines (user-customizable; defaults to DW brand)
+  const fromLines = (settings.invoiceFromAddress || BRAND_FROM_ADDRESS)
     .split('\n')
     .filter(Boolean);
   for (const line of fromLines) {
@@ -472,9 +476,31 @@ export async function buildChangeOrderPdf(
     }
   }
 
-  const pdfBytes = await pdfDoc.save();
+  return pdfDoc.save();
+}
+
+/**
+ * Generates a branded, professional invoice PDF and returns a blob URL.
+ * Thin wrapper over {@link buildChangeOrderPdfBytes} for preview/download.
+ */
+export async function buildChangeOrderPdf(
+  workItem: WorkItem,
+  client: Client,
+  settings: PdfSettings,
+): Promise<string> {
+  const pdfBytes = await buildChangeOrderPdfBytes(workItem, client, settings);
   const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
+}
+
+/**
+ * Company name shown on the invoice. Falls back to the DW Tailored Systems
+ * brand when Settings still holds the placeholder/empty value.
+ */
+function brandCompanyName(settings: PdfSettings): string {
+  const name = settings.companyName?.trim();
+  if (!name || name === 'Your Company') return BRAND.company;
+  return name;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -493,7 +519,7 @@ function drawFooter(
   });
 
   // Attribution text centered below the bar
-  const attrib = `Generated by ${settings.companyName || 'Your Company'} via Open TEN99`;
+  const attrib = `${brandCompanyName(settings)}  ·  ${BRAND.website}`;
   const attribW = font.widthOfTextAtSize(attrib, 7);
   const attribX = MARGIN + (CONTENT_W - attribW) / 2;
   // Ensure attribution doesn't go outside margins
@@ -501,9 +527,9 @@ function drawFooter(
   page.drawText(attrib, {
     x: clampedAttribX,
     y: barY - 12,
-    size: 7,
+    size: 8,
     font,
-    color: LIGHT_GRAY,
+    color: GRAY,
   });
 }
 

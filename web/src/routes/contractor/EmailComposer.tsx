@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../lib/firebase';
-import type { WorkItem, Client, EmailTemplate } from '../../lib/types';
+import type { WorkItem, Client, EmailTemplate, AppSettings } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS } from '../../lib/types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, uint8ToBase64 } from '../../lib/utils';
+import { BRAND, BRAND_HEX, slug } from '../../lib/brand';
+import { buildChangeOrderPdfBytes } from '../../lib/buildPdf';
 import {
   subscribeEmailTemplates,
   saveEmailTemplate,
@@ -17,22 +19,22 @@ export type EmailEditorType = 'completion' | 'invoice';
 interface EmailComposerProps {
   workItems: WorkItem[];
   clients: Client[];
+  settings: AppSettings;
 }
 
 type SendState = 'idle' | 'sending' | 'sent' | 'error';
 
-/* ── Brand colors for the email template ─────────────────── */
-const TEAL = '#1A8F8F';
-const HEADER_GRADIENT_START = '#1E2A3A';
-const HEADER_GRADIENT_END = '#243545';
-const TEAL_BORDER = '#1A9E9E';
-const TEXT_DARK = '#2C2C2C';
-const TEXT_MED = '#5A5550';
-const TEXT_LIGHT = '#7A756E';
-const BORDER_COLOR = '#E4DFDA';
-const BG_SUBTLE = '#F8F6F3';
-const BG_PAGE = '#F0EDEA';
-const DUE_DATE_COLOR = '#B5711F';
+/* ── DW Tailored Systems email palette (see lib/brand.ts) ── */
+const TEAL = BRAND_HEX.teal;            // accent fills
+const ACCENT = BRAND_HEX.darkTeal;      // links + emphasis (AA on light)
+const HEADER_BG = BRAND_HEX.darkTeal;   // solid header bar (white text AA)
+const TEXT_DARK = BRAND_HEX.charcoal;
+const TEXT_MED = BRAND_HEX.muted;
+const TEXT_LIGHT = BRAND_HEX.muted;
+const BORDER_COLOR = BRAND_HEX.border;
+const BG_SUBTLE = BRAND_HEX.subtle;
+const BG_PAGE = BRAND_HEX.cream;
+const DUE_DATE_COLOR = '#8A5413';       // amber, AA on white
 
 /* ── HTML escape to prevent XSS in email content ─────────── */
 function escapeHtml(str: string): string {
@@ -44,11 +46,6 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/* ── Logo placeholder (hosted URL for emails) ────────────── */
-// Set your hosted logo URLs here, or leave empty for text fallback
-const LOGO_WIDE_URL = '';
-const LOGO_ICON_URL = '';
-
 /* ── Signature fields ────────────────────────────────────── */
 interface SignatureData {
   name: string;
@@ -58,10 +55,10 @@ interface SignatureData {
 }
 
 const DEFAULT_SIGNATURE: SignatureData = {
-  name: 'Your Name',
-  title: 'Your Title',
-  website: '',
-  websiteLabel: '',
+  name: BRAND.name,
+  title: `${BRAND.title} · ${BRAND.company}`,
+  website: BRAND.websiteUrl,
+  websiteLabel: BRAND.website,
 };
 
 /* ── Build email HTML ────────────────────────────────────── */
@@ -92,7 +89,7 @@ function buildEmailHtml(opts: {
         <td style="padding:6px 20px;font-size:14px;color:${TEXT_DARK};font-family:system-ui,-apple-system,sans-serif;">
           ${i + 1}. ${esc(li.description) || '(no description)'}
         </td>
-        <td style="padding:6px 20px;font-size:14px;color:${TEXT_DARK};font-weight:500;text-align:right;white-space:nowrap;font-family:system-ui,-apple-system,sans-serif;">
+        <td style="padding:6px 20px;font-size:14px;color:${TEXT_DARK};font-weight:500;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-family:system-ui,-apple-system,sans-serif;">
           ${li.hours.toFixed(1)} hrs &mdash; ${formatCurrency(li.cost)}
         </td>
       </tr>`
@@ -105,40 +102,33 @@ function buildEmailHtml(opts: {
        </td></tr>`
     : '';
 
-  const logoWideTag = LOGO_WIDE_URL
-    ? `<img src="${LOGO_WIDE_URL}" width="160" alt="Open TEN99" style="display:block;height:auto;border:0;" />`
-    : `<span style="font-size:18px;font-weight:700;color:#FFFFFF;font-family:system-ui,-apple-system,sans-serif;letter-spacing:0.03em;">Open TEN99</span>`;
-
-  const logoIconTag = LOGO_ICON_URL
-    ? `<img src="${LOGO_ICON_URL}" width="52" alt="Open TEN99" style="display:block;height:auto;border:0;" />`
-    : '';
-
-  const signatureIconCell = logoIconTag
-    ? `<td style="padding-right:16px;vertical-align:top;">${logoIconTag}</td>`
-    : '';
+  const serif = "Georgia,'Times New Roman',serif";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
 <body style="margin:0;padding:0;background:${BG_PAGE};font-family:system-ui,-apple-system,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PAGE};">
-<tr><td align="center" style="padding:24px 16px;">
+<tr><td align="center" style="padding:32px 16px;">
 
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid ${BORDER_COLOR};">
 
   <!-- Brand header -->
   <tr>
-    <td style="background:linear-gradient(135deg,${HEADER_GRADIENT_START},${HEADER_GRADIENT_END});padding:24px 32px;border-bottom:3px solid ${TEAL_BORDER};">
+    <td style="background:${HEADER_BG};padding:26px 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td>${logoWideTag}</td>
-          <td align="right" style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.75);font-family:system-ui,-apple-system,sans-serif;letter-spacing:0.04em;">
+          <td style="font-family:${serif};font-size:21px;font-weight:700;color:#FFFFFF;letter-spacing:0.01em;">
+            ${esc(BRAND.company)}
+          </td>
+          <td align="right" style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.82);font-family:system-ui,-apple-system,sans-serif;letter-spacing:0.12em;">
             ${opts.headerLabel}
           </td>
         </tr>
       </table>
     </td>
   </tr>
+  <tr><td style="height:3px;background:${TEAL};font-size:0;line-height:0;">&nbsp;</td></tr>
 
   <!-- Body -->
   <tr>
@@ -188,7 +178,7 @@ function buildEmailHtml(opts: {
         <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid ${BORDER_COLOR};"></div></td></tr>
         <tr>
           <td style="padding:16px 20px;font-size:16px;font-weight:700;color:${TEXT_DARK};background:${BG_SUBTLE};font-family:system-ui,-apple-system,sans-serif;">Total</td>
-          <td style="padding:16px 20px;font-size:16px;font-weight:700;color:${TEAL};background:${BG_SUBTLE};text-align:right;font-family:system-ui,-apple-system,sans-serif;">
+          <td style="padding:16px 20px;font-size:16px;font-weight:700;color:${ACCENT};background:${BG_SUBTLE};text-align:right;font-variant-numeric:tabular-nums;font-family:system-ui,-apple-system,sans-serif;">
             ${opts.totalHours.toFixed(1)} hrs &mdash; ${formatCurrency(opts.totalCost)}
           </td>
         </tr>
@@ -205,16 +195,15 @@ function buildEmailHtml(opts: {
           <td style="padding:20px 0 0;">
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                ${signatureIconCell}
                 <td style="vertical-align:top;">
-                  <p style="font-size:15px;font-weight:600;color:${TEXT_DARK};margin:0 0 2px;font-family:system-ui,-apple-system,sans-serif;">
+                  <p style="font-family:${serif};font-size:16px;font-weight:700;color:${TEXT_DARK};margin:0 0 2px;">
                     ${esc(opts.signature.name)}
                   </p>
-                  <p style="font-size:13px;color:${TEXT_LIGHT};margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;">
+                  <p style="font-size:13px;color:${TEXT_MED};margin:0 0 8px;font-family:system-ui,-apple-system,sans-serif;">
                     ${esc(opts.signature.title)}
                   </p>
-                  <p style="font-size:13px;color:${TEXT_LIGHT};margin:0;line-height:1.6;font-family:system-ui,-apple-system,sans-serif;">
-                    <a href="${esc(opts.signature.website)}" style="color:${TEAL};text-decoration:none;">${esc(opts.signature.websiteLabel)}</a>
+                  <p style="font-size:13px;color:${TEXT_MED};margin:0;line-height:1.6;font-family:system-ui,-apple-system,sans-serif;">
+                    <a href="${esc(opts.signature.website)}" style="color:${ACCENT};text-decoration:none;font-weight:600;">${esc(opts.signature.websiteLabel)}</a>
                   </p>
                 </td>
               </tr>
@@ -228,10 +217,17 @@ function buildEmailHtml(opts: {
 
   <!-- Footer -->
   <tr>
-    <td style="border-top:1px solid ${BORDER_COLOR};padding:20px 32px;text-align:center;">
-      <span style="font-size:12px;color:${TEXT_LIGHT};font-family:system-ui,-apple-system,sans-serif;">
-        Open TEN99
-      </span>
+    <td style="border-top:1px solid ${BORDER_COLOR};background:${BG_SUBTLE};padding:20px 32px;text-align:center;">
+      <p style="font-family:${serif};font-size:13px;font-weight:700;color:${TEXT_DARK};margin:0 0 4px;">
+        ${esc(BRAND.company)}
+      </p>
+      <p style="font-size:12px;color:${TEXT_MED};margin:0;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">
+        <a href="mailto:${esc(BRAND.email)}" style="color:${ACCENT};text-decoration:none;">${esc(BRAND.email)}</a>
+        &nbsp;&middot;&nbsp;
+        <a href="${esc(BRAND.websiteUrl)}" style="color:${ACCENT};text-decoration:none;">${esc(BRAND.website)}</a>
+        &nbsp;&middot;&nbsp;
+        ${esc(BRAND.phone)}
+      </p>
     </td>
   </tr>
 
@@ -245,7 +241,7 @@ function buildEmailHtml(opts: {
 
 /* ── Component ───────────────────────────────────────────── */
 
-export default function EmailComposer({ workItems, clients }: EmailComposerProps) {
+export default function EmailComposer({ workItems, clients, settings }: EmailComposerProps) {
   const { id, type } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
 
@@ -288,8 +284,8 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
       ? `Invoice — ${item.subject}`
       : `Work Order Completed! — ${item.subject}`;
   });
-  const fromEmail = 'noreply@example.com';
-  const fromName = 'Open TEN99';
+  const fromEmail = BRAND.fromEmail;
+  const fromName = BRAND.fromName;
 
   const [greeting, setGreeting] = useState(`Hello ${client?.name ?? ''},`);
   const [message, setMessage] = useState(() => {
@@ -429,6 +425,23 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
     setSendState('sending');
     setError(null);
     try {
+      // Attach a branded PDF copy of the invoice (invoices only).
+      let pdfBase64: string | undefined;
+      let pdfFilename: string | undefined;
+      if (isInvoice && item && client) {
+        const pdfBytes = await buildChangeOrderPdfBytes(item, client, {
+          companyName: settings.companyName,
+          hourlyRate: settings.hourlyRate,
+          taxRate: settings.invoiceTaxRate,
+          pdfLogoUrl: settings.pdfLogoUrl,
+          invoiceFromAddress: settings.invoiceFromAddress,
+          invoiceNotes: settings.invoiceNotes,
+          invoiceTerms: settings.invoiceTerms,
+        });
+        pdfBase64 = uint8ToBase64(pdfBytes);
+        pdfFilename = `Invoice-${slug(item.subject)}-${(item.id ?? '').slice(0, 6)}.pdf`;
+      }
+
       const fn = httpsCallable(functions, 'sendCompletionEmail');
       await fn({
         to: toEmail,
@@ -438,6 +451,8 @@ export default function EmailComposer({ workItems, clients }: EmailComposerProps
         fromEmail,
         fromName,
         html: currentHtml,
+        pdfBase64,
+        pdfFilename,
       });
 
       if (emailType === 'invoice' && item?.id) {

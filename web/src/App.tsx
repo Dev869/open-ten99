@@ -381,7 +381,7 @@ function ContractorRoutes() {
       />
       <Route
         path="work-items/:id/email/:type"
-        element={<EmailComposer workItems={workItems} clients={clients} />}
+        element={<EmailComposer workItems={workItems} clients={clients} settings={settings} />}
       />
       <Route
         path="time-logs"
