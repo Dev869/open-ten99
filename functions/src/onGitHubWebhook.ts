@@ -74,6 +74,7 @@ interface DeploymentStatusPayload {
     creator: { login: string } | null;
   };
   deployment: {
+    id: number;
     environment: string;
   };
   repository: { full_name: string };
@@ -180,6 +181,49 @@ function buildDeploymentStatusActivity(
     createdAt: ds.created_at,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Idempotency: deterministic document ids
+// ---------------------------------------------------------------------------
+
+/**
+ * Derives a deterministic, idempotent Firestore document id from the event
+ * payload. GitHub delivers webhooks at-least-once, so re-deliveries of the
+ * same logical event must resolve to the same document id and become a no-op
+ * batch.set overwrite rather than creating duplicate activity docs.
+ *
+ * Returns null when no stable identifier can be derived (caller falls back to
+ * an auto-generated id, preserving prior behavior for unexpected payloads).
+ */
+function deterministicActivityId(
+  event: string,
+  body: unknown
+): string | null {
+  switch (event) {
+    case "push": {
+      const sha = (body as PushPayload).head_commit?.id;
+      return sha ? `commit-${sha}` : null;
+    }
+    case "pull_request": {
+      const num = (body as PullRequestPayload).pull_request?.number;
+      return typeof num === "number" ? `pr-${num}` : null;
+    }
+    case "issues": {
+      const num = (body as IssuesPayload).issue?.number;
+      return typeof num === "number" ? `issue-${num}` : null;
+    }
+    case "deployment_status": {
+      const ds = body as DeploymentStatusPayload;
+      const id = ds.deployment?.id;
+      const state = ds.deployment_status?.state;
+      return typeof id === "number" && state
+        ? `deployment-${id}-${state}`
+        : null;
+    }
+    default:
+      return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -299,15 +343,21 @@ export const onGitHubWebhook = onRequest(
         return;
       }
 
+      // Derive a deterministic document id so GitHub's at-least-once
+      // re-deliveries overwrite (idempotent no-op) instead of duplicating.
+      const deterministicId = deterministicActivityId(event, req.body);
+
       // Write activity to each matching app's github subcollection
       const batch = db.batch();
 
       for (const appDoc of appsSnap.docs) {
-        const githubRef = db
+        const githubCol = db
           .collection("apps")
           .doc(appDoc.id)
-          .collection("github")
-          .doc();
+          .collection("github");
+        const githubRef = deterministicId
+          ? githubCol.doc(deterministicId)
+          : githubCol.doc();
 
         batch.set(githubRef, {
           ...activity,

@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import * as crypto from "crypto";
 import { githubJson } from "./githubClient";
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,20 @@ export async function syncAppActivity(
     branch?: string;
   };
 
+  // Stable, deterministic document id keyed by the activity's natural
+  // identifier (commit sha / PR or issue number / deployment sha). This makes
+  // the write an idempotent upsert so concurrent onGitHubWebhook writes for
+  // the same logical event are overwritten, not lost via delete-all-then-write.
+  const stableActivityId = (a: ActivityDoc): string => {
+    const key =
+      a.type === "commit"
+        ? `commit:${a.sha ?? ""}`
+        : a.type === "deployment"
+          ? `deployment:${a.sha ?? ""}:${a.createdAt}`
+          : `${a.type}:${a.number ?? ""}`;
+    return crypto.createHash("sha1").update(key).digest("hex");
+  };
+
   const activities: ActivityDoc[] = [
     ...commits.map((c) => ({
       type: "commit" as const,
@@ -238,19 +253,16 @@ export async function syncAppActivity(
     })),
   ];
 
-  // 6. Delete existing activity docs and write new ones in a batch
+  // 6. Upsert activity docs using deterministic stable ids. Overwriting by
+  // stable id (instead of delete-all-then-write) keeps concurrent
+  // onGitHubWebhook writes for the same event from being lost.
   const activityRef = appRef.collection("activity");
-  const existingDocs = await activityRef.listDocuments();
 
   const batch = db.batch();
 
-  for (const docRef of existingDocs) {
-    batch.delete(docRef);
-  }
-
   for (const activity of activities) {
-    const newRef = activityRef.doc();
-    batch.set(newRef, {
+    const ref = activityRef.doc(stableActivityId(activity));
+    batch.set(ref, {
       ...activity,
       appId,
       repoFullName,

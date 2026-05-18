@@ -9,6 +9,24 @@ interface AnalyzeReportRequest {
   skipAi?: boolean;
 }
 
+// Firestore document shapes. WorkItemDoc/ClientDoc in generateReport.ts are
+// not exported, so define the fields this function actually reads here.
+interface WorkItemDoc {
+  id: string;
+  clientId?: string;
+  isBillable?: boolean;
+  totalCost?: number;
+  createdAt?: admin.firestore.Timestamp;
+}
+
+interface TransactionDoc {
+  id: string;
+  type?: string;
+  category?: string;
+  amount?: number;
+  date?: admin.firestore.Timestamp;
+}
+
 interface FinancialSummary {
   totalRevenue: number;
   totalExpenses: number;
@@ -60,22 +78,22 @@ export const onAnalyzeReport = onCall(
       }
 
       // Filter and aggregate work items
-      const workItems = workItemsSnap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((item: any) => {
+      const workItems: WorkItemDoc[] = workItemsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as WorkItemDoc)
+        .filter((item) => {
           if (!item.createdAt) return false;
           const d = item.createdAt.toDate();
           return d >= startDate && d <= endDate;
-        }) as any[];
+        });
 
       // Filter transactions
-      const transactions = transactionsSnap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((t: any) => {
+      const transactions: TransactionDoc[] = transactionsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as TransactionDoc)
+        .filter((t) => {
           if (!t.date) return false;
           const d = t.date.toDate();
           return d >= startDate && d <= endDate;
-        }) as any[];
+        });
 
       // Compute revenue by month
       const revenueByMonth = new Map<string, number>();
@@ -93,7 +111,9 @@ export const onAnalyzeReport = onCall(
         revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + (item.totalCost ?? 0));
         totalRevenue += item.totalCost ?? 0;
 
-        const clientName = clientsMap.get(item.clientId) ?? "Unknown";
+        const clientName =
+          (item.clientId ? clientsMap.get(item.clientId) : undefined) ??
+          "Unknown";
         const existing = revenueByClient.get(clientName);
         if (existing) {
           existing.amount += item.totalCost ?? 0;
@@ -104,7 +124,7 @@ export const onAnalyzeReport = onCall(
       }
 
       for (const t of transactions) {
-        if (t.type !== "expense") continue;
+        if (t.type !== "expense" || !t.date) continue;
         const d = t.date.toDate();
         const key = d.toLocaleDateString("en-US", { year: "numeric", month: "short" });
         const absAmount = Math.abs(t.amount ?? 0);
