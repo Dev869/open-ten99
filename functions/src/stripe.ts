@@ -208,7 +208,7 @@ export const onStripeSync = onSchedule({ schedule: 'every 6 hours', secrets: [en
  * Validates the webhook signature and processes charge/payment_intent events.
  */
 export const onStripeWebhook = onRequest(
-  { cors: true, maxInstances: 10 },
+  { maxInstances: 10, secrets: [stripeWebhookSecret] },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');
@@ -263,27 +263,49 @@ export const onStripeWebhook = onRequest(
 );
 
 /**
+ * Resolves the single active Stripe connected account. This app uses direct
+ * API-key Stripe integrations (not Stripe Connect), so an incoming webhook
+ * carries no per-user discriminator. If more than one active Stripe account
+ * exists we cannot safely attribute the charge, so we fail closed rather than
+ * silently crediting an arbitrary contractor (cross-tenant misbilling).
+ */
+async function resolveStripeAccount(
+  db: FirebaseFirestore.Firestore,
+  context: string
+): Promise<{ id: string; ownerId: string } | null> {
+  const snap = await db
+    .collection('connectedAccounts')
+    .where('provider', '==', 'stripe')
+    .where('status', '==', 'active')
+    .limit(2)
+    .get();
+
+  if (snap.empty) {
+    logger.warn(`${context}: no active Stripe account found`);
+    return null;
+  }
+  if (snap.size > 1) {
+    logger.error(
+      `${context}: multiple active Stripe accounts — cannot safely attribute ` +
+        `charge. Per-account webhook endpoints/secrets are required for ` +
+        `multi-tenant Stripe attribution. Skipping to avoid misbilling.`
+    );
+    return null;
+  }
+  const doc = snap.docs[0];
+  return { id: doc.id, ownerId: doc.data().ownerId as string };
+}
+
+/**
  * Handles a charge.succeeded webhook event by writing a transaction doc.
  */
 async function handleChargeSucceeded(
   db: FirebaseFirestore.Firestore,
   charge: Stripe.Charge
 ): Promise<void> {
-  // Find the connected account associated with this charge (by iterating active Stripe accounts)
-  const accountSnap = await db
-    .collection('connectedAccounts')
-    .where('provider', '==', 'stripe')
-    .where('status', '==', 'active')
-    .limit(1)
-    .get();
-
-  if (accountSnap.empty) {
-    logger.warn('charge.succeeded: no active Stripe account found', { chargeId: charge.id });
-    return;
-  }
-
-  const accountDoc = accountSnap.docs[0];
-  const ownerId = accountDoc.data().ownerId as string;
+  const account = await resolveStripeAccount(db, 'charge.succeeded');
+  if (!account) return;
+  const ownerId = account.ownerId;
 
   // Deduplicate
   const existingSnap = await db
@@ -302,7 +324,7 @@ async function handleChargeSucceeded(
   const desc = charge.description ?? (charge.metadata?.description as string | undefined) ?? 'Stripe payment';
   await db.collection('transactions').add({
     ownerId,
-    accountId: accountDoc.id,
+    accountId: account.id,
     provider: 'stripe',
     externalId: charge.id,
     date: Timestamp.fromMillis(charge.created * 1000),
@@ -326,20 +348,9 @@ async function handlePaymentIntentSucceeded(
   db: FirebaseFirestore.Firestore,
   paymentIntent: Stripe.PaymentIntent
 ): Promise<void> {
-  const accountSnap = await db
-    .collection('connectedAccounts')
-    .where('provider', '==', 'stripe')
-    .where('status', '==', 'active')
-    .limit(1)
-    .get();
-
-  if (accountSnap.empty) {
-    logger.warn('payment_intent.succeeded: no active Stripe account found', { piId: paymentIntent.id });
-    return;
-  }
-
-  const accountDoc = accountSnap.docs[0];
-  const ownerId = accountDoc.data().ownerId as string;
+  const account = await resolveStripeAccount(db, 'payment_intent.succeeded');
+  if (!account) return;
+  const ownerId = account.ownerId;
 
   // Deduplicate
   const existingSnap = await db
@@ -358,7 +369,7 @@ async function handlePaymentIntentSucceeded(
   const piDesc = paymentIntent.description ?? (paymentIntent.metadata?.description as string | undefined) ?? 'Stripe payment';
   await db.collection('transactions').add({
     ownerId,
-    accountId: accountDoc.id,
+    accountId: account.id,
     provider: 'stripe',
     externalId: paymentIntent.id,
     date: Timestamp.fromMillis(paymentIntent.created * 1000),

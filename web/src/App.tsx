@@ -25,6 +25,7 @@ import Login from './routes/Login';
 const pageNames: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/work-items': 'Work Orders',
+  '/dashboard/time-logs': 'Time Logs',
   '/dashboard/quotes': 'Quotes',
   '/dashboard/calendar': 'Calendar',
   '/dashboard/clients': 'Clients',
@@ -63,6 +64,7 @@ function getPageName(pathname: string): string {
 // Lazy-loaded contractor routes
 const Dashboard = lazy(() => import('./routes/contractor/Dashboard'));
 const WorkItems = lazy(() => import('./routes/contractor/WorkItems'));
+const TimeLogs = lazy(() => import('./routes/contractor/TimeLogs'));
 const WorkItemDetail = lazy(() => import('./routes/contractor/WorkItemDetail'));
 const Quotes = lazy(() => import('./routes/contractor/Quotes'));
 const QuoteDetail = lazy(() => import('./routes/contractor/QuoteDetail'));
@@ -381,6 +383,7 @@ function ContractorRoutes() {
         path="work-items/:id/email/:type"
         element={<EmailComposer workItems={workItems} clients={clients} />}
       />
+      <Route path="time-logs" element={<TimeLogs />} />
       <Route
         path="quotes"
         element={<Quotes clients={clients} hourlyRate={settings.hourlyRate} />}

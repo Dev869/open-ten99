@@ -8,7 +8,7 @@ import { syncAppActivity, GitHubRepo } from "./utils/syncActivity";
 import { encryptToken } from "./utils/crypto";
 
 const GITHUB_CLIENT_ID = defineString("GITHUB_CLIENT_ID");
-const GITHUB_CLIENT_SECRET = defineString("GITHUB_CLIENT_SECRET");
+const GITHUB_CLIENT_SECRET = defineSecret("GITHUB_CLIENT_SECRET");
 const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
 const REDIRECT_URI = defineString("GITHUB_REDIRECT_URI");
@@ -88,7 +88,7 @@ export const getGitHubAuthUrl = onCall(
  * authorization code for an access token, and persists user/org metadata.
  */
 export const handleGitHubCallback = onCall(
-  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey, GITHUB_CLIENT_SECRET] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(

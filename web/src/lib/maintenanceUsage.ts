@@ -44,14 +44,16 @@ export function calculateMaintenanceUsage(
   periodEndExclusive.setDate(periodEndExclusive.getDate() + 1);
 
   const used = workItems
-    .filter(
-      (i) =>
-        i.type === 'maintenance' &&
-        i.status !== 'draft' &&
-        i.status !== 'archived' &&
-        i.updatedAt >= periodStart &&
-        i.updatedAt < periodEndExclusive,
-    )
+    .filter((i) => {
+      if (i.type !== 'maintenance') return false;
+      if (i.status === 'draft' || i.status === 'archived') return false;
+      // When the work was done — scheduledDate if set, else createdAt.
+      // updatedAt (last-modified) is wrong: editing an item after the period
+      // ends would drop it, and an old item touched this period would be
+      // miscounted against the current allotment.
+      const when = i.scheduledDate ?? i.createdAt;
+      return when >= periodStart && when < periodEndExclusive;
+    })
     .reduce((sum, i) => sum + (i.totalHours || 0), 0);
 
   const overageHours = Math.max(0, used - allotted);

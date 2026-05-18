@@ -1,10 +1,10 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
+import { defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 
-const githubWebhookSecret = defineString("GITHUB_WEBHOOK_SECRET");
+const githubWebhookSecret = defineSecret("GITHUB_WEBHOOK_SECRET");
 
 // ---------------------------------------------------------------------------
 // Signature verification
@@ -192,7 +192,7 @@ function buildDeploymentStatusActivity(
  * the event's repository full_name.
  */
 export const onGitHubWebhook = onRequest(
-  { maxInstances: 10, timeoutSeconds: 60 },
+  { maxInstances: 10, timeoutSeconds: 60, secrets: [githubWebhookSecret] },
   async (req, res) => {
     // Only accept POST requests
     if (req.method !== "POST") {

@@ -25,14 +25,16 @@ describe('getRetainerPeriodEnd', () => {
     expect(end.getDate()).toBe(14);
   });
 
-  it('handles month-end overflow: renewalDay=31 in February', () => {
-    // renewalDay = 31, today = Feb 28 → period started Jan 31
-    // Jan 31 + 1 month = Feb 31 (JS overflows to Mar 3), then - 1 day = Mar 2
+  it('handles month-end clamp: renewalDay=31 on Feb 28 (Feb has no 31)', () => {
+    // renewalDay = 31, today = Feb 28, 2026 (Feb's last day). With clamping the
+    // Feb renewal falls on Feb 28, so a fresh period starts Feb 28 and runs to
+    // the day before the Mar 31 renewal = Mar 30. (Previously this overflowed
+    // to Mar 2, producing a ~60-day double-billed window — that was a bug.)
     const now = new Date(2026, 1, 28); // Feb 28, 2026
     const end = getRetainerPeriodEnd(31, now);
     expect(end.getFullYear()).toBe(2026);
     expect(end.getMonth()).toBe(2); // March (0-indexed)
-    expect(end.getDate()).toBe(2);
+    expect(end.getDate()).toBe(30);
   });
 
   it('period on exact renewal day: today == renewalDay', () => {

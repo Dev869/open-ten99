@@ -69,6 +69,8 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
         }
       : undefined,
     scheduledDate: data.scheduledDate ? toDate(data.scheduledDate) : undefined,
+    assigneeId: data.assigneeId ?? undefined,
+    teamId: data.teamId ?? undefined,
     clientNotes: data.clientNotes ?? undefined,
     clientApproval: data.clientApproval ?? undefined,
     clientApprovalDate: data.clientApprovalDate ? toDate(data.clientApprovalDate) : undefined,
@@ -266,6 +268,12 @@ export function subscribeSettings(
       teamId: data?.teamId ?? undefined,
       sidebarOrder: data?.sidebarOrder ?? undefined,
       sidebarHidden: data?.sidebarHidden ?? undefined,
+      pushNotificationsEnabled: data?.pushNotificationsEnabled ?? undefined,
+      pushNotifyWorkOrderDue: data?.pushNotifyWorkOrderDue ?? undefined,
+      pushNotifyNewInboundOrder: data?.pushNotifyNewInboundOrder ?? undefined,
+      fcmToken: data?.fcmToken ?? undefined,
+      mileageRate: data?.mileageRate ?? undefined,
+      roundTimeToQuarterHour: data?.roundTimeToQuarterHour ?? undefined,
     });
   }, { onExhausted: onError });
 }
@@ -1694,12 +1702,14 @@ export async function createTimeEntry(
 export async function updateTimeEntry(
   id: string,
   updates: {
+    clientId?: string;
     workItemId?: string | null;
     lineItemId?: string | null;
     appId?: string | null;
     description?: string;
     durationSeconds?: number;
     isBillable?: boolean;
+    startedAt?: Date;
     endedAt?: Date;
   }
 ): Promise<void> {
@@ -1717,12 +1727,18 @@ export async function updateTimeEntry(
       payload[key] = v == null ? deleteField() : v;
     }
   }
+  if (updates.clientId !== undefined) payload.clientId = updates.clientId;
   if (updates.description !== undefined) payload.description = updates.description;
   if (updates.durationSeconds !== undefined) payload.durationSeconds = updates.durationSeconds;
   if (updates.isBillable !== undefined) payload.isBillable = updates.isBillable;
+  if (updates.startedAt !== undefined) payload.startedAt = Timestamp.fromDate(updates.startedAt);
   if (updates.endedAt !== undefined) payload.endedAt = Timestamp.fromDate(updates.endedAt);
 
   await updateDoc(ref, payload);
+}
+
+export async function deleteTimeEntry(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'timeEntries', id));
 }
 
 export async function unlinkTimeEntriesForLineItem(

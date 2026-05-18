@@ -5,31 +5,72 @@ import * as logger from "firebase-functions/logger";
 
 const db = admin.firestore();
 
+const SCHEDULE_TZ = "America/New_York";
+
+/**
+ * "Now" as a calendar date in the scheduler's timezone. The scheduler fires at
+ * 06:00 America/New_York but `new Date()` on GCP is UTC, so a naive
+ * `now.getDate()` can be a day off near midnight, firing invoices early/late.
+ */
+function nowInScheduleTz(): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: SCHEDULE_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  // Noon avoids any DST/boundary ambiguity for date-only math.
+  return new Date(get("year"), get("month") - 1, get("day"), 12, 0, 0);
+}
+
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function clampDay(renewalDay: number, year: number, month: number): number {
+  return Math.min(renewalDay, lastDayOfMonth(year, month));
+}
+
 function getRetainerPeriodStart(renewalDay: number, now: Date): Date {
   const year = now.getFullYear();
   const month = now.getMonth();
   const today = now.getDate();
-  const clampedDay = Math.min(renewalDay, new Date(year, month + 1, 0).getDate());
 
-  if (today >= clampedDay) {
-    return new Date(year, month, clampedDay);
+  if (today >= clampDay(renewalDay, year, month)) {
+    return new Date(year, month, clampDay(renewalDay, year, month));
   }
-  const prevMonthLastDay = new Date(year, month, 0).getDate();
-  return new Date(year, month - 1, Math.min(renewalDay, prevMonthLastDay));
+  const prev = new Date(year, month - 1, 1);
+  return new Date(
+    prev.getFullYear(),
+    prev.getMonth(),
+    clampDay(renewalDay, prev.getFullYear(), prev.getMonth()),
+  );
 }
 
 function getRetainerPeriodEnd(renewalDay: number, now: Date): Date {
   const start = getRetainerPeriodStart(renewalDay, now);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 1);
+  // Day before the next period's clamped start — no JS month overflow.
+  const next = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  const nextStart = new Date(
+    next.getFullYear(),
+    next.getMonth(),
+    clampDay(renewalDay, next.getFullYear(), next.getMonth()),
+  );
+  const end = new Date(nextStart);
   end.setDate(end.getDate() - 1);
   return end;
 }
 
+/** Deterministic doc ID so concurrent/retried runs can't double-create. */
+function retainerInvoiceId(ownerId: string, clientId: string, periodStart: Date): string {
+  return `retainer_${ownerId}_${clientId}_${periodStart.toISOString().slice(0, 10)}`;
+}
+
 export const generateRetainerInvoices = onSchedule(
-  { schedule: "every day 06:00", timeZone: "America/New_York" },
+  { schedule: "every day 06:00", timeZone: SCHEDULE_TZ },
   async () => {
-    const now = new Date();
+    const now = nowInScheduleTz();
     const today = now.getDate();
 
     logger.info("Running retainer invoice generation", { today });
@@ -89,8 +130,10 @@ export const generateRetainerInvoices = onSchedule(
       for (const wiDoc of workItemsSnap.docs) {
         const wi = wiDoc.data();
         if (wi.status === "draft" || wi.isRetainerInvoice) continue;
-        const updatedAt = wi.updatedAt?.toDate?.() ?? new Date(0);
-        if (updatedAt < periodStart || updatedAt > periodEnd) continue;
+        // When the work was done: scheduledDate if set, else createdAt.
+        // updatedAt would wrongly include/exclude items edited after the period.
+        const when = wi.scheduledDate?.toDate?.() ?? wi.createdAt?.toDate?.() ?? new Date(0);
+        if (when < periodStart || when > periodEnd) continue;
 
         if (client.retainerBillingMode === "usage") {
           const wiLineItems = wi.lineItems ?? [];
@@ -135,26 +178,38 @@ export const generateRetainerInvoices = onSchedule(
 
       const nowTimestamp = admin.firestore.Timestamp.now();
 
-      await db.collection("workItems").add({
-        type: "maintenance",
-        status: "completed",
-        clientId: clientDoc.id,
-        ownerId,
-        subject,
-        sourceEmail: "",
-        lineItems,
-        totalHours,
-        totalCost,
-        isBillable: true,
-        deductFromRetainer: true,
-        invoiceStatus: "draft",
-        isRetainerInvoice: true,
-        retainerPeriodStart: admin.firestore.Timestamp.fromDate(periodStart),
-        retainerPeriodEnd: admin.firestore.Timestamp.fromDate(periodEnd),
-        retainerOverageHours: overageHours > 0 ? overageHours : null,
-        createdAt: nowTimestamp,
-        updatedAt: nowTimestamp,
-      });
+      // Deterministic ID + create() makes concurrent/retried scheduler runs
+      // idempotent (the prior read-then-add could double-create on retry).
+      const invoiceId = retainerInvoiceId(ownerId, clientDoc.id, periodStart);
+      try {
+        await db.collection("workItems").doc(invoiceId).create({
+          type: "maintenance",
+          status: "completed",
+          clientId: clientDoc.id,
+          ownerId,
+          subject,
+          sourceEmail: "",
+          lineItems,
+          totalHours,
+          totalCost,
+          isBillable: true,
+          deductFromRetainer: true,
+          invoiceStatus: "draft",
+          isRetainerInvoice: true,
+          retainerPeriodStart: admin.firestore.Timestamp.fromDate(periodStart),
+          retainerPeriodEnd: admin.firestore.Timestamp.fromDate(periodEnd),
+          retainerOverageHours: overageHours > 0 ? overageHours : null,
+          createdAt: nowTimestamp,
+          updatedAt: nowTimestamp,
+        });
+      } catch (e: unknown) {
+        // 6 = ALREADY_EXISTS — another run won the race; safe to skip.
+        if ((e as { code?: number }).code === 6) {
+          logger.info("Retainer invoice already exists (race-safe skip)", { clientId: clientDoc.id });
+          continue;
+        }
+        throw e;
+      }
 
       generated++;
       logger.info("Generated retainer invoice draft", {
@@ -182,7 +237,7 @@ async function generateForClient(clientDocId: string, ownerId: string): Promise<
   if (!client.retainerBillingMode) throw new HttpsError("failed-precondition", "Client has no billing mode configured");
   if (client.retainerPaused) throw new HttpsError("failed-precondition", "Client retainer is paused");
 
-  const now = new Date();
+  const now = nowInScheduleTz();
   const renewalDay = client.retainerRenewalDay ?? 1;
   const periodStart = getRetainerPeriodStart(renewalDay, now);
   const periodEnd = getRetainerPeriodEnd(renewalDay, now);
@@ -213,8 +268,9 @@ async function generateForClient(clientDocId: string, ownerId: string): Promise<
   for (const wiDoc of workItemsSnap.docs) {
     const wi = wiDoc.data();
     if (wi.status === "draft" || wi.isRetainerInvoice) continue;
-    const updatedAt = wi.updatedAt?.toDate?.() ?? new Date(0);
-    if (updatedAt < periodStart || updatedAt > periodEnd) continue;
+    // When the work was done: scheduledDate if set, else createdAt.
+    const when = wi.scheduledDate?.toDate?.() ?? wi.createdAt?.toDate?.() ?? new Date(0);
+    if (when < periodStart || when > periodEnd) continue;
 
     if (client.retainerBillingMode === "usage") {
       for (const li of (wi.lineItems ?? [])) {
@@ -256,29 +312,37 @@ async function generateForClient(clientDocId: string, ownerId: string): Promise<
 
   const nowTimestamp = admin.firestore.Timestamp.now();
 
-  const docRef = await db.collection("workItems").add({
-    type: "maintenance",
-    status: "completed",
-    clientId: clientDocId,
-    ownerId,
-    subject,
-    sourceEmail: "",
-    lineItems,
-    totalHours,
-    totalCost,
-    isBillable: true,
-    deductFromRetainer: true,
-    invoiceStatus: "draft",
-    isRetainerInvoice: true,
-    retainerPeriodStart: admin.firestore.Timestamp.fromDate(periodStart),
-    retainerPeriodEnd: admin.firestore.Timestamp.fromDate(periodEnd),
-    retainerOverageHours: overageHours > 0 ? overageHours : null,
-    createdAt: nowTimestamp,
-    updatedAt: nowTimestamp,
-  });
+  const invoiceId = retainerInvoiceId(ownerId, clientDocId, periodStart);
+  try {
+    await db.collection("workItems").doc(invoiceId).create({
+      type: "maintenance",
+      status: "completed",
+      clientId: clientDocId,
+      ownerId,
+      subject,
+      sourceEmail: "",
+      lineItems,
+      totalHours,
+      totalCost,
+      isBillable: true,
+      deductFromRetainer: true,
+      invoiceStatus: "draft",
+      isRetainerInvoice: true,
+      retainerPeriodStart: admin.firestore.Timestamp.fromDate(periodStart),
+      retainerPeriodEnd: admin.firestore.Timestamp.fromDate(periodEnd),
+      retainerOverageHours: overageHours > 0 ? overageHours : null,
+      createdAt: nowTimestamp,
+      updatedAt: nowTimestamp,
+    });
+  } catch (e: unknown) {
+    if ((e as { code?: number }).code === 6) {
+      throw new HttpsError("already-exists", "Retainer invoice already exists for this period");
+    }
+    throw e;
+  }
 
-  logger.info("Manually generated retainer invoice", { clientId: clientDocId, docId: docRef.id });
-  return docRef.id;
+  logger.info("Manually generated retainer invoice", { clientId: clientDocId, docId: invoiceId });
+  return invoiceId;
 }
 
 export const generateRetainerInvoiceManual = onCall(async (request) => {
