@@ -3,6 +3,7 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithRedirect,
+  signInWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
   signInWithCustomToken,
@@ -12,10 +13,16 @@ import { auth } from '../lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
 
-// Returns true if the user authenticated via Google Sign-In (contractor).
-// Custom-token users (portal clients) have providerData from a custom provider.
+// Demo/dev allowlist — must match the domain in firestore.rules isContractor().
+const DEV_EMAIL_DOMAIN = '@ten99.local';
+
+// Returns true if the user authenticated via Google Sign-In (contractor) or
+// via password with an allowlisted dev email. Custom-token users (portal
+// clients) have providerData from a custom provider.
 export function isContractorUser(user: User): boolean {
-  return user.providerData.some((p) => p.providerId === 'google.com');
+  if (user.providerData.some((p) => p.providerId === 'google.com')) return true;
+  const hasPassword = user.providerData.some((p) => p.providerId === 'password');
+  return hasPassword && (user.email ?? '').endsWith(DEV_EMAIL_DOMAIN);
 }
 
 export function useAuth() {
@@ -78,6 +85,24 @@ export function useAuth() {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    setAuthError(null);
+    if (!email.endsWith(DEV_EMAIL_DOMAIN)) {
+      const msg = `Dev sign-in is only available for ${DEV_EMAIL_DOMAIN} accounts.`;
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Email sign-in failed.';
+      console.error('Email sign-in error:', err);
+      setAuthError(message);
+      throw err;
+    }
+  };
+
   const signInWithToken = async (token: string) => {
     setAuthError(null);
     try {
@@ -97,5 +122,14 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { user, claims, loading, authError, signInWithGoogle, signInWithToken, logout };
+  return {
+    user,
+    claims,
+    loading,
+    authError,
+    signInWithGoogle,
+    signInWithEmail,
+    signInWithToken,
+    logout,
+  };
 }
