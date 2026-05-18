@@ -437,7 +437,7 @@ export const onPlaidSync = onSchedule(
 // ---------------------------------------------------------------------------
 
 export const onPlaidWebhook = onRequest(
-  { cors: true, maxInstances: 10 },
+  { maxInstances: 10, secrets: [plaidClientId, plaidSecret, plaidEnv, encryptionKey] },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method Not Allowed');

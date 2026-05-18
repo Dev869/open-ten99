@@ -1,7 +1,21 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import * as crypto from "crypto";
 import { getGeminiClient } from "./utils/geminiClient";
+
+/**
+ * Constant-time string comparison. Returns false for length mismatch without
+ * leaking timing information about how many characters matched.
+ */
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 interface PostmarkInboundPayload {
   From: string;
@@ -78,31 +92,30 @@ export const onEmailReceived = onRequest(
 
     let contractorUid: string | null = null;
     try {
-      const integrationsSnap = await admin
+      // Indexed lookup by token (Firestore auto-indexes nested fields) instead
+      // of an O(n) full-collection scan on every inbound email.
+      const matchSnap = await admin
         .firestore()
         .collection("integrations")
+        .where("postmarkWebhook.token", "==", providedToken)
+        .limit(1)
         .get();
 
-      for (const doc of integrationsSnap.docs) {
-        const data = doc.data();
-        const storedToken = data?.postmarkWebhook?.token;
-        logger.info("Token comparison", {
-          docId: doc.id,
-          hasPostmarkWebhook: !!data?.postmarkWebhook,
-          storedTokenPrefix: typeof storedToken === "string" ? storedToken.substring(0, 8) : "none",
-          providedTokenPrefix: providedToken.substring(0, 8),
-          match: storedToken === providedToken,
-        });
-        if (typeof storedToken === "string" && storedToken === providedToken) {
-          contractorUid = doc.id;
-          break;
-        }
+      const matchDoc = matchSnap.docs[0];
+      const storedToken = matchDoc?.data()?.postmarkWebhook?.token;
+
+      // Defense-in-depth: constant-time confirm of the equality the query
+      // already enforced. Never log any portion of the token.
+      if (
+        matchDoc &&
+        typeof storedToken === "string" &&
+        safeEqual(storedToken, providedToken)
+      ) {
+        contractorUid = matchDoc.id;
       }
 
       if (!contractorUid) {
-        logger.warn("No matching webhook token found", {
-          docsChecked: integrationsSnap.size,
-        });
+        logger.warn("No matching webhook token found");
         res.status(401).send("Unauthorized");
         return;
       }
@@ -307,7 +320,7 @@ ${body}
     const response = result.response;
     const text = response.text();
 
-    logger.info("Gemini raw response", { text });
+    logger.info("Gemini response received", { length: text.length });
 
     const parsed = JSON.parse(text) as GeminiParseResult;
 

@@ -6,7 +6,7 @@ import * as crypto from "crypto";
 import { encryptToken, decryptToken } from "./utils/crypto";
 
 const NOTION_CLIENT_ID = defineString("NOTION_CLIENT_ID");
-const NOTION_CLIENT_SECRET = defineString("NOTION_CLIENT_SECRET");
+const NOTION_CLIENT_SECRET = defineSecret("NOTION_CLIENT_SECRET");
 const NOTION_REDIRECT_URI = defineString("NOTION_REDIRECT_URI");
 const encryptionKey = defineSecret("TOKEN_ENCRYPTION_KEY");
 
@@ -106,7 +106,7 @@ export const getNotionAuthUrl = onCall(
  * stores workspace metadata for display.
  */
 export const handleNotionCallback = onCall(
-  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey] },
+  { cors: true, invoker: "public", maxInstances: 10, secrets: [encryptionKey, NOTION_CLIENT_SECRET] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "You must be signed in to complete Notion authorization.");

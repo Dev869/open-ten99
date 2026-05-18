@@ -15,6 +15,12 @@ export const generateMagicLink = onCall(
       throw new HttpsError("unauthenticated", "Must be signed in.");
     }
 
+    // Only contractors (Google sign-in) may mint portal links. Portal clients
+    // authenticate via custom token and must never be able to call this.
+    if (request.auth.token.firebase?.sign_in_provider !== "google.com") {
+      throw new HttpsError("permission-denied", "Only contractors can generate portal links.");
+    }
+
     const { clientId, email, workItemId } = request.data as {
       clientId: string;
       email: string;
@@ -23,6 +29,17 @@ export const generateMagicLink = onCall(
 
     if (!clientId || !email || !workItemId) {
       throw new HttpsError("invalid-argument", "clientId, email, and workItemId are required.");
+    }
+
+    // Verify the work item belongs to the calling contractor (prevents IDOR:
+    // a contractor minting a link to another contractor's work item).
+    const workItemSnap = await db.doc(`workItems/${workItemId}`).get();
+    if (!workItemSnap.exists) {
+      throw new HttpsError("not-found", "Work item not found.");
+    }
+    const workItemOwnerId = workItemSnap.data()?.ownerId;
+    if (workItemOwnerId !== request.auth.uid) {
+      throw new HttpsError("permission-denied", "You do not own this work item.");
     }
 
     // Generate a secure random token
@@ -71,6 +88,13 @@ export const verifyMagicLink = onCall(
     if (new Date() > expiresAt) {
       throw new HttpsError("deadline-exceeded", "This link has expired.");
     }
+
+    // Record verification for auditability / abuse detection. The portal
+    // re-verifies on each load, so this is a counter, not a single-use lock.
+    await docRef.update({
+      lastVerifiedAt: admin.firestore.Timestamp.now(),
+      verifyCount: admin.firestore.FieldValue.increment(1),
+    });
 
     // Fetch the work item data so the portal doesn't need direct Firestore access
     const workItemSnap = await db.doc(`workItems/${data.workItemId}`).get();
