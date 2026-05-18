@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback, createContext, useContext } f
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { IconPlay, IconPause, IconStop, IconClock, IconChevronDown, IconClose } from '../icons';
-import { createTimeEntry, updateTimeEntry } from '../../services/firestore';
+import { createTimeEntry, updateTimeEntry, createWorkItem } from '../../services/firestore';
 import type { Client, App } from '../../lib/types';
+import { Link } from 'react-router-dom';
 
 /* ── Persistence ─────────────────────────────────────── */
 
@@ -155,10 +156,11 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
      then updates durationSeconds/endedAt every AUTOSAVE_INTERVAL_MS
      and on beforeunload. Finalized on stop. */
   const autosaveInFlightRef = useRef(false);
-  const autosave = useCallback(async (finalize = false) => {
+  const autosave = useCallback(async (finalize = false, workItemIdOverride?: string) => {
     if (autosaveInFlightRef.current) return;
     const s = persistedRef.current;
-    if (!s.workItemId || !s.clientId) return;
+    const workItemId = workItemIdOverride ?? s.workItemId;
+    if (!workItemId || !s.clientId) return;
     const now = Date.now();
     const elapsed = computeElapsed(s, now);
     if (elapsed <= 0) return;
@@ -177,7 +179,7 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
           isBillable: s.isBillable,
           startedAt,
           endedAt,
-          workItemId: s.workItemId,
+          workItemId,
           lineItemId: s.lineItemId || undefined,
         });
         setPersisted((prev) => ({ ...prev, activeEntryId: id }));
@@ -188,7 +190,7 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
           isBillable: s.isBillable,
           appId: s.appId || undefined,
           endedAt,
-          ...(finalize ? { workItemId: s.workItemId, lineItemId: s.lineItemId || undefined } : {}),
+          ...(finalize ? { workItemId, lineItemId: s.lineItemId || undefined } : {}),
         });
       }
     } catch (err) {
@@ -246,7 +248,33 @@ export function TimeTrackerProvider({ clients, apps, children }: TimeTrackerProv
     // Flush final update, then clear everything
     void (async () => {
       try {
-        await autosave(true);
+        const s = persistedRef.current;
+        // Auto-create a work order when all required fields are filled and no
+        // work order is linked yet. Required for a WO: client + subject.
+        // We treat the timer description as the subject.
+        const elapsed = computeElapsed(s, Date.now());
+        const trimmedDesc = s.description.trim();
+        let autoWorkItemId: string | undefined;
+        if (!s.workItemId && s.clientId && trimmedDesc && elapsed > 0) {
+          try {
+            autoWorkItemId = await createWorkItem({
+              type: 'changeRequest',
+              status: 'draft',
+              clientId: s.clientId,
+              appId: s.appId || undefined,
+              sourceEmail: '',
+              subject: trimmedDesc,
+              lineItems: [],
+              totalHours: 0,
+              totalCost: 0,
+              isBillable: s.isBillable,
+            });
+          } catch (err) {
+            console.error('Failed to auto-create work order from timer', err);
+          }
+        }
+
+        await autosave(true, autoWorkItemId);
       } finally {
         setPersisted(EMPTY_STATE);
         clearPersisted();
@@ -491,6 +519,16 @@ export function TimeTrackerNavPill() {
                 />
               </button>
             </div>
+          </div>
+
+          <div className="px-3 pb-2.5">
+            <Link
+              to="/dashboard/time-logs"
+              onClick={toggleOpen}
+              className="block w-full text-center text-[11px] font-semibold uppercase tracking-wider text-[#9198a1] hover:text-[#f0f6fc] py-1.5 rounded-md hover:bg-[#21262d] transition-colors"
+            >
+              View time logs →
+            </Link>
           </div>
 
           <div className="flex gap-2 px-3 py-2.5 border-t border-[#3d444d] bg-[#0d1117]">
@@ -794,6 +832,13 @@ export function TimeTrackerBar() {
             <IconPlay size={14} />
             Start Timer
           </button>
+          <Link
+            to="/dashboard/time-logs"
+            onClick={toggleOpen}
+            className="block w-full text-center text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] py-2 transition-colors"
+          >
+            View time logs →
+          </Link>
         </div>
       </div>
     </div>

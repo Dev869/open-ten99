@@ -1694,12 +1694,14 @@ export async function createTimeEntry(
 export async function updateTimeEntry(
   id: string,
   updates: {
+    clientId?: string;
     workItemId?: string | null;
     lineItemId?: string | null;
     appId?: string | null;
     description?: string;
     durationSeconds?: number;
     isBillable?: boolean;
+    startedAt?: Date;
     endedAt?: Date;
   }
 ): Promise<void> {
@@ -1717,12 +1719,18 @@ export async function updateTimeEntry(
       payload[key] = v == null ? deleteField() : v;
     }
   }
+  if (updates.clientId !== undefined) payload.clientId = updates.clientId;
   if (updates.description !== undefined) payload.description = updates.description;
   if (updates.durationSeconds !== undefined) payload.durationSeconds = updates.durationSeconds;
   if (updates.isBillable !== undefined) payload.isBillable = updates.isBillable;
+  if (updates.startedAt !== undefined) payload.startedAt = Timestamp.fromDate(updates.startedAt);
   if (updates.endedAt !== undefined) payload.endedAt = Timestamp.fromDate(updates.endedAt);
 
   await updateDoc(ref, payload);
+}
+
+export async function deleteTimeEntry(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'timeEntries', id));
 }
 
 export async function unlinkTimeEntriesForLineItem(
