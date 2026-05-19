@@ -284,8 +284,22 @@ export default function EmailComposer({ workItems, clients, settings }: EmailCom
       ? `Invoice — ${item.subject}`
       : `Work Order Completed! — ${item.subject}`;
   });
-  const fromEmail = BRAND.fromEmail;
-  const fromName = BRAND.fromName;
+  // Sender identities from settings; fall back to BRAND defaults when none
+  // are configured. Each must be a verified sender in Brevo or sending fails.
+  const identities = useMemo(() => settings.fromIdentities ?? [], [settings.fromIdentities]);
+  const defaultIdentityId = useMemo(() => {
+    if (identities.length === 0) return '';
+    return (identities.find((i) => i.isDefault) ?? identities[0]).id;
+  }, [identities]);
+  const [selectedFromId, setSelectedFromId] = useState(defaultIdentityId);
+
+  useEffect(() => {
+    setSelectedFromId(defaultIdentityId);
+  }, [defaultIdentityId]);
+
+  const selectedIdentity = identities.find((i) => i.id === selectedFromId);
+  const fromEmail = selectedIdentity?.email ?? BRAND.fromEmail;
+  const fromName = selectedIdentity?.name ?? BRAND.fromName;
 
   const [greeting, setGreeting] = useState(`Hello ${client?.name ?? ''},`);
   const [message, setMessage] = useState(() => {
@@ -383,6 +397,15 @@ export default function EmailComposer({ workItems, clients, settings }: EmailCom
         name: lines[1] || DEFAULT_SIGNATURE.name,
         title: lines[2] || DEFAULT_SIGNATURE.title,
       });
+    }
+    // Restore the saved From identity by matching its email (falls back to
+    // the current default when the template predates identities or the
+    // address was removed).
+    if (tpl.fromEmail) {
+      const match = identities.find(
+        (i) => i.email.toLowerCase() === tpl.fromEmail?.toLowerCase(),
+      );
+      if (match) setSelectedFromId(match.id);
     }
     setHtmlOverride(tpl.html);
     setShowTemplateList(false);
@@ -711,11 +734,38 @@ export default function EmailComposer({ workItems, clients, settings }: EmailCom
               </div>
             </div>
 
-            {/* From (read-only) */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-input)]/50">
-              <span className="text-xs text-[var(--text-secondary)] font-medium">From:</span>
-              <span className="text-xs text-[var(--text-primary)]">{fromName}</span>
-              <span className="text-xs text-[var(--text-secondary)]">&lt;{fromEmail}&gt;</span>
+            {/* From */}
+            <div>
+              <label
+                htmlFor="email-from-select"
+                className="block text-xs text-[var(--text-secondary)] font-medium mb-1"
+              >
+                From
+              </label>
+              {identities.length > 0 ? (
+                <>
+                  <select
+                    id="email-from-select"
+                    value={selectedFromId}
+                    onChange={(e) => setSelectedFromId(e.target.value)}
+                    className="w-full h-11 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                  >
+                    {identities.map((idn) => (
+                      <option key={idn.id} value={idn.id}>
+                        {idn.name} &lt;{idn.email}&gt;{idn.isDefault ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                    Must be a verified sender in Brevo or sending will fail.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-input)]/50">
+                  <span className="text-xs text-[var(--text-primary)]">{fromName}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">&lt;{fromEmail}&gt;</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
