@@ -91,7 +91,7 @@ export default function PortalQuote() {
   const canRespond = !responded && !expired && quote.status !== 'draft';
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)]">
+    <div className="min-h-screen bg-[var(--bg-page)] pb-24 md:pb-12">
       {/* Header */}
       <div className="bg-[#4BA8A8]">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">

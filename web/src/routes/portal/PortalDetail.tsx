@@ -88,7 +88,7 @@ export default function PortalDetail({ workItems }: PortalDetailProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)]">
+    <div className="min-h-screen bg-[var(--bg-page)] pb-24 md:pb-12">
       {/* Teal brand header */}
       <div className="bg-[var(--accent)]">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-2">
