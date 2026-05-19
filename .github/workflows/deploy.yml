@@ -99,6 +99,15 @@ jobs:
           GITHUB_REDIRECT_URI=${{ secrets.GH_OAUTH_REDIRECT_URI || 'https://open-ten99.web.app/auth/github/callback' }}
           GITHUB_WEBHOOK_SECRET=${{ secrets.GH_WEBHOOK_SECRET || 'placeholder' }}
           POSTMARK_WEBHOOK_SECRET=${{ secrets.POSTMARK_WEBHOOK_SECRET || 'placeholder' }}
+          NOTION_CLIENT_ID=${{ secrets.NOTION_CLIENT_ID || 'placeholder' }}
+          NOTION_CLIENT_SECRET=${{ secrets.NOTION_CLIENT_SECRET || 'placeholder' }}
+          NOTION_REDIRECT_URI=${{ secrets.NOTION_REDIRECT_URI || 'https://open-ten99.web.app/auth/notion/callback' }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET || 'placeholder' }}
+          PLAID_CLIENT_ID=${{ secrets.PLAID_CLIENT_ID || 'placeholder' }}
+          PLAID_SECRET=${{ secrets.PLAID_SECRET || 'placeholder' }}
+          PLAID_ENV=${{ secrets.PLAID_ENV || 'sandbox' }}
+          TOKEN_ENCRYPTION_KEY=${{ secrets.TOKEN_ENCRYPTION_KEY || 'placeholder' }}
+          BREVO_API_KEY=${{ secrets.BREVO_API_KEY || 'placeholder' }}
           EOF
 
       - id: auth
