@@ -41,7 +41,7 @@ export default function PortalHome({ workItems, clientName }: PortalHomeProps) {
   const rest = items.filter((i) => i.status !== 'inReview');
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)]">
+    <div className="min-h-screen bg-[var(--bg-page)] pb-24 md:pb-12">
       {/* Teal brand header */}
       <div className="bg-[#4BA8A8]">
         <div className="max-w-2xl mx-auto px-4 pt-6 pb-2 flex items-center justify-between">
