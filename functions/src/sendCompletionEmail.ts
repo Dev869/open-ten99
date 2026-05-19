@@ -1,10 +1,10 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const sgMail = require("@sendgrid/mail");
 import * as logger from "firebase-functions/logger";
 
-const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
+const brevoApiKey = defineSecret("BREVO_API_KEY");
+
+const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
 interface SendEmailRequest {
   to: string;
@@ -20,7 +20,7 @@ interface SendEmailRequest {
 }
 
 export const sendCompletionEmail = onCall(
-  { secrets: [sendgridApiKey] },
+  { secrets: [brevoApiKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in.");
@@ -42,35 +42,55 @@ export const sendCompletionEmail = onCall(
       throw new HttpsError("invalid-argument", "pdfBase64 must be a string.");
     }
 
-    sgMail.setApiKey(sendgridApiKey.value());
-
     const ccList = Array.isArray(data.cc) ? data.cc : [];
-    const cc = ccList.filter((addr) => typeof addr === "string" && addr && addr !== data.to);
+    const cc = ccList
+      .filter((addr) => typeof addr === "string" && addr && addr !== data.to)
+      .map((email) => ({ email }));
+
+    const payload: Record<string, unknown> = {
+      sender: {
+        email: data.fromEmail || "noreply@example.com",
+        name: data.fromName || "Open TEN99",
+      },
+      to: [{ email: data.to, name: data.toName || undefined }],
+      subject: data.subject,
+      htmlContent: data.html,
+    };
+    if (cc.length > 0) {
+      payload.cc = cc;
+    }
+    if (data.pdfBase64) {
+      payload.attachment = [
+        {
+          content: data.pdfBase64,
+          name: data.pdfFilename || "invoice.pdf",
+        },
+      ];
+    }
 
     try {
-      await sgMail.send({
-        to: {
-          email: data.to,
-          name: data.toName || undefined,
+      const res = await fetch(BREVO_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "api-key": brevoApiKey.value(),
+          "content-type": "application/json",
+          accept: "application/json",
         },
-        cc: cc.length > 0 ? cc : undefined,
-        from: {
-          email: data.fromEmail || "noreply@example.com",
-          name: data.fromName || "Open TEN99",
-        },
-        subject: data.subject,
-        html: data.html,
-        attachments: data.pdfBase64
-          ? [
-              {
-                content: data.pdfBase64,
-                filename: data.pdfFilename || "invoice.pdf",
-                type: "application/pdf",
-                disposition: "attachment",
-              },
-            ]
-          : undefined,
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        // Brevo returns { code, message } — log the structured fields only
+        // (no recipient PII) and surface a generic error to the client.
+        let brevoError: unknown;
+        try {
+          brevoError = await res.json();
+        } catch {
+          brevoError = undefined;
+        }
+        logger.error("Brevo error", { status: res.status, body: brevoError });
+        throw new HttpsError("internal", "Failed to send email.");
+      }
 
       logger.info("Email sent", {
         to: data.to,
@@ -80,15 +100,8 @@ export const sendCompletionEmail = onCall(
       });
       return { success: true };
     } catch (err) {
-      // SendGrid puts the actionable detail (e.g. unverified sender) in
-      // response.body.errors — log only the structured error array to avoid
-      // persisting recipient PII; client gets a generic message.
-      const sgErrors = (err as { response?: { body?: { errors?: unknown } } })
-        ?.response?.body?.errors;
-      logger.error("SendGrid error", {
-        message: (err as Error)?.message,
-        errors: sgErrors,
-      });
+      if (err instanceof HttpsError) throw err;
+      logger.error("Brevo request failed", { message: (err as Error)?.message });
       throw new HttpsError("internal", "Failed to send email.");
     }
   }
