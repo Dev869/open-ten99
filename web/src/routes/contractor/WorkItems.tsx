@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { WorkItemCard } from '../../components/workitems/WorkItemCard';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { WorkItemTable } from '../../components/workitems/WorkItemTable';
 import { FilterTabs } from '../../components/workitems/FilterTabs';
 import { NewWorkOrderModal } from '../../components/workitems/NewWorkOrderModal';
 import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
@@ -10,7 +10,6 @@ import { isWorkOrder } from '../../lib/workItem';
 import { bulkUpdateStatus, convertToInvoice } from '../../services/firestore';
 import { IconDocument } from '../../components/icons';
 import { useInsights } from '../../hooks/useFirestore';
-import { InsightBadge } from '../../components/insights/InsightBadge';
 
 interface WorkItemsProps {
   workItems: WorkItem[];
@@ -24,6 +23,7 @@ const statusTabs = ['Open', 'All', 'Draft', 'In Review', 'Approved', 'Completed'
 
 export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { insights } = useInsights();
 
   const [search, setSearch] = useState('');
@@ -131,13 +131,6 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
         return true;
       });
   }, [workItems, selectedType, selectedStatus, search, clientMap, selectedClients, selectedApps, dateRange]);
-
-  function toggleSelect(id: string) {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  }
 
   async function handleBulkApprove() {
     const ids = [...selectedIds].filter((id) => {
@@ -385,42 +378,18 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
       )}
 
       {/* List */}
-      <div className="space-y-2">
-        {filtered.map((item, i) => {
-          const estimate = insights?.projects?.completionEstimates?.find((e) => e.workItemId === item.id);
-          const creep = insights?.projects?.scopeCreep?.find((s) => s.workItemId === item.id);
-          return (
-            <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
-              <WorkItemCard
-                item={item}
-                clientName={clientMap[item.clientId] ?? 'Unknown'}
-                appName={item.appId ? appMap[item.appId] : undefined}
-                selectable
-                selected={selectedIds.has(item.id!)}
-                onSelect={toggleSelect}
-              />
-              {(estimate || creep) && (
-                <div className="flex gap-1.5 px-1 pt-1">
-                  {estimate && (
-                    <InsightBadge
-                      label={`~${estimate.estimatedDays}d`}
-                      level="info"
-                      tooltip={`Estimated ${estimate.estimatedDays} days (${Math.round(estimate.confidence * 100)}% confidence)`}
-                    />
-                  )}
-                  {creep && (
-                    <InsightBadge
-                      label="Scope creep"
-                      level={creep.severity}
-                      tooltip={creep.reason}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {filtered.length > 0 && (
+        <WorkItemTable
+          workItems={filtered}
+          clients={clients}
+          appMap={appMap}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onRowClick={(item) => navigate(`/dashboard/work-items/${item.id}`)}
+          completionEstimates={insights?.projects?.completionEstimates}
+          scopeCreep={insights?.projects?.scopeCreep}
+        />
+      )}
 
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 md:py-24 px-4">
