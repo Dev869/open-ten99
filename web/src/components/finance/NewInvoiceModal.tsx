@@ -177,9 +177,9 @@ export function NewInvoiceModal({ clients, workItems, settings, hourlyRate, paym
       {/* Modal — full page on mobile, centered card on desktop */}
       <div
         className={cn(
-          'fixed z-[60] flex flex-col bg-[var(--bg-page)]',
+          'fixed z-[60] flex flex-col bg-[var(--bg-page)] box-border overflow-hidden',
           // Mobile: full page
-          'inset-0',
+          'inset-0 max-h-[100dvh]',
           // Desktop: centered card
           'md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
           'md:w-full md:max-w-lg md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',

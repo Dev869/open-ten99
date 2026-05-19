@@ -75,8 +75,8 @@ export function AddIncomeModal({ onClose, onAdded }: AddIncomeModalProps) {
         aria-modal="true"
         aria-label="Add income"
         className={cn(
-          'fixed z-[60] flex flex-col bg-[var(--bg-page)]',
-          'inset-0',
+          'fixed z-[60] flex flex-col bg-[var(--bg-page)] box-border overflow-hidden',
+          'inset-0 max-h-[100dvh]',
           'md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
           'md:w-full md:max-w-md md:max-h-[85vh] md:rounded-2xl md:border md:border-[var(--border)] md:shadow-2xl',
           'animate-fade-in-up md:animate-scale-in'
