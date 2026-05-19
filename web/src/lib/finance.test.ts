@@ -11,7 +11,25 @@ import {
   getInvoiceStatusCounts,
   calculateTrend,
 } from './finance';
-import type { WorkItem, Client } from './types';
+import type { WorkItem, Client, Transaction } from './types';
+
+function makeTransaction(overrides: Partial<Transaction>): Transaction {
+  return {
+    id: 'tx-' + Math.random().toString(36).slice(2),
+    ownerId: 'owner-1',
+    provider: 'manual',
+    date: new Date('2026-03-10'),
+    amount: 0,
+    description: 'Test income',
+    category: 'Manual Income',
+    type: 'income',
+    matchStatus: 'unmatched',
+    isManual: true,
+    createdAt: new Date('2026-03-10'),
+    updatedAt: new Date('2026-03-10'),
+    ...overrides,
+  } as Transaction;
+}
 
 function makeWorkItem(overrides: Partial<WorkItem>): WorkItem {
   return {
@@ -77,6 +95,50 @@ describe('calculateRevenue', () => {
     ];
     const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
     expect(calculateRevenue(items, range)).toBe(0);
+  });
+  it('includes in-range manual income alongside paid invoices', () => {
+    const items = [
+      makeWorkItem({ totalCost: 1000, invoiceStatus: 'paid', invoicePaidDate: new Date('2026-03-05'), isBillable: true }),
+    ];
+    const transactions = [
+      makeTransaction({ amount: 250, date: new Date('2026-03-12') }),
+      makeTransaction({ amount: 100, date: new Date('2026-03-20') }),
+    ];
+    const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
+    expect(calculateRevenue(items, range, transactions)).toBe(1350);
+  });
+  it('excludes manual income matched to an already-counted invoice', () => {
+    const transactions = [
+      makeTransaction({ amount: 500, date: new Date('2026-03-10'), matchedWorkItemId: 'wi-1' }),
+      makeTransaction({ amount: 200, date: new Date('2026-03-10') }),
+    ];
+    const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
+    expect(calculateRevenue([], range, transactions)).toBe(200);
+  });
+  it('excludes out-of-range manual income', () => {
+    const transactions = [
+      makeTransaction({ amount: 300, date: new Date('2026-02-15') }),
+      makeTransaction({ amount: 400, date: new Date('2026-04-02') }),
+      makeTransaction({ amount: 150, date: new Date('2026-03-09') }),
+    ];
+    const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
+    expect(calculateRevenue([], range, transactions)).toBe(150);
+  });
+  it('ignores non-manual or expense transactions', () => {
+    const transactions = [
+      makeTransaction({ amount: 500, date: new Date('2026-03-10'), provider: 'plaid' }),
+      makeTransaction({ amount: 500, date: new Date('2026-03-10'), type: 'expense' }),
+      makeTransaction({ amount: 100, date: new Date('2026-03-10') }),
+    ];
+    const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
+    expect(calculateRevenue([], range, transactions)).toBe(100);
+  });
+  it('is backward compatible when no transactions passed', () => {
+    const items = [
+      makeWorkItem({ totalCost: 700, invoiceStatus: 'paid', invoicePaidDate: new Date('2026-03-05'), isBillable: true }),
+    ];
+    const range = { start: new Date('2026-03-01'), end: new Date('2026-03-31') };
+    expect(calculateRevenue(items, range)).toBe(700);
   });
 });
 

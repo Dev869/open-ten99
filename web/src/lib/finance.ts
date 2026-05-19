@@ -1,4 +1,4 @@
-import type { WorkItem, Client, WorkItemType } from './types';
+import type { WorkItem, Client, WorkItemType, Transaction } from './types';
 import { isInvoice } from './workItem';
 
 // ── Exported Types ──────────────────────────────────────────────────────────
@@ -94,10 +94,18 @@ export function getDateRange(preset: DateRangePreset, ref: Date = new Date()): D
 
 /**
  * Sums totalCost of billable work items whose invoiceStatus is 'paid'
- * and whose invoicePaidDate falls within range.
+ * and whose invoicePaidDate falls within range, PLUS manually-entered
+ * income transactions whose date falls within range.
+ *
+ * Manual income tied to an already-counted invoice (matchedWorkItemId set)
+ * is excluded to avoid double-counting.
  */
-export function calculateRevenue(items: readonly WorkItem[], range: DateRange): number {
-  return items.reduce((sum, item) => {
+export function calculateRevenue(
+  items: readonly WorkItem[],
+  range: DateRange,
+  transactions: readonly Transaction[] = []
+): number {
+  const invoiceRevenue = items.reduce((sum, item) => {
     if (
       item.isBillable &&
       item.invoiceStatus === 'paid' &&
@@ -108,6 +116,20 @@ export function calculateRevenue(items: readonly WorkItem[], range: DateRange): 
     }
     return sum;
   }, 0);
+
+  const manualIncome = transactions.reduce((sum, tx) => {
+    if (
+      tx.provider === 'manual' &&
+      tx.type === 'income' &&
+      !tx.matchedWorkItemId &&
+      inRange(tx.date, range)
+    ) {
+      return sum + tx.amount;
+    }
+    return sum;
+  }, 0);
+
+  return invoiceRevenue + manualIncome;
 }
 
 /**
