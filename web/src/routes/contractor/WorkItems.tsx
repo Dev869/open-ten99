@@ -20,7 +20,7 @@ interface WorkItemsProps {
 }
 
 const typeTabs = ['All', 'Change Requests', 'Feature Requests', 'Maintenance'];
-const statusTabs = ['All', 'Draft', 'In Review', 'Approved', 'Completed'];
+const statusTabs = ['Open', 'All', 'Draft', 'In Review', 'Approved', 'Completed'];
 
 export default function WorkItems({ workItems, clients, apps, settings }: WorkItemsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,7 +28,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
 
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('Open');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -104,6 +104,7 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
         return true;
       })
       .filter((i) => {
+        if (selectedStatus === 'Open') return i.status !== 'completed' && i.status !== 'archived';
         if (selectedStatus === 'Draft') return i.status === 'draft';
         if (selectedStatus === 'In Review') return i.status === 'inReview';
         if (selectedStatus === 'Approved') return i.status === 'approved';
