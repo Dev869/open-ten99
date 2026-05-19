@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { WorkItemCard } from '../../components/workitems/WorkItemCard';
 import { Onboarding } from '../../components/onboarding/Onboarding';
 import { useAuth } from '../../hooks/useAuth';
-import { useSettings, useTimeEntries, useInsights } from '../../hooks/useFirestore';
+import { useSettings, useTimeEntries, useInsights, useTransactions } from '../../hooks/useFirestore';
 import { isWorkOrder } from '../../lib/workItem';
 import { UtilizationGauge } from '../../components/insights/UtilizationGauge';
 import { InsightShimmer } from '../../components/insights/InsightShimmer';
@@ -79,6 +79,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
   const { user } = useAuth();
   const { settings } = useSettings(user?.uid);
   const { entries: timeEntries } = useTimeEntries();
+  const { transactions } = useTransactions();
   const { insights, isGenerating } = useInsights();
   const navigate = useNavigate();
   const [onboardingDismissed, setOnboardingDismissed] = useState(
@@ -121,7 +122,7 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
     .reduce((s, i) => s + i.totalHours, 0);
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthRevenue = workItems
+  const monthInvoiceRevenue = workItems
     .filter(
       (i) =>
         i.isBillable &&
@@ -130,6 +131,18 @@ export default function Dashboard({ workItems, clients, apps }: DashboardProps) 
         i.invoicePaidDate >= monthStart
     )
     .reduce((s, i) => s + i.totalCost, 0);
+  // Manual income this month — exclude entries tied to an already-counted
+  // invoice (matchedWorkItemId) to avoid double-counting.
+  const monthManualIncome = transactions
+    .filter(
+      (t) =>
+        t.provider === 'manual' &&
+        t.type === 'income' &&
+        !t.matchedWorkItemId &&
+        t.date >= monthStart
+    )
+    .reduce((s, t) => s + t.amount, 0);
+  const monthRevenue = monthInvoiceRevenue + monthManualIncome;
 
   const recentCompleted = workItems
     .filter((i) => i.status === 'approved' || i.status === 'completed')

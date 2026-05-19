@@ -8,6 +8,7 @@ import { InsightBadge } from '../../components/insights/InsightBadge';
 import { TransactionRow } from '../../components/finance/TransactionRow';
 import { MatchSuggestion } from '../../components/finance/MatchSuggestion';
 import { CsvImportModal } from '../../components/finance/CsvImportModal';
+import { AddIncomeModal } from '../../components/finance/AddIncomeModal';
 import { formatDate } from '../../lib/utils';
 import { db, functions } from '../../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -71,6 +72,7 @@ export default function Transactions() {
   const [smartSorting, setSmartSorting] = useState(false);
   const [smartSortResult, setSmartSortResult] = useState<string | null>(null);
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showAddIncome, setShowAddIncome] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Match suggestion state
@@ -272,6 +274,15 @@ export default function Transactions() {
               Smart Sort
             </>
           )}
+        </button>
+        <button
+          onClick={() => setShowAddIncome(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Add Income
         </button>
         <button
           onClick={() => setShowCsvImport(true)}
@@ -479,6 +490,27 @@ export default function Transactions() {
             )}
           </button>
         </div>
+      )}
+      {/* Add Income Modal */}
+      {showAddIncome && (
+        <AddIncomeModal
+          onClose={() => setShowAddIncome(false)}
+          onAdded={() => {
+            setSmartSortResult('Income added');
+            fetchTransactions({
+              pageSize: PAGE_SIZE,
+              accountId: filterAccountId || undefined,
+              type: filterType || undefined,
+            }).then((result) => {
+              setPage({
+                transactions: result.transactions,
+                lastDoc: result.lastDoc,
+                hasMore: result.hasMore,
+                loading: false,
+              });
+            });
+          }}
+        />
       )}
       {/* CSV Import Modal */}
       {showCsvImport && (

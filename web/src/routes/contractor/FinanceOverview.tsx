@@ -15,7 +15,7 @@ import { KpiCard } from '../../components/finance/KpiCard';
 import { RevenueChart } from '../../components/finance/RevenueChart';
 import { TopClients } from '../../components/finance/TopClients';
 import { ActivityFeed } from '../../components/finance/ActivityFeed';
-import { useInsights } from '../../hooks/useFirestore';
+import { useInsights, useTransactions } from '../../hooks/useFirestore';
 import { CashFlowChart } from '../../components/insights/CashFlowChart';
 import { RunwayCard } from '../../components/insights/RunwayCard';
 import { InsightShimmer } from '../../components/insights/InsightShimmer';
@@ -35,8 +35,10 @@ export default function FinanceOverview({ workItems, clients }: { workItems: Wor
     return { start: prevStart, end: prevEnd };
   }, [range]);
 
-  const revenue = useMemo(() => calculateRevenue(workItems, range), [workItems, range]);
-  const previousRevenue = useMemo(() => calculateRevenue(workItems, previousRange), [workItems, previousRange]);
+  const { transactions } = useTransactions();
+
+  const revenue = useMemo(() => calculateRevenue(workItems, range, transactions), [workItems, range, transactions]);
+  const previousRevenue = useMemo(() => calculateRevenue(workItems, previousRange, transactions), [workItems, previousRange, transactions]);
   const revenueTrend = useMemo(() => calculateTrend(revenue, previousRevenue), [revenue, previousRevenue]);
 
   const outstanding = useMemo(() => calculateOutstanding(workItems), [workItems]);

@@ -15,12 +15,13 @@ import {
   subscribeGitHubActivity,
   subscribeConnectedAccounts,
   subscribeReceipts,
+  subscribeTransactions,
   subscribeTimeEntries,
   subscribeMileageTrips,
   subscribeInsights,
   callGenerateInsights,
 } from '../services/firestore';
-import type { WorkItem, Quote, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubAccount, GitHubActivity, ConnectedAccount, Receipt, TimeEntry, MileageTrip, Insights } from '../lib/types';
+import type { WorkItem, Quote, Client, AppSettings, App, Team, TeamMember, TeamInvite, IntegrationData, GitHubAccount, GitHubActivity, ConnectedAccount, Receipt, Transaction, TimeEntry, MileageTrip, Insights } from '../lib/types';
 
 /**
  * Wait for Firebase auth to be ready before subscribing to Firestore.
@@ -292,6 +293,23 @@ export function useReceipts() {
   }, []);
 
   return { receipts, loading };
+}
+
+export function useTransactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = whenAuthReady(() =>
+      subscribeTransactions((items) => {
+        setTransactions(items);
+        setLoading(false);
+      }),
+    );
+    return unsubscribe;
+  }, []);
+
+  return { transactions, loading };
 }
 
 export function useTimeEntries() {

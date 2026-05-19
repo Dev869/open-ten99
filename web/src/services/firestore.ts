@@ -1505,6 +1505,58 @@ export async function createManualExpense(data: {
   return docRef.id;
 }
 
+export async function createManualIncome(data: {
+  description: string;
+  amount: number;
+  date: Date;
+  category?: string;
+}): Promise<string> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+
+  const docRef = await addDoc(collection(db, 'transactions'), {
+    ownerId: user.uid,
+    provider: 'manual',
+    externalId: null,
+    date: Timestamp.fromDate(data.date),
+    amount: Math.abs(data.amount), // Income is positive
+    description: data.description,
+    category: data.category?.trim() || 'Manual Income',
+    type: 'income',
+    matchStatus: 'unmatched',
+    isManual: true,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
+  return docRef.id;
+}
+
+export function subscribeTransactions(
+  callback: (transactions: Transaction[]) => void
+): () => void {
+  const user = auth.currentUser;
+  if (!user) return () => {};
+
+  const q = query(
+    collection(db, 'transactions'),
+    where('ownerId', '==', user.uid)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const transactions = snapshot.docs
+        .map((d) => docToTransaction(d.id, d.data()))
+        .sort((a, b) => b.date.getTime() - a.date.getTime());
+      callback(transactions);
+    },
+    (error) => {
+      console.error('transactions subscription error:', error);
+      callback([]);
+    }
+  );
+}
+
 export async function confirmMatch(transactionId: string, workItemId: string): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error('Not authenticated');
