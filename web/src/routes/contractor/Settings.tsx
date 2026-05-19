@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { AppSettings } from '../../lib/types';
+import type { AppSettings, FromIdentity } from '../../lib/types';
 import { updateSettings } from '../../services/firestore';
 import { IconMail, IconLightbulb, IconBook, IconDocument, IconLock, IconBell, IconNotebook } from '../../components/icons';
 import { useNotion } from '../../hooks/useNotion';
@@ -73,6 +73,11 @@ export default function Settings({ settings, userId }: SettingsProps) {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [savedTemplate, setSavedTemplate] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode);
+
+  // Email From identities
+  const [fromIdentities, setFromIdentities] = useState<FromIdentity[]>(settings.fromIdentities ?? []);
+  const [savingIdentities, setSavingIdentities] = useState(false);
+  const [savedIdentities, setSavedIdentities] = useState(false);
 
   const { user } = useAuth();
   const { integration } = useIntegration(user?.uid);
@@ -148,7 +153,49 @@ export default function Settings({ settings, userId }: SettingsProps) {
     setInvoiceFromAddress(settings.invoiceFromAddress ?? '');
     setInvoiceTerms(settings.invoiceTerms ?? '');
     setInvoiceNotes(settings.invoiceNotes ?? '');
+    setFromIdentities(settings.fromIdentities ?? []);
   }, [settings]);
+
+  function updateIdentity(id: string, patch: Partial<FromIdentity>) {
+    setFromIdentities((prev) => prev.map((idn) => (idn.id === id ? { ...idn, ...patch } : idn)));
+  }
+
+  function addIdentity() {
+    setFromIdentities((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), name: '', email: '', isDefault: prev.length === 0 },
+    ]);
+  }
+
+  function removeIdentity(id: string) {
+    setFromIdentities((prev) => {
+      const next = prev.filter((idn) => idn.id !== id);
+      // Ensure a default still exists if any remain.
+      if (next.length > 0 && !next.some((idn) => idn.isDefault)) {
+        return next.map((idn, i) => (i === 0 ? { ...idn, isDefault: true } : idn));
+      }
+      return next;
+    });
+  }
+
+  function setDefaultIdentity(id: string) {
+    setFromIdentities((prev) => prev.map((idn) => ({ ...idn, isDefault: idn.id === id })));
+  }
+
+  async function handleSaveIdentities() {
+    setSavingIdentities(true);
+    const cleaned = fromIdentities
+      .map((idn) => ({ ...idn, name: idn.name.trim(), email: idn.email.trim() }))
+      .filter((idn) => idn.name && idn.email);
+    if (cleaned.length > 0 && !cleaned.some((idn) => idn.isDefault)) {
+      cleaned[0] = { ...cleaned[0], isDefault: true };
+    }
+    await updateSettings(userId, { fromIdentities: cleaned });
+    setFromIdentities(cleaned);
+    setSavingIdentities(false);
+    setSavedIdentities(true);
+    setTimeout(() => setSavedIdentities(false), 2000);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -471,6 +518,111 @@ export default function Settings({ settings, userId }: SettingsProps) {
             >
               {savingTemplate ? 'Saving...' : savedTemplate ? 'Saved!' : 'Save Template'}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Email From Addresses ── */}
+      <div className="mt-8">
+        <h2 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+          Email From Addresses
+        </h2>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+          <div className="p-5">
+            <p className="text-xs text-[var(--text-secondary)] mb-4">
+              Sender identities available in the email composer when sending work
+              orders and invoices. Each address must be a verified sender in Brevo
+              or sending will fail.
+            </p>
+
+            {fromIdentities.length === 0 ? (
+              <p className="text-sm text-[var(--text-secondary)] italic mb-4">
+                No sender addresses configured yet.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3 mb-4">
+                {fromIdentities.map((idn) => (
+                  <li
+                    key={idn.id}
+                    className="flex flex-col sm:flex-row sm:items-end gap-3 p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-page)]"
+                  >
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`from-name-${idn.id}`}
+                        className="block text-xs text-[var(--text-secondary)] font-medium mb-1"
+                      >
+                        Name
+                      </label>
+                      <input
+                        id={`from-name-${idn.id}`}
+                        type="text"
+                        value={idn.name}
+                        onChange={(e) => updateIdentity(idn.id, { name: e.target.value })}
+                        placeholder="Your Business"
+                        className="w-full h-11 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`from-email-${idn.id}`}
+                        className="block text-xs text-[var(--text-secondary)] font-medium mb-1"
+                      >
+                        Email
+                      </label>
+                      <input
+                        id={`from-email-${idn.id}`}
+                        type="email"
+                        autoComplete="email"
+                        value={idn.email}
+                        onChange={(e) => updateIdentity(idn.id, { email: e.target.value })}
+                        placeholder="you@example.com"
+                        className="w-full h-11 px-3 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setDefaultIdentity(idn.id)}
+                        aria-pressed={idn.isDefault ?? false}
+                        className={`min-h-[44px] px-3 rounded-lg text-xs font-semibold transition-colors ${
+                          idn.isDefault
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {idn.isDefault ? 'Default' : 'Set Default'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeIdentity(idn.id)}
+                        aria-label={`Remove ${idn.name || 'sender'}`}
+                        className="min-h-[44px] px-3 rounded-lg text-xs font-semibold text-[var(--color-red)] hover:bg-[var(--color-red)]/10 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={addIdentity}
+                className="min-h-[44px] px-4 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-input)] transition-colors"
+              >
+                + Add Address
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveIdentities}
+                disabled={savingIdentities}
+                className="min-h-[44px] px-4 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-dark)] disabled:opacity-50 transition-colors"
+              >
+                {savingIdentities ? 'Saving...' : savedIdentities ? 'Saved!' : 'Save Addresses'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

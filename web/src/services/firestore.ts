@@ -75,6 +75,7 @@ function docToWorkItem(id: string, data: DocumentData): WorkItem {
     clientApproval: data.clientApproval ?? undefined,
     clientApprovalDate: data.clientApprovalDate ? toDate(data.clientApprovalDate) : undefined,
     invoiceStatus: data.invoiceStatus ?? undefined,
+    invoicedAt: data.invoicedAt ? toDate(data.invoicedAt) : undefined,
     invoiceSentDate: data.invoiceSentDate ? toDate(data.invoiceSentDate) : undefined,
     invoicePaidDate: data.invoicePaidDate ? toDate(data.invoicePaidDate) : undefined,
     invoiceDueDate: data.invoiceDueDate ? toDate(data.invoiceDueDate) : undefined,
@@ -274,6 +275,7 @@ export function subscribeSettings(
       fcmToken: data?.fcmToken ?? undefined,
       mileageRate: data?.mileageRate ?? undefined,
       roundTimeToQuarterHour: data?.roundTimeToQuarterHour ?? undefined,
+      fromIdentities: data?.fromIdentities ?? undefined,
     });
   }, { onExhausted: onError });
 }
@@ -302,6 +304,7 @@ export async function createWorkItem(item: Omit<WorkItem, 'id' | 'createdAt' | '
     ...clean,
     lineItems: item.lineItems.map(lineItemToData),
     scheduledDate: item.scheduledDate ? Timestamp.fromDate(item.scheduledDate) : null,
+    invoicedAt: item.invoicedAt ? Timestamp.fromDate(item.invoicedAt) : null,
     retainerPeriodStart: item.retainerPeriodStart ? Timestamp.fromDate(item.retainerPeriodStart) : null,
     retainerPeriodEnd: item.retainerPeriodEnd ? Timestamp.fromDate(item.retainerPeriodEnd) : null,
     ownerId: auth.currentUser?.uid ?? null,
@@ -326,6 +329,7 @@ export async function updateWorkItem(item: WorkItem) {
     clientApproval: item.clientApproval ?? null,
     clientApprovalDate: item.clientApprovalDate ? Timestamp.fromDate(item.clientApprovalDate) : null,
     invoiceStatus: item.invoiceStatus ?? null,
+    invoicedAt: item.invoicedAt ? Timestamp.fromDate(item.invoicedAt) : null,
     invoiceSentDate: item.invoiceSentDate ? Timestamp.fromDate(item.invoiceSentDate) : null,
     invoicePaidDate: item.invoicePaidDate ? Timestamp.fromDate(item.invoicePaidDate) : null,
     invoiceDueDate: item.invoiceDueDate ? Timestamp.fromDate(item.invoiceDueDate) : null,
@@ -370,6 +374,31 @@ export async function bulkUpdateStatus(ids: string[], status: string) {
     return updateDoc(ref, { status, ownerId: uid, updatedAt: Timestamp.now() });
   });
   await Promise.all(promises);
+}
+
+/**
+ * Converts work orders into invoices by stamping `invoicedAt = now`. Sets
+ * `invoiceStatus = 'draft'` only when unset (preserves any existing status).
+ * After this the items leave work-order views and appear under Invoices —
+ * see `isInvoice`. Does NOT touch `invoiceSentDate` / sent status.
+ */
+export async function convertToInvoice(ids: string[]) {
+  const uid = auth.currentUser?.uid ?? null;
+  const now = Timestamp.now();
+  await Promise.all(
+    ids.map((id) => {
+      const ref = doc(db, 'workItems', id);
+      return getDoc(ref).then((snap) => {
+        const existingStatus = snap.exists() ? snap.data().invoiceStatus : undefined;
+        return updateDoc(ref, {
+          invoicedAt: now,
+          invoiceStatus: existingStatus ?? 'draft',
+          ownerId: uid,
+          updatedAt: now,
+        });
+      });
+    }),
+  );
 }
 
 // --- Invoice Tracking ---

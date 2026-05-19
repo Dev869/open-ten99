@@ -37,6 +37,25 @@ describe('isInvoice / isWorkOrder', () => {
     expect(isWorkOrder(item)).toBe(false);
   });
 
+  it('treats a set invoicedAt as an invoice even when not yet sent', () => {
+    const item = make({ invoicedAt: new Date('2026-02-01'), invoiceStatus: 'draft' });
+    expect(isInvoice(item)).toBe(true);
+    expect(isWorkOrder(item)).toBe(false);
+  });
+
+  it('treats invoicedAt as an invoice with no invoiceStatus at all', () => {
+    const item = make({ invoicedAt: new Date('2026-03-01') });
+    expect(isInvoice(item)).toBe(true);
+    expect(isWorkOrder(item)).toBe(false);
+  });
+
+  it('remains a work order when invoicedAt is unset (backward compatible)', () => {
+    const item = make({ invoiceStatus: 'draft' });
+    expect(item.invoicedAt).toBeUndefined();
+    expect(isInvoice(item)).toBe(false);
+    expect(isWorkOrder(item)).toBe(true);
+  });
+
   it.each(['sent', 'paid', 'overdue'] as const)(
     'treats invoiceStatus "%s" as an invoice even without invoiceSentDate',
     (status) => {
@@ -51,5 +70,17 @@ describe('isInvoice / isWorkOrder', () => {
     const notSent = make({ invoiceStatus: 'draft' });
     expect(isInvoice(sent)).toBe(!isWorkOrder(sent));
     expect(isInvoice(notSent)).toBe(!isWorkOrder(notSent));
+  });
+
+  it('convert-to-invoice effect: stamping invoicedAt flips a work order to an invoice', () => {
+    const workOrder = make({ invoiceStatus: 'draft' });
+    expect(isWorkOrder(workOrder)).toBe(true);
+
+    // Mirrors convertToInvoice(): set invoicedAt, keep existing invoiceStatus.
+    const converted = { ...workOrder, invoicedAt: new Date('2026-05-18') };
+    expect(isInvoice(converted)).toBe(true);
+    expect(isWorkOrder(converted)).toBe(false);
+    // Original is untouched (immutability).
+    expect(isWorkOrder(workOrder)).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ import type { WorkItem, Client, AppSettings, App } from '../../lib/types';
 import { WORK_ITEM_TYPE_LABELS, WORK_ITEM_STATUS_LABELS } from '../../lib/types';
 import { formatDate, exportToCsv } from '../../lib/utils';
 import { isWorkOrder } from '../../lib/workItem';
-import { bulkUpdateStatus } from '../../services/firestore';
+import { bulkUpdateStatus, convertToInvoice } from '../../services/firestore';
 import { IconDocument } from '../../components/icons';
 import { useInsights } from '../../hooks/useFirestore';
 import { InsightBadge } from '../../components/insights/InsightBadge';
@@ -173,6 +173,15 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
     if (!ids.length) return;
     setBulkLoading(true);
     await bulkUpdateStatus(ids, 'archived');
+    setSelectedIds(new Set());
+    setBulkLoading(false);
+  }
+
+  async function handleBulkConvertToInvoice() {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setBulkLoading(true);
+    await convertToInvoice(ids);
     setSelectedIds(new Set());
     setBulkLoading(false);
   }
@@ -351,6 +360,13 @@ export default function WorkItems({ workItems, clients, apps, settings }: WorkIt
             className="px-3 py-1.5 min-h-[44px] bg-[var(--color-green)] text-white text-xs font-semibold rounded-full hover:brightness-110 transition-all disabled:opacity-50"
           >
             Approve Selected
+          </button>
+          <button
+            onClick={handleBulkConvertToInvoice}
+            disabled={bulkLoading}
+            className="px-3 py-1.5 min-h-[44px] bg-[var(--accent)] text-white text-xs font-semibold rounded-full hover:brightness-110 transition-all disabled:opacity-50"
+          >
+            Convert to Invoice
           </button>
           <button
             onClick={handleBulkArchive}

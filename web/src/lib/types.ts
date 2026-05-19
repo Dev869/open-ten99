@@ -59,6 +59,10 @@ export interface WorkItem {
   clientApproval?: 'pending' | 'approved' | 'rejected';
   clientApprovalDate?: Date;
   invoiceStatus?: 'draft' | 'sent' | 'paid' | 'overdue';
+  // Set when an item becomes an invoice via manual creation or conversion
+  // from a work order. Independent of whether it has been emailed/sent.
+  // Drives `isInvoice` so draft invoices are classified correctly.
+  invoicedAt?: Date;
   invoiceSentDate?: Date;
   invoicePaidDate?: Date;
   invoiceDueDate?: Date;
@@ -125,6 +129,16 @@ export interface AppSettings {
   fcmToken?: string;
   mileageRate?: number;
   roundTimeToQuarterHour?: boolean;
+  // Configurable "From" sender identities for outbound email. Each must be a
+  // verified sender in Brevo or sending will fail.
+  fromIdentities?: FromIdentity[];
+}
+
+export interface FromIdentity {
+  id: string;
+  name: string;
+  email: string;
+  isDefault?: boolean;
 }
 
 export const PAYMENT_TERMS_OPTIONS = [

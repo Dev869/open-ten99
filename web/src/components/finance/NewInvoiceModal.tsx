@@ -136,6 +136,7 @@ export function NewInvoiceModal({ clients, workItems, settings, hourlyRate, paym
         totalCost,
         isBillable: true,
         deductFromRetainer,
+        invoicedAt: new Date(),
         invoiceStatus: 'draft',
         invoiceDueDate: dueDate ? new Date(dueDate) : undefined,
         isRetainerInvoice,
