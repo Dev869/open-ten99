@@ -17,7 +17,9 @@ import {
   discardWorkItem,
   updateInvoiceStatus,
   unlinkTimeEntriesForLineItem,
+  convertToInvoice,
 } from '../../services/firestore';
+import { isWorkOrder } from '../../lib/workItem';
 import { buildChangeOrderPdf } from '../../lib/buildPdf';
 import { IconClose } from '../../components/icons';
 
@@ -56,6 +58,7 @@ export default function WorkItemDetail({
   const [item, setItem] = useState<WorkItem | null>(null);
   const [showEmail, setShowEmail] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -605,6 +608,40 @@ export default function WorkItemDetail({
         <h2 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
           Invoice Status
         </h2>
+
+        {/* Convert work order → invoice */}
+        {isWorkOrder(item) && (
+          <div className="flex items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-[var(--bg-input)]/50 border border-[var(--border)]">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[var(--text-primary)]">
+                This is a work order
+              </p>
+              <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                Convert it to an invoice to track and bill it under Invoices.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                if (!item.id) return;
+                setConverting(true);
+                try {
+                  await convertToInvoice([item.id]);
+                  setItem({
+                    ...item,
+                    invoicedAt: new Date(),
+                    invoiceStatus: item.invoiceStatus ?? 'draft',
+                  });
+                } finally {
+                  setConverting(false);
+                }
+              }}
+              disabled={converting}
+              className="shrink-0 h-10 px-4 rounded-xl bg-[var(--accent)] text-white text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50"
+            >
+              {converting ? 'Converting…' : 'Convert to Invoice'}
+            </button>
+          </div>
+        )}
 
         {/* Draft / No invoice */}
         {(!item.invoiceStatus || item.invoiceStatus === 'draft') && (
